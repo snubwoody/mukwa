@@ -74,4 +74,4 @@ namespace app {
         return QVariant();
     }
 
-} // namespace folio
+} // namespace app
