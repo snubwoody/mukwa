@@ -1,5 +1,5 @@
-#include <QTest>
 #include "../../src/category.h"
+#include <QTest>
 
 class CategoryModelTest : public QObject {
     Q_OBJECT
@@ -7,7 +7,7 @@ class CategoryModelTest : public QObject {
 
     void getCategory() {
         auto model = app::CategoryModel{};
-        std::vector categories {
+        std::vector categories{
             app::Category{
                 .id = "C1",
                 .title = "Groceries",

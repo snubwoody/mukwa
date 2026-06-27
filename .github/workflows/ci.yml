@@ -11,6 +11,20 @@ concurrency:
   group: ci-${{github.ref}}-${{github.workflow}}
   cancel-in-progress: true
 jobs:
+#  lint-qml:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v6
+#      - name: Install Qt
+#        uses: jurplel/install-qt-action@v4
+#        with:
+#          cache: true
+#          cache-key-prefix: ${{runner.os}}-install-qt-${{hashFiles('xmake.lua')}}
+#          version: ${{env.QT_VERSION}}
+#      - uses: extractions/setup-just@v3
+#        with:
+#          just-version: ${{env.JUST_VERSION}}
+#      - run: just check-qml-lint
   format:
     runs-on: macos-latest
     steps:
@@ -41,6 +55,8 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
+          cache: true
+          cache-key-prefix: ${{runner.os}}-install-qt-${{hashFiles('xmake.lua')}}
           version: ${{env.QT_VERSION}}
       - name: Set xmake to use Clang
         if: ${{runner.os == 'Linux'}}
@@ -66,17 +82,23 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
+          cache: true
+          cache-key-prefix: ${{runner.os}}-install-qt-${{hashFiles('xmake.lua')}}
           version: ${{env.QT_VERSION}}
       - name: Set xmake to use Clang
         if: ${{runner.os == 'Linux'}}
         run: xmake f --toolchain=clang -y
+      - uses: extractions/setup-just@v3
+        with:
+          just-version: ${{env.JUST_VERSION}}
       - name: Run tests
-        run: xmake run -y test
+        run: just test
   pass:
     needs:
       - test
       - build
       - format
+#      - lint-qml
     runs-on: ubuntu-latest
     steps:
       - name: Complete

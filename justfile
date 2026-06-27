@@ -14,10 +14,14 @@ run:
 
 # Run all the tests
 test:
-    xmake test
+    xmake test -y
 
 format:
     clang-format ./src/*.cpp ./src/*.h ./src/bin/*.cpp ./tests/qt/*.cpp ./tests/doctest/*.cpp -i
 
 check-format:
     clang-format ./src/*.cpp ./src/*.h ./src/bin/*.cpp ./tests/qt/*.cpp ./tests/doctest/*.cpp --Werror --dry-run
+
+# Run qmllint on all the *.qml files
+check-qml-lint:
+    qmllint src/ui/*.qml --max-warnings 0

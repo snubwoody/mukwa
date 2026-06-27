@@ -24,6 +24,7 @@ Rectangle {
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
+        spacing: 0
 
         Text {
             text: qsTr("Spending")
@@ -57,7 +58,7 @@ Rectangle {
             model: accountModel
 
             delegate: RowLayout {
-                width: listView.width
+                width: ListView.view.width
 
                 Text {
                     text: display
@@ -88,59 +89,60 @@ Rectangle {
             }
 
             onClicked: popup.open()
-        }
 
-        Popup {
-            id: popup
+            Popup {
+                id: popup
 
-            closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
-            dim: false
-            focus: true
-            implicitHeight: 200
-            implicitWidth: parent.width
-            modal: true
-            x: control.x
-            y: control.y + control.height
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+                dim: false
+                focus: true
+                implicitHeight: 200
+                implicitWidth: control.width
+                modal: true
+                x: control.x
+                y: control.y + control.height
 
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 8
+                ColumnLayout {
+                    anchors.fill: parent
+                    spacing: 8
 
-                TextField {
-                    id: accountName
+                    TextField {
+                        id: accountName
 
-                    placeholderText: qsTr("Account name")
-                }
-                TextField {
-                    id: startingBalance
-
-                    placeholderText: qsTr("Starting balance")
-                }
-                Button {
-                    text: qsTr("Confirm")
-                    width: parent.width
-
-                    background: Rectangle {
-                        // color: "#FFFFFF"
-                        color: Colors.neutral50
-                        radius: 2
+                        placeholderText: qsTr("Account name")
                     }
-                    contentItem: Text {
-                        color: Colors.textBody
-                        horizontalAlignment: Text.AlignHCenter
-                        text: control.text
+                    TextField {
+                        id: startingBalance
+
+                        placeholderText: qsTr("Starting balance")
                     }
+                    Button {
+                        text: qsTr("Confirm")
+                        Layout.fillWidth: true
 
-                    onClicked: {
-                        accountModel.addAccount(accountName.text, parseFloat(startingBalance.text) || 0);
+                        background: Rectangle {
+                            // color: "#FFFFFF"
+                            color: Colors.neutral50
+                            radius: 2
+                        }
+                        contentItem: Text {
+                            color: Colors.textBody
+                            horizontalAlignment: Text.AlignHCenter
+                            text: control.text
+                        }
 
-                        accountName.clear();
-                        startingBalance.clear();
+                        onClicked: {
+                            accountModel.addAccount(accountName.text, parseFloat(startingBalance.text) || 0);
 
-                        popup.close();
+                            accountName.clear();
+                            startingBalance.clear();
+
+                            popup.close();
+                        }
                     }
                 }
             }
         }
+
     }
 }

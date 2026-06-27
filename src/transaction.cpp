@@ -49,13 +49,13 @@ namespace app {
     }
 
     void TransactionTableModel::setAccount(QString transactionId, QString accountId) {
-        for (auto& transaction :transactions) {
+        for (auto& transaction : transactions) {
             if (transaction.id != transactionId.toStdString()) {
                 continue;
             }
             transaction.accountId = accountId.toStdString();
         }
-        std::println("Updated transaction account, transactionId: {}",transactionId.toStdString());
+        std::println("Updated transaction account, transactionId: {}", transactionId.toStdString());
     }
 
     int TransactionTableModel::rowCount(const QModelIndex& index) const {

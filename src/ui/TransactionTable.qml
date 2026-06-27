@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Window
 import QtQuick.Controls
 import QtQuick.Layouts
+import AppModels
 
 // TODO: make popup appear on top if it's below the screen
 Rectangle {
@@ -70,7 +71,7 @@ Rectangle {
                             id: delegate
                             required property var model
                             required property int index
-                            width: combobox.width
+                            width: parent.width
 
                             contentItem: Text {
                                 text: delegate.model[combobox.textRole]

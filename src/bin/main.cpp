@@ -15,23 +15,27 @@ using namespace app;
 
 // (QtMsgType, const QMessageLogContext&, const QString&);
 
-void logQtMessage(QtMsgType messageType,const QMessageLogContext& context, const QString& message) {
+void logQtMessage(
+    QtMsgType messageType,
+    const QMessageLogContext& context,
+    const QString& message
+) {
     if (messageType == QtMsgType::QtDebugMsg) {
         return;
     }
-    std::println("QT: {}",message.toStdString());
+    std::println("QT: {}", message.toStdString());
 }
 
 int main(int argc, char* argv[]) {
     qInstallMessageHandler(logQtMessage);
     QCoreApplication::setApplicationName("Finance app");
     QCoreApplication::setApplicationVersion("0.1.0");
+
     QGuiApplication app(argc, argv);
 
     AccountModel accountModel{};
     CategoryModel categoryModel{};
     TransactionTableModel transactionModel{&categoryModel, &accountModel};
-
     std::vector transactions{
         Transaction{
             .id = "T1",

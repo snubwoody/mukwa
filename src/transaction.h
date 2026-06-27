@@ -33,7 +33,7 @@ namespace app {
         TransactionTableModel(CategoryModel* categoryModel, AccountModel* accountModel)
             : categoryModel(categoryModel), accountModel(accountModel) {}
 
-        Q_INVOKABLE void setAccount(QString transactionId,QString accountId);
+        Q_INVOKABLE void setAccount(QString transactionId, QString accountId);
         void loadTransactions(std::span<Transaction> transactions);
 
         int rowCount(const QModelIndex& index = QModelIndex()) const override;
