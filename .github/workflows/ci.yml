@@ -1,11 +1,12 @@
 name: CI
 env:
-  JUST_VERSION: '1.46.0'
+  JUST_VERSION: 1.46.0
+  QT_VERSION: 6.10.0
 on:
   pull_request:
-    branches: ["main","v**","qt"]
+    branches: ["main"]
   push:
-    branches: ["main","qt"]
+    branches: ["main"]
 concurrency:
   group: ci-${{github.ref}}-${{github.workflow}}
   cancel-in-progress: true
@@ -37,14 +38,14 @@ jobs:
         with:
           version: latest
           platform: x64
-      - name: Set xmake to use Clang
-        if: ${{runner.os == 'Linux'}}
-        run: xmake f --toolchain=clang
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
-#        with:
-#          version: 6.11.1
-      - run: xmake build -y folio
+        with:
+          version: ${{env.QT_VERSION}}
+      - name: Set xmake to use Clang
+        if: ${{runner.os == 'Linux'}}
+        run: xmake f --toolchain=clang -y
+      - run: xmake build -y
   test:
     strategy:
       fail-fast: false
@@ -64,8 +65,11 @@ jobs:
         run: sudo apt update
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
-#        with:
-#          version: 6.11.1
+        with:
+          version: ${{env.QT_VERSION}}
+      - name: Set xmake to use Clang
+        if: ${{runner.os == 'Linux'}}
+        run: xmake f --toolchain=clang -y
       - name: Run tests
         run: xmake run -y test
   pass:
