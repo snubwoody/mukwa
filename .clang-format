@@ -6,6 +6,7 @@ IndentWidth: 4
 DerivePointerAlignment: false
 PointerAlignment: Left
 AllowShortFunctionsOnASingleLine: Empty
+IndentCaseLabels: true
 # Format Qt properties like regular methods
 AllowBreakBeforeQtProperty: true
 ColumnLimit: 100

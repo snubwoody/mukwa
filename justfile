@@ -7,9 +7,11 @@ gen-cmake:
 # Generate a compile_commands.json file for IDE support
 gen-compile-commands:
     xmake project -k compile_commands
-# Run the app in dev mode
-dev:
-    xmake run folio
+
+# Run the app
+run:
+    xmake run app
+
 # Run all the tests
 test:
     xmake run test

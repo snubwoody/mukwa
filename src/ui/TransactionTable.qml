@@ -3,7 +3,7 @@ import QtQuick.Window
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// TODO: make popup appear ontop if it's below the screen
+// TODO: make popup appear on top if it's below the screen
 Rectangle {
     Layout.fillHeight: true
     Layout.fillWidth: true
@@ -62,7 +62,14 @@ Rectangle {
                 }
             }
 
+            // TODO: use column names instead of indices
+            TableView.editDelegate: ComboBox {
+                model: accountModel
+                anchors.fill: parent
+            }
+
             contentItem: Item {
+                visible: !tableCell.editing
                 RowLayout {
                     anchors.fill: parent
 
@@ -73,6 +80,9 @@ Rectangle {
                         checked: false
                         visible: tableCell.column === 0
                     }
+
+
+
                     Text {
                         // Layout.fillHeight: true
                         // Layout.fillWidth: true

@@ -40,6 +40,8 @@ namespace app {
         QHash<int, QByteArray> roleNames() const override {
             return {{Qt::DisplayRole, "display"}};
         }
+
+        Qt::ItemFlags flags(const QModelIndex& index) const override;
     };
 
 } // namespace app
