@@ -18,6 +18,8 @@ Rectangle {
         syncView: tableView
 
         delegate: Rectangle {
+            implicitWidth: 100
+            implicitHeight: 50
             Text {
                 color: Colors.textMuted
                 font.weight: 600
@@ -35,17 +37,10 @@ Rectangle {
         clip: true
         model: transactionTableModel
 
-        // delegate: Rectangle {
-        //     border.color: Colors.neutral50
-        //     border.width: 1
-        //
-        //     Text {
-        //         text: display
-        //     }
-        // }
-
         delegate: TableViewDelegate {
             id: tableCell
+            implicitWidth: 100
+            implicitHeight: 50
 
             background: Item {
                 Rectangle {
@@ -62,10 +57,32 @@ Rectangle {
                 }
             }
 
-            // TODO: use column names instead of indices
-            TableView.editDelegate: ComboBox {
-                model: accountModel
-                anchors.fill: parent
+            TableView.editDelegate: DelegateChooser{
+
+                DelegateChoice {
+                    column: 1
+                    delegate:  ComboBox{
+                        id: combobox
+                        anchors.fill: parent
+                        model: accountModel
+
+                        delegate: ItemDelegate {
+                            id: delegate
+                            required property var model
+                            required property int index
+                            width: combobox.width
+
+                            contentItem: Text {
+                                text: delegate.model[combobox.textRole]
+                            }
+
+                            onClicked: {
+                                transactionTableModel.setAccount("A1","T1")
+                            }
+                        }
+                    }
+
+                }
             }
 
             contentItem: Item {
@@ -75,17 +92,11 @@ Rectangle {
 
                     CheckBox {
                         id: checkBox
-
-                        // Layout.fillHeight: true
                         checked: false
                         visible: tableCell.column === 0
                     }
 
-
-
                     Text {
-                        // Layout.fillHeight: true
-                        // Layout.fillWidth: true
                         Layout.leftMargin: 4
                         color: tableCell.selected ? "white" : "black"
                         text: tableCell.model.display
