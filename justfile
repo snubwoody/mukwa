@@ -14,10 +14,10 @@ run:
 
 # Run all the tests
 test:
-    xmake run test
+    xmake test
 
 format:
-    clang-format ./src/*.cpp ./src/*.h ./src/bin/*.cpp ./tests/*.cpp -i
+    clang-format ./src/*.cpp ./src/*.h ./src/bin/*.cpp ./tests/qt/*.cpp ./tests/doctest/*.cpp -i
 
 check-format:
-    clang-format ./src/*.cpp ./src/*.h ./src/bin/*.cpp ./tests/*.cpp --Werror --dry-run
+    clang-format ./src/*.cpp ./src/*.h ./src/bin/*.cpp ./tests/qt/*.cpp ./tests/doctest/*.cpp --Werror --dry-run

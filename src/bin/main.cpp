@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
 
     AccountModel accountModel{};
     CategoryModel categoryModel{};
-    TransactionTableModel transactionModel{&categoryModel,&accountModel};
+    TransactionTableModel transactionModel{&categoryModel, &accountModel};
 
     std::vector transactions{
         Transaction{
