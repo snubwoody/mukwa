@@ -21,10 +21,8 @@ namespace app {
                 }
                 return QVariant();
             case 2:
-                return QString("Payee");
-            case 3:
                 return QString("Note");
-            case 4:
+            case 3:
                 if (!transaction.categoryId) {
                     return QVariant();
                 }
@@ -33,9 +31,9 @@ namespace app {
                     return QString::fromStdString(category.value().title);
                 }
                 return QVariant();
-            case 5:
+            case 4:
                 return QString("Outflow");
-            case 6:
+            case 5:
                 return QString("Inflow");
             default:
                 break;
@@ -65,7 +63,7 @@ namespace app {
     }
 
     int TransactionTableModel::columnCount(const QModelIndex& index) const {
-        return 7;
+        return 6;
     }
 
     QVariant
@@ -76,14 +74,12 @@ namespace app {
             case 1:
                 return QString("Account");
             case 2:
-                return QString("Payee");
-            case 3:
                 return QString("Note");
-            case 4:
+            case 3:
                 return QString("Category");
-            case 5:
+            case 4:
                 return QString("Outflow");
-            case 6:
+            case 5:
                 return QString("Inflow");
             default:
                 break;
