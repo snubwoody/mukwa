@@ -8,12 +8,16 @@ namespace app {
         }
 
         const auto transaction = transactions[index.row()];
+        const auto account = accountModel->getAccount(transaction.accountId);
 
         switch (index.column()) {
             case 0:
                 return QString::fromStdString(transaction.date);
             case 1:
-                return QString("Account");
+                if (account) {
+                    return QString::fromStdString(account->name);
+                }
+                return QVariant();
             case 2:
                 return QString("Payee");
             case 3:
@@ -76,7 +80,7 @@ namespace app {
         return QVariant();
     }
 
-    Qt::ItemFlags TransactionTableModel::flags(const QModelIndex& index) const{
+    Qt::ItemFlags TransactionTableModel::flags(const QModelIndex& index) const {
         Q_UNUSED(index)
         return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsEditable;
     }

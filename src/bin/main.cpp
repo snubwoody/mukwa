@@ -20,24 +20,27 @@ int main(int argc, char* argv[]) {
 
     AccountModel accountModel{};
     CategoryModel categoryModel{};
-    TransactionTableModel transactionModel{&categoryModel};
+    TransactionTableModel transactionModel{&categoryModel,&accountModel};
 
     std::vector transactions{
         Transaction{
             .id = "T1",
             .date = "01/01/2026",
+            .accountId = "A1",
             .amount = 200,
         },
         Transaction{
             .id = "T2",
             .date = "01/01/2026",
             .categoryId = "C2",
+            .accountId = "A1",
             .amount = 22400,
         },
         Transaction{
             .id = "T3",
             .date = "01/01/2026",
             .categoryId = "C1",
+            .accountId = "A2",
             .amount = 2002,
         },
     };
