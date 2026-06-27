@@ -23,9 +23,21 @@ target("app")
         set_values("windows.subsystem", "console")
     end
 
-target("test")
+target("doctest")
     set_kind("binary")
     add_deps("app_lib")
     add_packages("doctest")
-    add_files("tests/*.cpp")
+    add_files("tests/doctest/*.cpp")
     add_tests("unit")
+
+for _, file in ipairs(os.files("tests/qt/*.cpp")) do
+    local name = path.basename(file)
+    target("qt_test_"..name)
+        set_kind("binary")
+        add_rules("qt.console")
+        set_default(false)
+        add_frameworks("QtTest","QtQml")
+        add_deps("app_lib")
+        add_files(file,{rules = "qt.moc"})
+        add_tests("default")
+end

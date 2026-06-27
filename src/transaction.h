@@ -1,5 +1,7 @@
 #pragma once
 
+#include "account.h"
+
 #include <QAbstractTableModel>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
@@ -14,6 +16,8 @@ namespace app {
         std::string id;
         std::string date;
         std::optional<std::string> categoryId;
+        // The sending account.
+        std::string accountId;
         float amount;
     };
 
@@ -23,10 +27,13 @@ namespace app {
 
         std::vector<Transaction> transactions;
         CategoryModel* categoryModel;
+        AccountModel* accountModel;
 
       public:
-        TransactionTableModel(CategoryModel* categoryModel) : categoryModel(categoryModel) {}
+        TransactionTableModel(CategoryModel* categoryModel, AccountModel* accountModel)
+            : categoryModel(categoryModel), accountModel(accountModel) {}
 
+        Q_INVOKABLE void setAccount(QString transactionId, QString accountId);
         void loadTransactions(std::span<Transaction> transactions);
 
         int rowCount(const QModelIndex& index = QModelIndex()) const override;
@@ -40,6 +47,8 @@ namespace app {
         QHash<int, QByteArray> roleNames() const override {
             return {{Qt::DisplayRole, "display"}};
         }
+
+        Qt::ItemFlags flags(const QModelIndex& index) const override;
     };
 
 } // namespace app

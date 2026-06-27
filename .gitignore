@@ -7,3 +7,4 @@ build/
 .zed/
 compile_commands.json
 CMakeLists.txt
+cmake-build-debug/
