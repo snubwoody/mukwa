@@ -1,0 +1,79 @@
+name: CI
+env:
+  JUST_VERSION: '1.46.0'
+on:
+  pull_request:
+    branches: ["main","v**","qt"]
+  push:
+    branches: ["main","qt"]
+concurrency:
+  group: ci-${{github.ref}}-${{github.workflow}}
+  cancel-in-progress: true
+jobs:
+  format:
+    name: Check format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: extractions/setup-just@v3
+        with:
+          just-version: ${{env.JUST_VERSION}}
+      - run: sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+        name: Install LLVM
+      - run: just check-format
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+      - name: Set up GCC
+        uses: egor-tensin/setup-gcc@v2
+        if: ${{runner.os == 'Linux'}}
+        with:
+          version: latest
+          platform: x64
+      - name: Set xmake to use Clang
+        if: ${{runner.os == 'Linux'}}
+        run: xmake f --toolchain=clang
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+#        with:
+#          version: 6.11.1
+      - run: xmake build -y folio
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: extractions/setup-just@v3
+        with:
+          just-version: ${{env.JUST_VERSION}}
+      - uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+      - name: Install system dependencies
+        if: ${{runner.os == 'Linux'}}
+        run: sudo apt update
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+#        with:
+#          version: 6.11.1
+      - name: Run tests
+        run: xmake run -y test
+  pass:
+    needs:
+      - test
+      - build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Complete
+        run: echo All good!
