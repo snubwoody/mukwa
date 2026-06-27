@@ -21,4 +21,4 @@ namespace app {
     TempDir::~TempDir() {
         std::filesystem::remove_all(path);
     }
-} // namespace folio
+} // namespace app
