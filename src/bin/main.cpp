@@ -13,8 +13,6 @@
 
 using namespace app;
 
-// (QtMsgType, const QMessageLogContext&, const QString&);
-
 void logQtMessage(
     QtMsgType messageType,
     const QMessageLogContext& context,

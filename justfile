@@ -1,4 +1,4 @@
-set windows-shell := ["nu","-c"]
+set windows-shell := ["powershell","-c"]
 
 # Generate a CMakeLists.txt file for IDE support
 gen-cmake:

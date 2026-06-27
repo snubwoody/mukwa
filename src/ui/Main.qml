@@ -16,6 +16,13 @@ Window {
 
         Sidebar {}
 
+        Rectangle {
+            id: leftBorder
+            implicitWidth: 1
+            Layout.fillHeight: true
+            color: Colors.neutral50
+        }
+
         TransactionTable {}
     }
 }
