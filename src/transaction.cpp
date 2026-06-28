@@ -1,6 +1,7 @@
 #include "transaction.h"
 
 #include <print>
+#include <spdlog/spdlog.h>
 
 namespace app {
 
@@ -55,7 +56,11 @@ namespace app {
             }
             transaction.accountId = accountId.toStdString();
         }
-        std::println("Updated transaction account, transactionId: {}", transactionId.toStdString());
+        spdlog::info(
+            "Updated transaction ({}) account to {}",
+            transactionId.toStdString(),
+            accountId.toStdString()
+        );
     }
 
     int TransactionTableModel::rowCount(const QModelIndex& index) const {

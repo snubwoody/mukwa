@@ -1,11 +1,11 @@
 add_rules("mode.debug", "mode.release")
 set_languages("c++23")
 
-add_requires("doctest")
+add_requires("doctest","spdlog 1.17.0")
 
 target("app_lib")
     add_rules("qt.static")
-    add_packages("doctest")
+    add_packages("doctest","spdlog")
     add_headerfiles("src/*.h")
     add_frameworks("QtGui","QtQml")
     add_headerfiles("src/*.h")
@@ -16,6 +16,7 @@ target("app")
     add_rules("qt.quickapp")
     add_frameworks("QtGui")
     add_deps("app_lib")
+    add_packages("spdlog")
     add_files("src/bin/*.cpp")
     add_files("src/ui/qml.qrc")
     add_defines("DOCTEST_CONFIG_DISABLE") -- Remove testing code

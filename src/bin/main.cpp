@@ -6,6 +6,7 @@
 #include <ostream>
 #include <print>
 #include <qqml.h>
+#include <spdlog/spdlog.h>
 #include <string>
 #include <vector>
 
@@ -18,14 +19,26 @@ void logQtMessage(
     const QMessageLogContext& context,
     const QString& message
 ) {
-    if (messageType == QtMsgType::QtDebugMsg) {
-        return;
+    switch (messageType) {
+        case QtWarningMsg:
+            spdlog::warn("Qt: {}", message.toStdString());
+            break;
+        case QtInfoMsg:
+            spdlog::info("Qt: {}", message.toStdString());
+            break;
+        case QtFatalMsg:
+            spdlog::error("Qt: {}", message.toStdString());
+            break;
+        default:
+            break;
     }
-    std::println("QT: {}", message.toStdString());
 }
 
 int main(int argc, char* argv[]) {
     qInstallMessageHandler(logQtMessage);
+
+    spdlog::info("Launching app");
+
     QCoreApplication::setApplicationName("Finance app");
     QCoreApplication::setApplicationVersion("0.1.0");
 
