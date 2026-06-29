@@ -1,0 +1,65 @@
+import { StandardListView, VerticalBox,ListView, Button,Palette } from "std-widgets.slint";
+import {Colors} from "./colors.slint";
+
+struct Account {
+    id: string,
+    name: string,
+    balance: string
+}
+
+export global State {
+    callback create_account(string);
+}
+
+
+component Sidebar inherits VerticalLayout {
+    in-out property <[Account]> accounts;
+    preferred-width: 350px;
+
+    HorizontalLayout {
+        alignment: space-between;
+        Text {
+            text: "Accounts";
+            color: black;
+            font-weight: 600;
+        }
+
+        Text {
+            text: "0.00";
+            color: black;
+            font-weight: 600;
+        }
+    }
+
+    ListView {
+        for account in accounts : HorizontalLayout {
+            alignment: space-between;
+            Text {
+                text: account.name;
+                color: black;
+            }
+
+            Text {
+                text: account.balance;
+                color: Colors.textBody;
+            }
+        }
+    }
+
+    Button {
+        text: "Create account";
+    }
+}
+
+export component MainWindow inherits Window {
+    preferred-width: 500px;
+    preferred-height: 500px;
+    background: white;
+    in-out property <[Account]> accounts;
+    default-font-family: "Segoe UI";
+
+
+    Sidebar {
+        accounts: accounts;
+    }
+}
