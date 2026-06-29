@@ -1,4 +1,10 @@
-set windows-shell := ["nu","-c"]
+set windows-shell := ["powershell","-c"]
+
+add-migration name:
+    cargo run --bin cli migrate new {{name}}
+
+migrate:
+    cargo run --bin cli migrate up
 
 # Generate a CMakeLists.txt file for IDE support
 gen-cmake:

@@ -10,3 +10,6 @@ CMakeLists.txt
 cmake-build-debug/
 .env
 /target
+*.sqlite
+/*.app
+*.data
