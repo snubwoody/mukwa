@@ -1,0 +1,20 @@
+export struct Account {
+    id: string,
+    name: string,
+    balance: string,
+}
+
+export struct Transaction {
+    id: string,
+    date: string,
+    account-id: string,
+    category-id: string,
+}
+
+export global State {
+    callback create_account(name: string);
+    callback create_transaction();
+    pure callback get_account_name(id: string) -> string;
+    in-out property <[Transaction]> transactions;
+    in-out property <[Account]> accounts;
+}

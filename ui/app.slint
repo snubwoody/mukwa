@@ -6,75 +6,71 @@ import {
     Palette,
 } from "std-widgets.slint";
 import { Colors } from "./colors.slint";
+import { Account, Transaction, State } from "./globals.slint";
+import { Sidebar } from "./sidebar.slint";
+export { Account, Transaction, State } from "./globals.slint";
 
-struct Account {
-    id: string,
-    name: string,
-    balance: string,
-}
+component TransactionTable inherits VerticalLayout {
+    in property <[string]> columns;
+    in property <[Transaction]> transactions;
+    vertical-stretch: 0;
 
-export global State {
-    callback create_account(string);
-}
-
-component Sidebar inherits VerticalLayout {
-    in-out property <[Account]> accounts;
-    preferred-width: 350px;
-    spacing: 8px;
-    alignment: start;
-
-    HorizontalLayout {
-        alignment: space-between;
-        Text {
-            text: "Accounts";
-            color: black;
-            font-weight: 600;
-        }
-
-        Text {
-            text: "0.00";
-            color: black;
-            font-weight: 600;
-        }
+    Button {
+        vertical-stretch: 0;
+        text: @tr("Add transaction");
+        primary: true;
+        clicked => State.create_transaction();
     }
 
     VerticalLayout {
-        Flickable {
-            max-height: 250px;
-            viewport-height: content.preferred-height;
-
-            content := VerticalLayout {
-                for account in accounts: HorizontalLayout {
-                    alignment: space-between;
-                    Text {
-                        text: account.name;
-                        color: black;
-                    }
-
-                    Text {
-                        text: account.balance;
-                        color: Colors.textBody;
-                    }
-                }
+        vertical-stretch: 0;
+        HorizontalLayout {
+            vertical-stretch: 0;
+            for column in columns: Text {
+                text: column;
+                color: Colors.textBody;
             }
         }
-    }
 
-    Button {
-        text: "Create account";
-        primary: true;
-        clicked => State.create_account("New account");
+        for transaction in transactions: HorizontalLayout {
+            vertical-stretch: 0;
+            Text {
+                text: transaction.date;
+                color: Colors.textBody;
+            }
+
+            Text {
+                text: State.get_account_name(transaction.account-id);
+                color: Colors.textBody;
+            }
+
+            Text {
+                text: "Category";
+                color: Colors.textBody;
+            }
+
+            Text {
+                text: "Amount";
+                color: Colors.textBody;
+            }
+        }
     }
 }
 
 export component MainWindow inherits Window {
-    preferred-width: 500px;
-    preferred-height: 500px;
+    preferred-width: 750px;
+    preferred-height: 750px;
     background: white;
-    in-out property <[Account]> accounts;
-    default-font-family: "Segoe UI";
+    title: "Finance app";
 
-    Sidebar {
-        accounts: accounts;
+    HorizontalLayout {
+        Sidebar {
+            accounts: State.accounts;
+        }
+
+        TransactionTable {
+            columns: [@tr("Date"), @tr("Account"), @tr("Category"), @tr("Amount")];
+            transactions: State.transactions;
+        }
     }
 }

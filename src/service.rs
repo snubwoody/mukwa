@@ -1,11 +1,13 @@
 use crate::{ui, Error};
+use jiff::civil::Date;
 use slint::SharedString;
+use std::fmt::Display;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::iter::Peekable;
 use std::path::{Path, PathBuf};
-use std::str::Lines;
+use std::str::{FromStr, Lines};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -58,10 +60,90 @@ impl Category {
     }
 }
 
+#[derive(PartialOrd, PartialEq, Debug, Default, Clone)]
+pub struct Transaction {
+    pub id: Uuid,
+    pub account_id: Uuid,
+    pub category_id: Option<Uuid>,
+    pub date: Date,
+}
+
+impl Transaction {
+    /// Parses a `Transaction` from a `&str`.
+    pub fn parse(value: &str) -> crate::Result<Transaction> {
+        let parts: Vec<_> = value.split("|").collect();
+        let id = Uuid::parse_str(parts[0])
+            .map_err(|_| Error::ParseError("Invalid transaction id".to_string()))?;
+        let date =
+            Date::from_str(parts[1]).map_err(|_| Error::ParseError("Invalid date".to_string()))?;
+        let account_id = Uuid::parse_str(parts[2])
+            .map_err(|_| Error::ParseError("Invalid account id".to_string()))?;
+        let category_id = Uuid::parse_str(parts[3]).ok();
+
+        let transaction = Transaction {
+            id,
+            account_id,
+            date,
+            category_id,
+        };
+
+        Ok(transaction)
+    }
+}
+
+impl Display for Transaction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let category_id = match self.category_id {
+            Some(id) => id.to_string(),
+            None => String::new(),
+        };
+        write!(
+            f,
+            "{}|{}|{}|{}",
+            self.id, self.date, self.account_id, category_id
+        )
+    }
+}
+
+impl From<Transaction> for ui::Transaction {
+    fn from(value: Transaction) -> Self {
+        let category_id = match value.category_id {
+            Some(id) => id.to_string(),
+            None => String::new(),
+        };
+
+        Self {
+            id: value.id.to_string().into(),
+            account_id: value.account_id.to_string().into(),
+            category_id: category_id.into(),
+            date: value.date.to_string().into(),
+        }
+    }
+}
+
+impl From<&Transaction> for ui::Transaction {
+    fn from(value: &Transaction) -> Self {
+        let category_id = match value.category_id {
+            Some(id) => id.to_string(),
+            None => String::new(),
+        };
+
+        Self {
+            id: value.id.to_string().into(),
+            account_id: value.account_id.to_string().into(),
+            category_id: category_id.into(),
+            date: value.date.to_string().into(),
+        }
+    }
+}
+
+// TODO: use buffered writer
+#[derive(Clone)]
 pub struct Service {
     path: PathBuf,
     accounts: Vec<Account>,
     categories: Vec<Category>,
+    transactions: Vec<Transaction>,
 }
 
 // TODO: add backup
@@ -72,11 +154,15 @@ impl Service {
             path: path.as_ref().to_path_buf(),
             accounts: Vec::new(),
             categories: Vec::new(),
+            transactions: Vec::new(),
         }
     }
 
     pub fn accounts(&self) -> &[Account] {
         self.accounts.as_ref()
+    }
+    pub fn transactions(&self) -> &[Transaction] {
+        self.transactions.as_ref()
     }
 
     pub fn categories(&self) -> &[Category] {
@@ -94,6 +180,14 @@ impl Service {
         Ok(account)
     }
 
+    pub fn get_account(&self, id: Uuid) -> Option<&Account> {
+        self.accounts.iter().find(|a| a.id == id)
+    }
+
+    pub fn get_transaction(&self, id: Uuid) -> Option<&Transaction> {
+        self.transactions.iter().find(|t| t.id == id)
+    }
+
     pub fn read(&mut self) -> crate::Result<()> {
         let data = fs::read_to_string(&self.path)?;
 
@@ -106,6 +200,9 @@ impl Service {
                 }
                 "[Categories]" => {
                     self.parse_categories(&mut lines)?;
+                }
+                "[Transactions]" => {
+                    self.parse_transactions(&mut lines)?;
                 }
                 " " => {}
                 _ => return Err(Error::ParseError(format!("Invalid section: {line}"))),
@@ -125,6 +222,18 @@ impl Service {
                 name: name.to_owned(),
             };
             self.accounts.push(account);
+            match lines.peek() {
+                Some(val) if self.is_section_header(val) => break,
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
+    fn parse_transactions(&mut self, lines: &mut Peekable<Lines>) -> crate::Result<()> {
+        while let Some(line) = lines.next() {
+            let transaction = Transaction::parse(line)?;
+            self.transactions.push(transaction);
             match lines.peek() {
                 Some(val) if self.is_section_header(val) => break,
                 _ => {}
@@ -165,7 +274,6 @@ impl Service {
             .read(true)
             .open(&self.path)?;
 
-        // TODO: maybe store strings as ""
         write!(file, "[Accounts]\n")?;
         for account in &self.accounts {
             write!(file, "{}|{}\n", account.id, account.name)?;
@@ -176,6 +284,11 @@ impl Service {
             write!(file, "{}|{}\n", category.id, category.title)?;
         }
 
+        write!(file, "[Transactions]\n")?;
+        for transaction in &self.transactions {
+            write!(file, "{transaction}\n",)?;
+        }
+
         Ok(())
     }
 }
@@ -183,8 +296,53 @@ impl Service {
 #[cfg(test)]
 mod test {
     use super::*;
+    use jiff::civil::date;
     use std::fs;
     use tempfile::tempdir;
+
+    #[test]
+    fn parse_transaction() -> crate::Result<()> {
+        let id = Uuid::now_v7();
+        let account_id = Uuid::now_v7();
+        let category_id = Uuid::now_v7();
+        let date = date(1999, 1, 1);
+        let value = format!("{id}|{date}|{account_id}|{category_id}");
+        let transaction = Transaction::parse(&value)?;
+        assert_eq!(transaction.id, id);
+        assert_eq!(transaction.account_id, account_id);
+        assert_eq!(transaction.category_id.unwrap(), category_id);
+        assert_eq!(transaction.date, date);
+        Ok(())
+    }
+
+    #[test]
+    fn parse_transaction_empty_category() -> crate::Result<()> {
+        let id = Uuid::now_v7();
+        let account_id = Uuid::now_v7();
+        let date = date(1999, 1, 1);
+        let value = format!("{id}|{date}|{account_id}|");
+        let transaction = Transaction::parse(&value)?;
+        assert_eq!(transaction.id, id);
+        assert_eq!(transaction.account_id, account_id);
+        assert!(transaction.category_id.is_none());
+        assert_eq!(transaction.date, date);
+        Ok(())
+    }
+
+    #[test]
+    fn transaction_to_string() -> crate::Result<()> {
+        let category_id = Uuid::now_v7();
+        let transaction = Transaction {
+            category_id: Some(category_id),
+            ..Default::default()
+        };
+        let value = format!(
+            "{}|{}|{}|{}",
+            transaction.id, transaction.date, transaction.account_id, category_id
+        );
+        assert_eq!(transaction.to_string(), value);
+        Ok(())
+    }
 
     #[test]
     fn save_to_file() -> crate::Result<()> {

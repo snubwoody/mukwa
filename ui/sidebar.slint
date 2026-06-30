@@ -1,0 +1,60 @@
+import {
+    StandardListView,
+    VerticalBox,
+    ListView,
+    Button,
+    Palette,
+} from "std-widgets.slint";
+import { Colors } from "./colors.slint";
+import { Account, State } from "./globals.slint";
+
+
+export component Sidebar inherits VerticalLayout {
+    in-out property <[Account]> accounts;
+    width: 350px;
+    spacing: 8px;
+    alignment: start;
+
+    HorizontalLayout {
+        alignment: space-between;
+        Text {
+            text: "Accounts";
+            color: black;
+            font-weight: 600;
+        }
+
+        Text {
+            text: "0.00";
+            color: black;
+            font-weight: 600;
+        }
+    }
+
+    VerticalLayout {
+        Flickable {
+            max-height: 250px;
+            viewport-height: content.preferred-height;
+
+            content := VerticalLayout {
+                for account in accounts: HorizontalLayout {
+                    alignment: space-between;
+                    Text {
+                        text: account.name;
+                        color: black;
+                    }
+
+                    Text {
+                        text: account.balance;
+                        color: Colors.textBody;
+                    }
+                }
+            }
+        }
+    }
+
+    Button {
+        text: @tr("Create account");
+        primary: true;
+        clicked => State.create_account("New account");
+    }
+}
