@@ -1,0 +1,56 @@
+import { Colors } from "../colors.slint";
+import { FocusBorder } from "./focus-border.slint";
+
+export component Button inherits Rectangle {
+    in property <string> text;
+    in property <bool> enabled <=> touch-area.enabled;
+    out property <bool> has-focus: focus-scope.has-focus;
+    callback clicked <=> touch-area.clicked;
+
+    accessible-label: text;
+    accessible-enabled: true;
+    accessible-role: button;
+
+    accessible-action-default() => {
+        clicked()
+    }
+
+    forward-focus: focus-scope;
+    background: Colors.surfacePrimary;
+    border-radius: 4px;
+
+    HorizontalLayout {
+        padding-right: 12px;
+        padding-left: 12px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+        alignment: center;
+
+        Text {
+            text: text;
+            color: white;
+        }
+    }
+
+    touch-area := TouchArea {
+        width: parent.width;
+        height: parent.height;
+    }
+
+    focus-scope := FocusScope {
+        x: 0;
+        width: 0; // Do not react on clicks
+
+        key-pressed(event) => {
+            if (event.text == " " || event.text == "\n") {
+                clicked();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    if root.has-focus: FocusBorder {
+        border-radius: root.border-radius;
+    }
+}

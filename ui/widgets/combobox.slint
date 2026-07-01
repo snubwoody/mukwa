@@ -1,0 +1,122 @@
+import { Colors } from "../colors.slint";
+import { ListView } from "std-widgets.slint";
+import { FocusBorder } from "./focus-border.slint";
+
+export component ComboBox {
+    in property <[{ value: string, text: string}]> options;
+    in-out property <int> current-index: 0;
+    in-out property <string> current-value: options[current-index].value;
+    in property <bool> enabled;
+
+    public function select(index: int) {
+        current-index = index;
+    }
+
+    public function move-selection-up() {
+        root.select(Math.max(root.current-index - 1, 0));
+    }
+
+    public function move-selection-down() {
+        root.select(Math.min(root.current-index + 1, root.options.length - 1));
+    }
+
+    accessible-role: combobox;
+    accessible-enabled: enabled;
+    accessible-expandable: true;
+    // TODO: might be better to use the text?
+    accessible-value: current-value;
+    forward-focus: focus-scope;
+
+    focus-scope := FocusScope {
+        enabled: root.enabled;
+        key-pressed(event) => {
+            if (!self.enabled) {
+                return reject;
+            }
+            if (event.text == " " || event.text == "\n") {
+//                clicked();
+                return accept;
+            }
+            return reject;
+        }
+
+        touch-area := TouchArea {
+            clicked => {
+                popup.show();
+            }
+        }
+    }
+
+    background := Rectangle {
+        background: Colors.neutral50;
+        border-color: Colors.blue500;
+        border-width: 1px;
+        vertical-stretch: 1;
+    }
+
+    // TODO: clicking space should open
+    Text {
+        text: options[current-index].text;
+        color: Colors.textBody;
+        horizontal-alignment: left;
+        vertical-alignment: center;
+        overflow: elide;
+        horizontal-stretch: 1;
+        vertical-stretch: 1;
+    }
+
+    popup := PopupWindow {
+        width: root.width;
+        y: root.y + background.height;
+
+        popup-background := Rectangle {
+            background: white;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Colors.neutral50;
+        }
+
+        close-policy: close-on-click-outside;
+
+        forward-focus: popup-fs;
+
+        popup-fs := FocusScope {
+            key-pressed(event) => {
+                if (!self.enabled) {
+                    return reject;
+                }
+                if (event.text == Key.UpArrow) {
+                    root.move-selection-up();
+                    return accept;
+                } else if (event.text == Key.DownArrow) {
+                    root.move-selection-down();
+                    return accept;
+                } else if (event.text == Key.Return || event.text == Key.Escape) {
+                    popup.close();
+                    return accept;
+                }
+                return reject;
+            }
+
+            ListView {
+                for option[i] in options: Rectangle {
+                    background: current-index == i ? Colors.neutral50 : white;
+                    height: 24px;
+                    TouchArea {
+                        clicked => {
+                            root.select(i);
+                            popup.close();
+                        }
+                    }
+
+                    Text {
+                        text: option.text;
+                        color: Colors.textBody;
+                    }
+                }
+            }
+        }
+    }
+
+    if focus-scope.has-focus: FocusBorder { }
+}
