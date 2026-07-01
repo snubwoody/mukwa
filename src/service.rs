@@ -9,6 +9,7 @@ use std::io::Write;
 use std::iter::Peekable;
 use std::path::{Path, PathBuf};
 use std::str::{FromStr, Lines};
+use tracing::info;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -140,6 +141,13 @@ impl From<&Transaction> for ui::Transaction {
     }
 }
 
+#[derive(Clone, PartialEq, PartialOrd, Default)]
+pub struct UpdateTransactionOpts {
+    /// The transaction id.
+    pub id: Uuid,
+    pub account_id: Option<Uuid>,
+}
+
 // TODO: use buffered writer <https://doc.rust-lang.org/std/io/struct.BufWriter.html>
 #[derive(Clone, Default)]
 pub struct Service {
@@ -181,6 +189,30 @@ impl Service {
         Ok(account)
     }
 
+    pub fn update_transaction(
+        &mut self,
+        opts: UpdateTransactionOpts,
+    ) -> crate::Result<Transaction> {
+        let (index, transaction) = self
+            .transactions
+            .iter()
+            .enumerate()
+            .find(|(_, t)| t.id == opts.id)
+            .ok_or(Error::not_found(&format!(
+                "Transaction ({}) not found",
+                opts.id
+            )))?;
+
+        let mut new_transaction = transaction.clone();
+        if let Some(account_id) = opts.account_id {
+            new_transaction.account_id = account_id;
+        }
+
+        self.transactions[index] = new_transaction;
+        self.write()?;
+        Ok(self.transactions[index].clone())
+    }
+
     pub fn create_transaction(&mut self) -> crate::Result<Transaction> {
         let account_id = match self.accounts.first() {
             Some(account) => account.id,
@@ -207,6 +239,7 @@ impl Service {
     }
 
     pub fn read(&mut self) -> crate::Result<()> {
+        info!("Loading data from {:?}", self.path);
         let data = fs::read_to_string(&self.path)?;
 
         let mut lines = data.lines().peekable();
@@ -283,10 +316,12 @@ impl Service {
     }
 
     pub fn write(&self) -> crate::Result<()> {
+        // TODO: truncate
         let mut file = OpenOptions::new()
             .create(true)
             .write(true)
             .read(true)
+            .truncate(true)
             .open(&self.path)?;
 
         writeln!(file, "[Accounts]")?;
