@@ -3,70 +3,161 @@ import {
     VerticalBox,
     ListView,
     Palette,
+    LineEdit,
 } from "std-widgets.slint";
 import { Colors } from "./colors.slint";
 import { Account, Transaction, State } from "./globals.slint";
 import { Sidebar } from "./sidebar.slint";
 export { Account, Transaction, State } from "./globals.slint";
-import { Button } from "./widgets.slint";
+import { Button, ComboBox } from "./widgets.slint";
 
+component EditingRow inherits VerticalLayout {
+    in property <Transaction> transaction;
+    out property <string> selected-account-id: transaction.account-id;
+    out property <string> selected-amount: transaction.amount;
+    callback cancel();
+    callback confirm();
+
+    HorizontalLayout {
+        vertical-stretch: 0;
+        cross-axis-alignment: center;
+
+        Text {
+            text: transaction.date;
+            color: Colors.textBody;
+        }
+
+        ComboBox {
+            options: State.account-options;
+            changed(value) => {
+                selected-account-id = value;
+            }
+        }
+
+        Text {
+            text: State.get_account_name(transaction.category-id);
+            color: Colors.textBody;
+        }
+
+        Rectangle {
+            border-width: 1px;
+            border-color: Colors.blue500;
+            width: 100px;
+            TextInput {
+                text: transaction.amount;
+                color: Colors.textBody;
+            }
+        }
+    }
+
+    HorizontalLayout {
+        alignment: end;
+        spacing: 8px;
+        Button {
+            text: "Cancel";
+            clicked => cancel();
+        }
+
+        Button {
+            text: "Confirm";
+            clicked => confirm();
+        }
+    }
+}
+
+
+// TODO: add focus scope, and make sure it continues from the current index
 export component TransactionTable inherits VerticalLayout {
     in property <[string]> columns;
     in property <[Transaction]> transactions;
+    property <int> active-row: -1;
     vertical-stretch: 0;
 
-    Button {
-        text: @tr("Add transaction");
-        clicked => State.create_transaction();
+    HorizontalLayout {
+        alignment: end;
+        vertical-stretch: 0;
+
+        Button {
+            text: @tr("Add transaction");
+            clicked => State.create_transaction();
+        }
     }
 
     VerticalLayout {
-        vertical-stretch: 0;
         HorizontalLayout {
-            vertical-stretch: 0;
             for column in columns: Text {
                 text: column;
                 color: Colors.textBody;
             }
         }
 
-        for transaction in transactions: background := Rectangle {
-            property <bool> has-hover <=> touch-area.has-hover;
-            touch-area := TouchArea { }
+        // TODO: use focus scope and deactive when it loses focus
+        // - Use accessibilty
+        ListView {
+            for transaction[i] in transactions: Rectangle {
+                out property <bool> is-active: active-row == i;
 
-            states [
-                hovered when touch-area.has-hover: {
-                    background: Colors.neutral25;
-                    in {
-                        animate background { duration: 50ms; }
+                touch-area := TouchArea {
+                    clicked => {
+                        if (is-active) {
+                            active-row = -1;
+                        } else {
+                            active-row = i;
+                        }
                     }
-                    out {
-                        animate background { duration: 50ms; }
+                }
+
+                states [
+                    active when is-active: {
+                        background: Colors.blue50;
+                    }
+                    hovered when touch-area.has-hover: {
+                        background: Colors.neutral25;
+                        in {
+                            animate background { duration: 50ms; }
+                        }
+                        out {
+                            animate background { duration: 50ms; }
+                        }
+                    }
+                ]
+
+                HorizontalLayout {
+                    vertical-stretch: 0;
+                    visible: !is-active;
+                    cross-axis-alignment: center;
+
+                    Text {
+                        text: transaction.date;
+                        color: Colors.textBody;
+                    }
+
+                    Text {
+                        text: State.get_account_name(transaction.account-id);
+                        color: Colors.textBody;
+                    }
+
+                    Text {
+                        text: State.get_account_name(transaction.category-id);
+                        color: Colors.textBody;
+                    }
+
+                    Text {
+                        text: transaction.amount;
+                        color: Colors.textBody;
                     }
                 }
-            ]
 
-            row := HorizontalLayout {
-                vertical-stretch: 0;
-
-                Text {
-                    text: transaction.date;
-                    color: Colors.textBody;
-                }
-
-                Text {
-                    text: State.get_account_name(transaction.account-id);
-                    color: Colors.textBody;
-                }
-
-                Text {
-                    text: State.get_account_name(transaction.category-id);
-                    color: Colors.textBody;
-                }
-
-                Text {
-                    text: transaction.amount;
-                    color: Colors.textBody;
+                edit-row := EditingRow {
+                    visible: is-active;
+                    transaction: transaction;
+                    confirm => {
+                        State.update_transaction(transaction.id, edit-row.selected-account-id, edit-row.selected-amount);
+                        active-row = -1;
+                    }
+                    cancel => {
+                        active-row = -1;
+                    }
                 }
             }
         }

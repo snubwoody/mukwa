@@ -8,6 +8,8 @@ export component ComboBox {
     in-out property <string> current-value: options[current-index].value;
     in property <bool> enabled;
 
+    callback changed(value: string);
+
     public function select(index: int) {
         current-index = index;
     }
@@ -92,6 +94,7 @@ export component ComboBox {
                     root.move-selection-down();
                     return accept;
                 } else if (event.text == Key.Return || event.text == Key.Escape) {
+                    changed(options[current-index].value);
                     popup.close();
                     return accept;
                 }
