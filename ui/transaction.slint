@@ -1,0 +1,74 @@
+import {
+    StandardListView,
+    VerticalBox,
+    ListView,
+    Palette,
+} from "std-widgets.slint";
+import { Colors } from "./colors.slint";
+import { Account, Transaction, State } from "./globals.slint";
+import { Sidebar } from "./sidebar.slint";
+export { Account, Transaction, State } from "./globals.slint";
+import { Button } from "./widgets.slint";
+
+export component TransactionTable inherits VerticalLayout {
+    in property <[string]> columns;
+    in property <[Transaction]> transactions;
+    vertical-stretch: 0;
+
+    Button {
+        text: @tr("Add transaction");
+        clicked => State.create_transaction();
+    }
+
+    VerticalLayout {
+        vertical-stretch: 0;
+        HorizontalLayout {
+            vertical-stretch: 0;
+            for column in columns: Text {
+                text: column;
+                color: Colors.textBody;
+            }
+        }
+
+        for transaction in transactions: background := Rectangle {
+            property <bool> has-hover <=> touch-area.has-hover;
+            touch-area := TouchArea { }
+
+            states [
+                hovered when touch-area.has-hover: {
+                    background: Colors.neutral25;
+                    in {
+                        animate background { duration: 50ms; }
+                    }
+                    out {
+                        animate background { duration: 50ms; }
+                    }
+                }
+            ]
+
+            row := HorizontalLayout {
+                vertical-stretch: 0;
+
+                Text {
+                    text: transaction.date;
+                    color: Colors.textBody;
+                }
+
+                Text {
+                    text: State.get_account_name(transaction.account-id);
+                    color: Colors.textBody;
+                }
+
+                Text {
+                    text: State.get_account_name(transaction.category-id);
+                    color: Colors.textBody;
+                }
+
+                Text {
+                    text: transaction.amount;
+                    color: Colors.textBody;
+                }
+            }
+        }
+    }
+}
