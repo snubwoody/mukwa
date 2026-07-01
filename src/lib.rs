@@ -15,6 +15,7 @@ mod ui {
     slint::include_modules!();
 }
 
+// TODO: use skia renderer
 pub fn run() -> Result<()> {
     let mut service = Service::open("app.data");
     service.read()?;

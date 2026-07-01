@@ -2,13 +2,13 @@ import {
     StandardListView,
     VerticalBox,
     ListView,
-    Button,
     Palette,
 } from "std-widgets.slint";
 import { Colors } from "./colors.slint";
 import { Account, Transaction, State } from "./globals.slint";
 import { Sidebar } from "./sidebar.slint";
 export { Account, Transaction, State } from "./globals.slint";
+import { Button } from "./widgets.slint";
 
 component TransactionTable inherits VerticalLayout {
     in property <[string]> columns;
@@ -16,9 +16,7 @@ component TransactionTable inherits VerticalLayout {
     vertical-stretch: 0;
 
     Button {
-        vertical-stretch: 0;
         text: @tr("Add transaction");
-        primary: true;
         clicked => State.create_transaction();
     }
 

@@ -146,8 +146,6 @@ pub struct Service {
     transactions: Vec<Transaction>,
 }
 
-// TODO: add backup
-// TODO: parser struct
 impl Service {
     pub fn open(path: impl AsRef<Path>) -> Service {
         Service {
