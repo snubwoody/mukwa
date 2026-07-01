@@ -1,5 +1,6 @@
 use crate::{ui, Error};
 use jiff::civil::Date;
+use jiff::Zoned;
 use slint::SharedString;
 use std::fmt::Display;
 use std::fs;
@@ -117,6 +118,7 @@ impl From<Transaction> for ui::Transaction {
             account_id: value.account_id.to_string().into(),
             category_id: category_id.into(),
             date: value.date.to_string().into(),
+            amount: SharedString::from("0.00"),
         }
     }
 }
@@ -133,12 +135,13 @@ impl From<&Transaction> for ui::Transaction {
             account_id: value.account_id.to_string().into(),
             category_id: category_id.into(),
             date: value.date.to_string().into(),
+            amount: SharedString::from("0.00"),
         }
     }
 }
 
-// TODO: use buffered writer
-#[derive(Clone)]
+// TODO: use buffered writer <https://doc.rust-lang.org/std/io/struct.BufWriter.html>
+#[derive(Clone, Default)]
 pub struct Service {
     path: PathBuf,
     accounts: Vec<Account>,
@@ -176,6 +179,23 @@ impl Service {
         self.accounts.push(account.clone());
         self.write()?;
         Ok(account)
+    }
+
+    pub fn create_transaction(&mut self) -> crate::Result<Transaction> {
+        let account_id = match self.accounts.first() {
+            Some(account) => account.id,
+            None => Uuid::now_v7(),
+        };
+
+        let transaction = Transaction {
+            date: Zoned::now().date(),
+            account_id,
+            id: Uuid::now_v7(),
+            category_id: None,
+        };
+        self.transactions.push(transaction.clone());
+        self.write()?;
+        Ok(transaction)
     }
 
     pub fn get_account(&self, id: Uuid) -> Option<&Account> {
@@ -241,10 +261,7 @@ impl Service {
     }
 
     fn is_section_header(&self, value: &str) -> bool {
-        match value {
-            "[Accounts]" | "[Categories]" | "[Transactions]" => true,
-            _ => false,
-        }
+        matches!(value, "[Accounts]" | "[Categories]" | "[Transactions]")
     }
 
     fn parse_categories(&mut self, lines: &mut Peekable<Lines>) -> crate::Result<()> {
@@ -272,19 +289,19 @@ impl Service {
             .read(true)
             .open(&self.path)?;
 
-        write!(file, "[Accounts]\n")?;
+        writeln!(file, "[Accounts]")?;
         for account in &self.accounts {
-            write!(file, "{}|{}\n", account.id, account.name)?;
+            writeln!(file, "{}|{}", account.id, account.name)?;
         }
 
-        write!(file, "[Categories]\n")?;
+        writeln!(file, "[Categories]")?;
         for category in &self.categories {
-            write!(file, "{}|{}\n", category.id, category.title)?;
+            writeln!(file, "{}|{}", category.id, category.title)?;
         }
 
-        write!(file, "[Transactions]\n")?;
+        writeln!(file, "[Transactions]")?;
         for transaction in &self.transactions {
-            write!(file, "{transaction}\n",)?;
+            writeln!(file, "{transaction}",)?;
         }
 
         Ok(())
@@ -386,6 +403,29 @@ mod test {
         assert_eq!(account.name, "Savings");
         assert_eq!(category1.title, "Transport");
         assert_eq!(category2.title, "Groceries");
+        Ok(())
+    }
+
+    #[test]
+    fn create_transaction_picks_first_account() -> crate::Result<()> {
+        let dir = tempdir()?;
+        let path = dir.path().join("app.data");
+        let mut service = Service::open(&path);
+
+        let account = service.create_account("Account")?;
+        let transaction = service.create_transaction()?;
+
+        assert_eq!(transaction.account_id, account.id);
+        Ok(())
+    }
+
+    #[test]
+    fn create_transaction_with_no_accounts() -> crate::Result<()> {
+        let dir = tempdir()?;
+        let path = dir.path().join("app.data");
+        let mut service = Service::open(&path);
+
+        let _ = service.create_transaction()?;
         Ok(())
     }
 }
