@@ -5,8 +5,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("Sqlite error: {0}")]
-    RusqliteError(#[from] rusqlite::Error),
     #[error("IO error: {0}")]
     IoError(#[from] io::Error),
     #[error(transparent)]
