@@ -1,4 +1,4 @@
-# Finance app
+# Mukwa
 
 A free personal finance app.
 
