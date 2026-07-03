@@ -1,7 +1,7 @@
-use crate::{ui, Error};
+use crate::{ui, Error, Money};
 use jiff::civil::Date;
 use jiff::Zoned;
-use slint::SharedString;
+use slint::{SharedString, ToSharedString};
 use std::fmt::Display;
 use std::fs;
 use std::fs::OpenOptions;
@@ -68,6 +68,7 @@ pub struct Transaction {
     pub account_id: Uuid,
     pub category_id: Option<Uuid>,
     pub date: Date,
+    pub amount: Money,
 }
 
 impl Transaction {
@@ -81,12 +82,14 @@ impl Transaction {
         let account_id = Uuid::parse_str(parts[2])
             .map_err(|_| Error::ParseError("Invalid account id".to_string()))?;
         let category_id = Uuid::parse_str(parts[3]).ok();
+        let amount = Money::from_scaled(parts[4].parse::<i64>()?);
 
         let transaction = Transaction {
             id,
             account_id,
             date,
             category_id,
+            amount,
         };
 
         Ok(transaction)
@@ -101,8 +104,12 @@ impl Display for Transaction {
         };
         write!(
             f,
-            "{}|{}|{}|{}",
-            self.id, self.date, self.account_id, category_id
+            "{}|{}|{}|{}|{}",
+            self.id,
+            self.date,
+            self.account_id,
+            category_id,
+            self.amount.inner()
         )
     }
 }
@@ -115,11 +122,11 @@ impl From<Transaction> for ui::Transaction {
         };
 
         Self {
-            id: value.id.to_string().into(),
-            account_id: value.account_id.to_string().into(),
-            category_id: category_id.into(),
-            date: value.date.to_string().into(),
-            amount: SharedString::from("0.00"),
+            id: value.id.to_shared_string(),
+            account_id: value.account_id.to_shared_string(),
+            category_id: category_id.to_shared_string(),
+            date: value.date.to_shared_string(),
+            amount: value.to_shared_string(),
         }
     }
 }
@@ -136,7 +143,7 @@ impl From<&Transaction> for ui::Transaction {
             account_id: value.account_id.to_string().into(),
             category_id: category_id.into(),
             date: value.date.to_string().into(),
-            amount: SharedString::from("0.00"),
+            amount: value.amount.to_shared_string(),
         }
     }
 }
@@ -146,6 +153,7 @@ pub struct UpdateTransactionOpts {
     /// The transaction id.
     pub id: Uuid,
     pub account_id: Option<Uuid>,
+    pub amount: Option<Money>,
 }
 
 // TODO: use buffered writer <https://doc.rust-lang.org/std/io/struct.BufWriter.html>
@@ -208,6 +216,10 @@ impl Service {
             new_transaction.account_id = account_id;
         }
 
+        if let Some(amount) = opts.amount {
+            new_transaction.amount = amount;
+        }
+
         self.transactions[index] = new_transaction;
         self.write()?;
         Ok(self.transactions[index].clone())
@@ -224,6 +236,7 @@ impl Service {
             account_id,
             id: Uuid::now_v7(),
             category_id: None,
+            amount: Money::ZERO,
         };
         self.transactions.push(transaction.clone());
         self.write()?;
@@ -316,7 +329,6 @@ impl Service {
     }
 
     pub fn write(&self) -> crate::Result<()> {
-        // TODO: truncate
         let mut file = OpenOptions::new()
             .create(true)
             .write(true)
@@ -356,12 +368,14 @@ mod test {
         let account_id = Uuid::now_v7();
         let category_id = Uuid::now_v7();
         let date = date(1999, 1, 1);
-        let value = format!("{id}|{date}|{account_id}|{category_id}");
+        let amount = Money::new(200);
+        let value = format!("{id}|{date}|{account_id}|{category_id}|{}", amount.inner());
         let transaction = Transaction::parse(&value)?;
         assert_eq!(transaction.id, id);
         assert_eq!(transaction.account_id, account_id);
         assert_eq!(transaction.category_id.unwrap(), category_id);
         assert_eq!(transaction.date, date);
+        assert_eq!(transaction.amount, amount);
         Ok(())
     }
 
@@ -370,7 +384,7 @@ mod test {
         let id = Uuid::now_v7();
         let account_id = Uuid::now_v7();
         let date = date(1999, 1, 1);
-        let value = format!("{id}|{date}|{account_id}|");
+        let value = format!("{id}|{date}|{account_id}||0");
         let transaction = Transaction::parse(&value)?;
         assert_eq!(transaction.id, id);
         assert_eq!(transaction.account_id, account_id);
@@ -382,13 +396,19 @@ mod test {
     #[test]
     fn transaction_to_string() -> crate::Result<()> {
         let category_id = Uuid::now_v7();
+        let amount = Money::new(600);
         let transaction = Transaction {
             category_id: Some(category_id),
+            amount,
             ..Default::default()
         };
         let value = format!(
-            "{}|{}|{}|{}",
-            transaction.id, transaction.date, transaction.account_id, category_id
+            "{}|{}|{}|{}|{}",
+            transaction.id,
+            transaction.date,
+            transaction.account_id,
+            category_id,
+            amount.inner()
         );
         assert_eq!(transaction.to_string(), value);
         Ok(())

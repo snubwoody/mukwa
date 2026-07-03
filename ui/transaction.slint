@@ -10,6 +10,7 @@ import { Account, Transaction, State } from "./globals.slint";
 import { Sidebar } from "./sidebar.slint";
 export { Account, Transaction, State } from "./globals.slint";
 import { Button, ComboBox } from "./widgets.slint";
+import { FocusBorder } from "widgets/focus-border.slint";
 
 component EditingRow inherits VerticalLayout {
     in property <Transaction> transaction;
@@ -17,6 +18,8 @@ component EditingRow inherits VerticalLayout {
     out property <string> selected-amount: transaction.amount;
     callback cancel();
     callback confirm();
+
+    spacing: 8px;
 
     HorizontalLayout {
         vertical-stretch: 0;
@@ -34,18 +37,36 @@ component EditingRow inherits VerticalLayout {
             }
         }
 
-        Text {
-            text: State.get_account_name(transaction.category-id);
-            color: Colors.textBody;
+        Rectangle {
+            horizontal-stretch: 1;
+            Text {
+                text: State.get_account_name(transaction.category-id);
+                color: Colors.textBody;
+            }
         }
 
         Rectangle {
             border-width: 1px;
             border-color: Colors.blue500;
-            width: 100px;
-            TextInput {
+            clip: true;
+            width: 250px;
+            height: 36px;
+            border-radius: 4px;
+            background: white;
+            money-input := TextInput {
                 text: transaction.amount;
                 color: Colors.textBody;
+                input-type: decimal;
+                edited => {
+                }
+
+                key-pressed(event) => {
+                    if (event.text == Key.Escape || event.text == Key.Return) {
+                        selected-amount = money-input.text;
+                        return accept;
+                    }
+                    return reject;
+                }
             }
         }
     }
@@ -71,11 +92,9 @@ export component TransactionTable inherits VerticalLayout {
     in property <[string]> columns;
     in property <[Transaction]> transactions;
     property <int> active-row: -1;
-    vertical-stretch: 0;
 
     HorizontalLayout {
         alignment: end;
-        vertical-stretch: 0;
 
         Button {
             text: @tr("Add transaction");
@@ -85,31 +104,55 @@ export component TransactionTable inherits VerticalLayout {
 
     VerticalLayout {
         HorizontalLayout {
-            for column in columns: Text {
-                text: column;
-                color: Colors.textBody;
+            for column in columns: Rectangle {
+                Text {
+                    width: 100%;
+                    horizontal-alignment: start;
+                    text: column;
+                    color: Colors.textBody;
+                }
             }
         }
 
-        // TODO: use focus scope and deactive when it loses focus
+        // TODO: focus when clicked
         // - Use accessibilty
         ListView {
-            for transaction[i] in transactions: Rectangle {
+            for transaction[i] in transactions: row := Rectangle {
                 out property <bool> is-active: active-row == i;
+                forward-focus: focus-scope;
 
-                touch-area := TouchArea {
-                    clicked => {
-                        if (is-active) {
-                            active-row = -1;
-                        } else {
+                focus-scope := FocusScope {
+                    key-pressed(event) => {
+                        if (event.text == Key.Space) {
                             active-row = i;
+                            return accept;
+                        }
+                        if (event.text == Key.Escape) {
+                            active-row = -1;
+                            return accept;
+                        }
+                        return reject;
+                    }
+                    touch-area := TouchArea {
+                        clicked => {
+                            if (!is-active) {
+                                active-row = i;
+                            }
                         }
                     }
                 }
 
+                if focus-scope.has-focus: FocusBorder { }
+
                 states [
                     active when is-active: {
                         background: Colors.blue50;
+                        in {
+                            animate background { duration: 50ms; }
+                        }
+                        out {
+                            animate background { duration: 50ms; }
+                        }
                     }
                     hovered when touch-area.has-hover: {
                         background: Colors.neutral25;
@@ -127,24 +170,44 @@ export component TransactionTable inherits VerticalLayout {
                     visible: !is-active;
                     cross-axis-alignment: center;
 
-                    Text {
-                        text: transaction.date;
-                        color: Colors.textBody;
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        Text {
+                            width: 100%;
+                            horizontal-alignment: start;
+                            text: transaction.date;
+                            color: Colors.textBody;
+                        }
                     }
 
-                    Text {
-                        text: State.get_account_name(transaction.account-id);
-                        color: Colors.textBody;
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        Text {
+                            width: 100%;
+                            horizontal-alignment: start;
+                            text: State.get_account_name(transaction.account-id);
+                            color: Colors.textBody;
+                        }
                     }
 
-                    Text {
-                        text: State.get_account_name(transaction.category-id);
-                        color: Colors.textBody;
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        Text {
+                            width: 100%;
+                            horizontal-alignment: start;
+                            text: State.get_account_name(transaction.category-id);
+                            color: Colors.textBody;
+                        }
                     }
 
-                    Text {
-                        text: transaction.amount;
-                        color: Colors.textBody;
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        Text {
+                            width: 100%;
+                            horizontal-alignment: start;
+                            text: transaction.amount;
+                            color: Colors.textBody;
+                        }
                     }
                 }
 

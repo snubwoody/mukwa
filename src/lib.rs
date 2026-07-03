@@ -1,13 +1,16 @@
 pub mod error;
+mod money;
 mod service;
 
 pub use error::Error;
 pub use error::Result;
+pub use money::Money;
 use std::cell::RefCell;
 
 use crate::service::{Service, UpdateTransactionOpts};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
+use std::str::FromStr;
 use tracing::{info, warn};
 use uuid::Uuid;
 
@@ -29,6 +32,7 @@ impl AppState {
     pub fn new(service: Service) -> AppState {
         let transactions_list: Vec<ui::Transaction> =
             service.transactions().iter().map(|t| t.into()).collect();
+
         let transactions_model = Rc::new(VecModel::from(transactions_list));
         let account_list: Vec<ui::Account> = service.accounts().iter().map(|a| a.into()).collect();
         let account_options: Vec<_> = account_list
@@ -66,9 +70,11 @@ impl AppState {
 
     pub fn update_transaction(&mut self, id: &str, account_id: &str, amount: &str) -> Result<()> {
         let account_id = Uuid::parse_str(account_id).ok();
+        let amount = Money::from_str(amount).ok();
         let opts = UpdateTransactionOpts {
             id: Uuid::parse_str(id)?,
             account_id,
+            amount,
         };
         let transaction = self.service.borrow_mut().update_transaction(opts)?;
         let transactions: Vec<ui::Transaction> = self
