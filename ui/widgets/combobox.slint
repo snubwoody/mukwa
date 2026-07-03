@@ -29,14 +29,14 @@ export component ComboBox {
     accessible-value: current-value;
     forward-focus: focus-scope;
 
+    // TODO: arrow keys should scroll
     focus-scope := FocusScope {
         enabled: root.enabled;
         key-pressed(event) => {
             if (!self.enabled) {
                 return reject;
             }
-            if (event.text == " " || event.text == "\n") {
-//                clicked();
+            if (event.text == Key.Space || event.text == Key.Return) {
                 return accept;
             }
             return reject;
@@ -50,26 +50,30 @@ export component ComboBox {
     }
 
     background := Rectangle {
-        background: Colors.neutral50;
+        background: white;
         border-color: Colors.blue500;
         border-width: 1px;
+        border-radius: 4px;
         vertical-stretch: 1;
+        clip: true;
+        Text {
+            text: options[current-index].text;
+            color: Colors.textBody;
+            horizontal-alignment: left;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+            vertical-stretch: 1;
+        }
     }
 
     // TODO: clicking space should open
-    Text {
-        text: options[current-index].text;
-        color: Colors.textBody;
-        horizontal-alignment: left;
-        vertical-alignment: center;
-        overflow: elide;
-        horizontal-stretch: 1;
-        vertical-stretch: 1;
-    }
+
 
     popup := PopupWindow {
-        width: root.width;
+        width: max(root.width,250px);
         y: root.y + background.height;
+        height: 250px;
 
         popup-background := Rectangle {
             background: white;
@@ -101,6 +105,7 @@ export component ComboBox {
                 return reject;
             }
 
+            // TODO: change background on hover
             ListView {
                 for option[i] in options: Rectangle {
                     background: current-index == i ? Colors.neutral50 : white;
