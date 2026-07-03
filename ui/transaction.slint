@@ -93,6 +93,7 @@ component TransactionRow inherits Rectangle {
     callback select-row(int);
 
     forward-focus: focus-scope;
+    height: is-active ? edit-row.preferred-height : row.preferred-height;
 
     focus-scope := FocusScope {
         key-pressed(event) => {
@@ -136,8 +137,9 @@ component TransactionRow inherits Rectangle {
         }
     ]
 
-    HorizontalLayout {
+    row := HorizontalLayout {
         vertical-stretch: 0;
+        padding: 8px;
         visible: !is-active;
         cross-axis-alignment: center;
 
