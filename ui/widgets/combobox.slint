@@ -56,9 +56,12 @@ export component ComboBox {
         border-radius: 4px;
         vertical-stretch: 1;
         clip: true;
-        Text {
+        height: text.preferred-height + 8px;
+
+        text := Text {
             text: options[current-index].text;
             color: Colors.textBody;
+            width: 100%;
             horizontal-alignment: left;
             vertical-alignment: center;
             overflow: elide;

@@ -19,6 +19,7 @@ component EditingRow inherits VerticalLayout {
     callback cancel();
     callback confirm();
 
+    padding: 8px;
     spacing: 8px;
 
     HorizontalLayout {
@@ -26,6 +27,8 @@ component EditingRow inherits VerticalLayout {
         cross-axis-alignment: center;
 
         Text {
+            horizontal-stretch: 1;
+            horizontal-alignment: start;
             text: transaction.date;
             color: Colors.textBody;
         }
@@ -229,15 +232,28 @@ export component TransactionTable inherits VerticalLayout {
             }
         }
 
+        Rectangle {
+            width: 100%;
+            height: 2px;
+            background: Colors.neutral50;
+        }
         // TODO: focus when clicked
         // - Use accessibilty
         ListView {
-            for transaction[i] in transactions: TransactionRow {
-                is-active: active-row == i;
-                transaction: transaction;
-                index: i;
-                select-row(index) => {
-                    select-row(index)
+            for transaction[i] in transactions: VerticalLayout {
+                TransactionRow {
+                    is-active: active-row == i;
+                    transaction: transaction;
+                    index: i;
+                    select-row(index) => {
+                        select-row(index)
+                    }
+                }
+
+                Rectangle {
+                    width: 100%;
+                    height: 2px;
+                    background: Colors.neutral50;
                 }
             }
         }
