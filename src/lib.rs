@@ -1,8 +1,10 @@
 pub mod error;
+mod money;
 mod service;
 
 pub use error::Error;
 pub use error::Result;
+pub use money::Money;
 use std::cell::RefCell;
 
 use crate::service::{Service, UpdateTransactionOpts};

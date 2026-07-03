@@ -1,4 +1,5 @@
 use std::io;
+use std::num::ParseFloatError;
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -9,6 +10,8 @@ pub enum Error {
     IoError(#[from] io::Error),
     #[error(transparent)]
     UuidError(#[from] uuid::Error),
+    #[error(transparent)]
+    ParseFloatError(#[from] ParseFloatError),
     #[error("Parse error: {0}")]
     ParseError(String),
     #[error("{0}")]
