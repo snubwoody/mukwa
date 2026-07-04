@@ -11,6 +11,7 @@ import { Sidebar } from "./sidebar.slint";
 export { Account, Transaction, State } from "./globals.slint";
 import { Button, ComboBox } from "./widgets.slint";
 import { FocusBorder } from "widgets/focus-border.slint";
+import { Calendar } from "./widgets/calendar.slint";
 
 component EditingRow inherits VerticalLayout {
     in property <Transaction> transaction;
@@ -26,11 +27,33 @@ component EditingRow inherits VerticalLayout {
         vertical-stretch: 0;
         cross-axis-alignment: center;
 
-        Text {
-            horizontal-stretch: 1;
-            horizontal-alignment: start;
-            text: transaction.date;
-            color: Colors.textBody;
+        touch-area := TouchArea {
+            Text {
+                horizontal-stretch: 1;
+                horizontal-alignment: start;
+                text: transaction.date;
+                color: Colors.textBody;
+            }
+
+            clicked => {
+                calendar-popup.show();
+            }
+        }
+
+        calendar-popup := PopupWindow {
+            x: touch-area.x;
+            y: touch-area.y;
+
+            width: 250px;
+            height: 250px;
+
+            close-policy: close-on-click-outside;
+
+            calendar := Calendar {
+                changed => {
+                    calendar-popup.close();
+                }
+            }
         }
 
         ComboBox {

@@ -1,6 +1,6 @@
-use crate::{ui, Error, Money};
-use jiff::civil::Date;
+use crate::{Error, Money, ui};
 use jiff::Zoned;
+use jiff::civil::Date;
 use slint::{SharedString, ToSharedString};
 use std::fmt::Display;
 use std::fs;
