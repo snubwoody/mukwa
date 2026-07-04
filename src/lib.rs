@@ -1,6 +1,6 @@
 pub mod error;
 mod money;
-mod service;
+pub mod service;
 
 pub use error::Error;
 pub use error::Result;
