@@ -1,6 +1,6 @@
-use crate::{ui, Error, Money};
-use jiff::civil::Date;
+use crate::{Error, Money, ui};
 use jiff::Zoned;
+use jiff::civil::Date;
 use slint::{SharedString, ToSharedString};
 use std::fmt::Display;
 use std::fs;
@@ -148,12 +148,13 @@ impl From<&Transaction> for ui::Transaction {
     }
 }
 
-#[derive(Clone, PartialEq, PartialOrd, Default)]
+#[derive(Clone, PartialEq, PartialOrd, Default, Debug)]
 pub struct UpdateTransactionOpts {
     /// The transaction id.
     pub id: Uuid,
     pub account_id: Option<Uuid>,
     pub amount: Option<Money>,
+    pub date: Option<Date>,
 }
 
 // TODO: use buffered writer <https://doc.rust-lang.org/std/io/struct.BufWriter.html>
@@ -218,6 +219,10 @@ impl Service {
 
         if let Some(amount) = opts.amount {
             new_transaction.amount = amount;
+        }
+
+        if let Some(date) = opts.date {
+            new_transaction.date = date;
         }
 
         self.transactions[index] = new_transaction;

@@ -22,7 +22,7 @@ export global State {
     callback create_transaction();
     pure callback get_account_name(id: string) -> string;
     pure callback get_category_name(id: string) -> string;
-    pure callback update_transaction(id: string, account-id: string, amount: string);
+    pure callback update_transaction(id: string, account-id: string, amount: string, date: string);
     in-out property <[Transaction]> transactions;
     // Account options for combo boxes
     in-out property <[{ value: string, text: string}]> account-options;

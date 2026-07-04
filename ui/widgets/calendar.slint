@@ -1,0 +1,193 @@
+import { Colors } from "../colors.slint";
+import { Button } from "button.slint";
+
+export struct Date {
+    year: int,
+    month: int,
+    day: int,
+}
+
+export global CalendarState {
+    pure callback days-in-month(date: Date) -> [[int]];
+    pure callback increment-month(date: Date) -> Date;
+    pure callback increment-week(date: Date) -> Date;
+    pure callback increment-day(date: Date) -> Date;
+    pure callback decrement-month(date: Date) -> Date;
+    pure callback decrement-week(date: Date) -> Date;
+    pure callback decrement-day(date: Date) -> Date;
+    pure callback today() -> Date;
+}
+
+// TODO: add month names for intl
+export component Calendar {
+    in-out property <Date> date: CalendarState.today();
+    // TODO: maybe only update when it goes past 28?
+    property <[[int]]> weeks-in-month: CalendarState.days-in-month(date);
+    property <[string]> day-titles: [
+        @tr("Su"),
+        @tr("Mo"),
+        @tr("Tu"),
+        @tr("We"),
+        @tr("Th"),
+        @tr("Fr"),
+        @tr("Sa"),
+    ];
+    property <[string]> month-titles: [
+        @tr("Jan"),
+        @tr("Feb"),
+        @tr("Mar"),
+        @tr("Apr"),
+        @tr("May"),
+        @tr("Jun"),
+        @tr("Jul"),
+        @tr("Aug"),
+        @tr("Sep"),
+        @tr("Oct"),
+        @tr("Nov"),
+        @tr("Dec"),
+    ];
+
+    callback changed(Date);
+
+    function select-day(day: int) {
+        date.day = day;
+    }
+
+    function decrement-month() {
+        date = CalendarState.decrement-month(date);
+    }
+
+    function increment-month() {
+        date = CalendarState.increment-month(date);
+    }
+
+    function increment-week() {
+        date = CalendarState.increment-week(date);
+    }
+
+    function increment-day() {
+        date = CalendarState.increment-day(date);
+    }
+
+    function decrement-day() {
+        date = CalendarState.decrement-day(date);
+    }
+
+    function decrement-week() {
+        date = CalendarState.decrement-week(date);
+    }
+
+    forward-focus: focus-scope;
+
+    init => {
+        focus-scope.focus();
+    }
+
+    Rectangle {
+        background: white;
+    }
+
+    focus-scope := FocusScope {
+        key-pressed(event) => {
+            if (event.text == Key.RightArrow) {
+                increment-day();
+                return accept;
+            }
+            if (event.text == Key.UpArrow) {
+                decrement-week();
+                return accept;
+            }
+            if (event.text == Key.DownArrow) {
+                increment-week();
+                return accept;
+            }
+            if (event.text == Key.LeftArrow) {
+                decrement-day();
+                return accept;
+            }
+            if (event.text == Key.Return) {
+                changed(date);
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    VerticalLayout {
+        HorizontalLayout {
+            alignment: space-between;
+            padding: 4px;
+            cross-axis-alignment: center;
+
+            Button {
+                text: "Prev";
+                clicked => {
+                    decrement-month();
+                }
+            }
+
+            Text {
+                text: month-titles[date.month - 1] + " " + date.year;
+                color: Colors.textBody;
+            }
+
+            Button {
+                text: "Next";
+                clicked => increment-month();
+            }
+        }
+
+        GridLayout {
+            spacing: 8px;
+            Row {
+                for day-title in day-titles: Rectangle {
+                    Text {
+                        text: day-title;
+                        color: Colors.textMuted;
+                    }
+                }
+            }
+
+            for week in weeks-in-month: Row {
+                for day in week: Rectangle {
+                    property <bool> enabled: day > 0;
+                    border-radius: 4px;
+                    background: day == date.day ? Colors.surfacePrimary : transparent;
+                    accessible-role: button;
+                    accessible-checkable: true;
+                    accessible-checked: day == date.day;
+                    accessible-enabled: enabled;
+                    accessible-label: enabled ? day : "";
+                    accessible-action-default => {
+                        touch-area.clicked()
+                    }
+
+                    touch-area := TouchArea {
+                        enabled: enabled;
+                        clicked => {
+                            select-day(day);
+                            changed(date);
+                        }
+                    }
+
+                    states [
+                        hovered when touch-area.has-hover && day != date.day && enabled: {
+                            background: Colors.neutral50;
+                            in {
+                                animate background { duration: 50ms; }
+                            }
+                            out {
+                                animate background { duration: 50ms; }
+                            }
+                        }
+                    ]
+
+                    Text {
+                        text: enabled ? day : "";
+                        color: day == date.day ? white : Colors.textBody;
+                    }
+                }
+            }
+        }
+    }
+}

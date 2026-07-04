@@ -11,23 +11,51 @@ import { Sidebar } from "./sidebar.slint";
 export { Account, Transaction, State } from "./globals.slint";
 import { Button, ComboBox } from "./widgets.slint";
 import { FocusBorder } from "widgets/focus-border.slint";
+import { Calendar } from "./widgets/calendar.slint";
 
 component EditingRow inherits VerticalLayout {
     in property <Transaction> transaction;
     out property <string> selected-account-id: transaction.account-id;
     out property <string> selected-amount: transaction.amount;
+    out property <string> selected-date: transaction.date;
     callback cancel();
     callback confirm();
 
+    padding: 8px;
     spacing: 8px;
 
     HorizontalLayout {
         vertical-stretch: 0;
         cross-axis-alignment: center;
 
-        Text {
-            text: transaction.date;
-            color: Colors.textBody;
+        touch-area := TouchArea {
+            Text {
+                horizontal-stretch: 1;
+                horizontal-alignment: start;
+                text: selected-date;
+                color: Colors.textBody;
+            }
+
+            clicked => {
+                calendar-popup.show();
+            }
+        }
+
+        calendar-popup := PopupWindow {
+            x: touch-area.x;
+            y: touch-area.y;
+
+            width: 250px;
+            height: 250px;
+
+            close-policy: close-on-click-outside;
+
+            calendar := Calendar {
+                changed(date) => {
+                    selected-date = date.year + "-" + date.month + "-" + date.day;
+                    calendar-popup.close();
+                }
+            }
         }
 
         ComboBox {
@@ -86,6 +114,116 @@ component EditingRow inherits VerticalLayout {
     }
 }
 
+component TransactionRow inherits Rectangle {
+    in-out property <bool> is-active;
+    in property <Transaction> transaction;
+    in property <int> index;
+    callback select-row(int);
+
+    forward-focus: focus-scope;
+    height: is-active ? edit-row.preferred-height : row.preferred-height;
+
+    focus-scope := FocusScope {
+        key-pressed(event) => {
+            if (event.text == Key.Space) {
+                select-row(index);
+                return accept;
+            }
+            if (event.text == Key.Escape) {
+                select-row(-1);
+                return accept;
+            }
+            return reject;
+        }
+        touch-area := TouchArea {
+            clicked => {
+                if (!is-active) {
+                    select-row(index);
+                }
+            }
+        }
+    }
+
+    states [
+        active when is-active: {
+            background: Colors.blue50;
+            in {
+                animate background { duration: 50ms; }
+            }
+            out {
+                animate background { duration: 50ms; }
+            }
+        }
+        hovered when touch-area.has-hover: {
+            background: Colors.neutral25;
+            in {
+                animate background { duration: 50ms; }
+            }
+            out {
+                animate background { duration: 50ms; }
+            }
+        }
+    ]
+
+    row := HorizontalLayout {
+        vertical-stretch: 0;
+        padding: 8px;
+        visible: !is-active;
+        cross-axis-alignment: center;
+
+        Rectangle {
+            horizontal-stretch: 1;
+            Text {
+                width: 100%;
+                horizontal-alignment: start;
+                text: transaction.date;
+                color: Colors.textBody;
+            }
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+            Text {
+                width: 100%;
+                horizontal-alignment: start;
+                text: State.get_account_name(transaction.account-id);
+                color: Colors.textBody;
+            }
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+            Text {
+                width: 100%;
+                horizontal-alignment: start;
+                text: State.get_account_name(transaction.category-id);
+                color: Colors.textBody;
+            }
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+            Text {
+                width: 100%;
+                horizontal-alignment: start;
+                text: transaction.amount;
+                color: Colors.textBody;
+            }
+        }
+    }
+
+    edit-row := EditingRow {
+        visible: is-active;
+        transaction: transaction;
+        confirm => {
+            State.update_transaction(transaction.id, edit-row.selected-account-id, edit-row.selected-amount,edit-row.selected-date);
+            select-row(-1);
+        }
+        cancel => {
+            select-row(-1);
+        }
+    }
+}
 
 // TODO: add focus scope, and make sure it continues from the current index
 export component TransactionTable inherits VerticalLayout {
@@ -93,8 +231,13 @@ export component TransactionTable inherits VerticalLayout {
     in property <[Transaction]> transactions;
     property <int> active-row: -1;
 
+    function select-row(index: int) {
+        active-row = index;
+    }
+
     HorizontalLayout {
         alignment: end;
+        padding: 16px;
 
         Button {
             text: @tr("Add transaction");
@@ -114,113 +257,28 @@ export component TransactionTable inherits VerticalLayout {
             }
         }
 
+        Rectangle {
+            width: 100%;
+            height: 2px;
+            background: Colors.neutral50;
+        }
         // TODO: focus when clicked
         // - Use accessibilty
         ListView {
-            for transaction[i] in transactions: row := Rectangle {
-                out property <bool> is-active: active-row == i;
-                forward-focus: focus-scope;
-
-                focus-scope := FocusScope {
-                    key-pressed(event) => {
-                        if (event.text == Key.Space) {
-                            active-row = i;
-                            return accept;
-                        }
-                        if (event.text == Key.Escape) {
-                            active-row = -1;
-                            return accept;
-                        }
-                        return reject;
-                    }
-                    touch-area := TouchArea {
-                        clicked => {
-                            if (!is-active) {
-                                active-row = i;
-                            }
-                        }
-                    }
-                }
-
-                if focus-scope.has-focus: FocusBorder { }
-
-                states [
-                    active when is-active: {
-                        background: Colors.blue50;
-                        in {
-                            animate background { duration: 50ms; }
-                        }
-                        out {
-                            animate background { duration: 50ms; }
-                        }
-                    }
-                    hovered when touch-area.has-hover: {
-                        background: Colors.neutral25;
-                        in {
-                            animate background { duration: 50ms; }
-                        }
-                        out {
-                            animate background { duration: 50ms; }
-                        }
-                    }
-                ]
-
-                HorizontalLayout {
-                    vertical-stretch: 0;
-                    visible: !is-active;
-                    cross-axis-alignment: center;
-
-                    Rectangle {
-                        horizontal-stretch: 1;
-                        Text {
-                            width: 100%;
-                            horizontal-alignment: start;
-                            text: transaction.date;
-                            color: Colors.textBody;
-                        }
-                    }
-
-                    Rectangle {
-                        horizontal-stretch: 1;
-                        Text {
-                            width: 100%;
-                            horizontal-alignment: start;
-                            text: State.get_account_name(transaction.account-id);
-                            color: Colors.textBody;
-                        }
-                    }
-
-                    Rectangle {
-                        horizontal-stretch: 1;
-                        Text {
-                            width: 100%;
-                            horizontal-alignment: start;
-                            text: State.get_account_name(transaction.category-id);
-                            color: Colors.textBody;
-                        }
-                    }
-
-                    Rectangle {
-                        horizontal-stretch: 1;
-                        Text {
-                            width: 100%;
-                            horizontal-alignment: start;
-                            text: transaction.amount;
-                            color: Colors.textBody;
-                        }
-                    }
-                }
-
-                edit-row := EditingRow {
-                    visible: is-active;
+            for transaction[i] in transactions: VerticalLayout {
+                TransactionRow {
+                    is-active: active-row == i;
                     transaction: transaction;
-                    confirm => {
-                        State.update_transaction(transaction.id, edit-row.selected-account-id, edit-row.selected-amount);
-                        active-row = -1;
+                    index: i;
+                    select-row(index) => {
+                        select-row(index)
                     }
-                    cancel => {
-                        active-row = -1;
-                    }
+                }
+
+                Rectangle {
+                    width: 100%;
+                    height: 2px;
+                    background: Colors.neutral50;
                 }
             }
         }
