@@ -8,7 +8,7 @@ pub use money::Money;
 use std::cell::RefCell;
 
 use crate::service::{Service, UpdateTransactionOpts};
-use jiff::civil::{Date, Weekday};
+use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
@@ -70,14 +70,23 @@ impl AppState {
         Ok(())
     }
 
-    pub fn update_transaction(&mut self, id: &str, account_id: &str, amount: &str) -> Result<()> {
+    pub fn update_transaction(
+        &mut self,
+        id: &str,
+        account_id: &str,
+        amount: &str,
+        date: &str,
+    ) -> Result<()> {
         let account_id = Uuid::parse_str(account_id).ok();
         let amount = Money::from_str(amount).ok();
+        let date = Date::strptime("%Y-%m-%d", date).ok();
         let opts = UpdateTransactionOpts {
             id: Uuid::parse_str(id)?,
             account_id,
             amount,
+            date,
         };
+
         let transaction = self.service.borrow_mut().update_transaction(opts)?;
         let transactions: Vec<ui::Transaction> = self
             .transactions
@@ -177,12 +186,9 @@ fn setup_calendar_state(window: &ui::MainWindow) {
         let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
         match result {
             Ok(date) => {
-                let mut days: Vec<i32> = vec![];
                 // Pad with 0 for the out of month days to align the calendar grid
                 let offset = date.first_of_month().weekday().to_sunday_zero_offset();
-                for _ in 0..offset {
-                    days.push(0);
-                }
+                let mut days: Vec<i32> = vec![0; offset as usize];
 
                 for d in 1..=date.days_in_month() {
                     days.push(d as i32);
@@ -235,8 +241,8 @@ pub fn run() -> Result<()> {
 
     global_state.on_update_transaction({
         let mut state = state.clone();
-        move |id, account_id, amount| {
-            if let Err(err) = state.update_transaction(&id, &account_id, &amount) {
+        move |id, account_id, amount, date| {
+            if let Err(err) = state.update_transaction(&id, &account_id, &amount, &date) {
                 warn!("Failed to update transaction: {err}");
             }
         }

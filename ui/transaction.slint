@@ -17,6 +17,7 @@ component EditingRow inherits VerticalLayout {
     in property <Transaction> transaction;
     out property <string> selected-account-id: transaction.account-id;
     out property <string> selected-amount: transaction.amount;
+    out property <string> selected-date: transaction.date;
     callback cancel();
     callback confirm();
 
@@ -31,7 +32,7 @@ component EditingRow inherits VerticalLayout {
             Text {
                 horizontal-stretch: 1;
                 horizontal-alignment: start;
-                text: transaction.date;
+                text: selected-date;
                 color: Colors.textBody;
             }
 
@@ -50,7 +51,8 @@ component EditingRow inherits VerticalLayout {
             close-policy: close-on-click-outside;
 
             calendar := Calendar {
-                changed => {
+                changed(date) => {
+                    selected-date = date.year + "-" + date.month + "-" + date.day;
                     calendar-popup.close();
                 }
             }
@@ -214,7 +216,7 @@ component TransactionRow inherits Rectangle {
         visible: is-active;
         transaction: transaction;
         confirm => {
-            State.update_transaction(transaction.id, edit-row.selected-account-id, edit-row.selected-amount);
+            State.update_transaction(transaction.id, edit-row.selected-account-id, edit-row.selected-amount,edit-row.selected-date);
             select-row(-1);
         }
         cancel => {
