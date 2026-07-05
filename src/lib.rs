@@ -1,4 +1,5 @@
 pub mod error;
+pub mod migrator;
 mod money;
 pub mod service;
 
@@ -260,4 +261,12 @@ pub fn run() -> Result<()> {
 
     main_window.run().unwrap();
     Ok(())
+}
+
+/// Opens an in memory sqlite database for testing.
+#[cfg(test)]
+pub(crate) fn create_test_db() -> rusqlite::Connection {
+    use rusqlite::Connection;
+
+    Connection::open_in_memory().expect("Failed to open sqlite connection")
 }

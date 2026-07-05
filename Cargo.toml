@@ -2,6 +2,19 @@
 name = "mukwa"
 version = "0.1.0-alpha.1"
 edition = "2024"
+default-run = "app"
+
+[[bench]]
+name = "service"
+harness = false
+
+[[bin]]
+name = "app"
+path = "src/bin/main.rs"
+
+[[bin]]
+name = "cli"
+path = "src/bin/cli.rs"
 
 [dependencies]
 slint = { version = "1.17.0", features = ["backend-winit", "renderer-skia"] }
@@ -12,6 +25,8 @@ jiff = "0.2.29"
 tracing-subscriber = "0.3.23"
 uuid = { version = "1.23.4", features = ["v7"] }
 itertools = "0.15.0"
+rusqlite = { version = "0.40.1", features = ["bundled"] }
+clap = { version = "4.6.1", features = ["derive"] }
 
 [build-dependencies]
 slint-build = "1.16.0"
@@ -19,6 +34,4 @@ slint-build = "1.16.0"
 [dev-dependencies]
 divan = "0.1.21"
 
-[[bench]]
-name = "service"
-harness = false
+
