@@ -165,8 +165,12 @@ pub fn create_migration_file(dir: impl AsRef<Path>, name: &str) -> crate::Result
     fs::create_dir_all(&dir)?;
     let mut path = dir.as_ref().join(file_name);
     path.set_extension("sql");
-    let mut file = File::options().create(true).write(true).open(&path)?;
-    file.write(buffer.as_bytes())?;
+    let mut file = File::options()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .open(&path)?;
+    let _ = file.write(buffer.as_bytes())?;
 
     Ok(path)
 }
@@ -210,7 +214,6 @@ mod tests {
     use rusqlite::ErrorCode;
 
     use super::*;
-    use crate::create_test_db;
 
     #[test]
     fn load_migration_from_file() {
@@ -270,13 +273,13 @@ mod tests {
 
     #[test]
     fn run_migration() -> crate::Result<()> {
-        let conn = create_test_db();
+        let connection = Connection::open_in_memory().unwrap();
         let mut migrator = Migrator::new();
         let migration = Migration::up("CREATE TABLE users(id TEXT PRIMARY KEY)", 0);
         migrator.add_migration(migration);
-        migrator.migrate(&conn)?;
+        migrator.migrate(&connection)?;
 
-        let row = conn.query_row(
+        let row = connection.query_row(
             "INSERT INTO users(id) VALUES ('Player 1') RETURNING *",
             (),
             |row| row.get::<_, String>(0),
@@ -288,32 +291,34 @@ mod tests {
 
     #[test]
     fn skip_applied_migrations() {
-        let conn = create_test_db();
-        create_migrations_table(&conn).unwrap();
-        conn.execute("INSERT INTO schema_migrations(version) VALUES (1010)", ())
+        let connection = Connection::open_in_memory().unwrap();
+        create_migrations_table(&connection).unwrap();
+        connection
+            .execute("INSERT INTO schema_migrations(version) VALUES (1010)", ())
             .expect("Failed to run query");
         let mut migrator = Migrator::new();
         let m1 = Migration::up("CREATE TABLE users(id TEXT PRIMARY KEY)", 1);
         let m2 = Migration::up("CREATE TABLE organisations(id TEXT PRIMARY KEY)", 1010);
         migrator.add_migration(m1);
         migrator.add_migration(m2);
-        migrator.migrate(&conn).unwrap();
+        migrator.migrate(&connection).unwrap();
 
-        conn.execute("INSERT INTO users(id) VALUES ('Player 1')", ())
+        connection
+            .execute("INSERT INTO users(id) VALUES ('Player 1')", ())
             .unwrap();
-        let result = conn.execute("INSERT INTO organisations(id) VALUES ('Player 1')", ());
+        let result = connection.execute("INSERT INTO organisations(id) VALUES ('Player 1')", ());
         assert!(result.is_err());
     }
 
     #[test]
     fn update_migrations_table_after_migrating() {
-        let conn = create_test_db();
+        let connection = Connection::open_in_memory().unwrap();
         let mut migrator = Migrator::new();
         let migration = Migration::up("CREATE TABLE users(id TEXT PRIMARY KEY)", 100);
         migrator.add_migration(migration);
-        migrator.migrate(&conn).unwrap();
+        migrator.migrate(&connection).unwrap();
 
-        let version = conn
+        let version = connection
             .query_row("SELECT * FROM schema_migrations", (), |row| {
                 row.get::<_, i64>("version")
             })
@@ -323,40 +328,43 @@ mod tests {
 
     #[test]
     fn init_migrations_table() {
-        let conn = create_test_db();
-        create_migrations_table(&conn).unwrap();
+        let connection = Connection::open_in_memory().unwrap();
+        create_migrations_table(&connection).unwrap();
 
-        conn.execute(
-            "INSERT INTO schema_migrations(version) VALUES($1)",
-            [29492424],
-        )
-        .unwrap();
+        connection
+            .execute(
+                "INSERT INTO schema_migrations(version) VALUES($1)",
+                [29492424],
+            )
+            .unwrap();
     }
 
     #[test]
     fn get_applied_migrations() {
-        let conn = create_test_db();
-        create_migrations_table(&conn).unwrap();
+        let connection = Connection::open_in_memory().unwrap();
+        create_migrations_table(&connection).unwrap();
 
-        conn.execute(
-            "INSERT INTO schema_migrations(version) VALUES (5),(10),(15),(20)",
-            (),
-        )
-        .unwrap();
+        connection
+            .execute(
+                "INSERT INTO schema_migrations(version) VALUES (5),(10),(15),(20)",
+                (),
+            )
+            .unwrap();
         let migrator = Migrator::new();
-        let migrations = migrator.applied_migrations(&conn).unwrap();
+        let migrations = migrator.applied_migrations(&connection).unwrap();
         assert_eq!(migrations, [5, 10, 15, 20]);
     }
 
     #[test]
     fn schema_migrations_unique_version() {
-        let conn = create_test_db();
-        create_migrations_table(&conn).unwrap();
+        let connection = Connection::open_in_memory().unwrap();
+        create_migrations_table(&connection).unwrap();
 
-        conn.execute("INSERT INTO schema_migrations(version) VALUES($1)", [0])
+        connection
+            .execute("INSERT INTO schema_migrations(version) VALUES($1)", [0])
             .unwrap();
 
-        let result = conn.execute("INSERT INTO schema_migrations(version) VALUES($1)", [0]);
+        let result = connection.execute("INSERT INTO schema_migrations(version) VALUES($1)", [0]);
         let err = result.expect_err("Expected duplicate insert to fail");
         match err {
             rusqlite::Error::SqliteFailure(a, _) => {
@@ -368,9 +376,9 @@ mod tests {
 
     #[test]
     fn schema_migrations_not_null() {
-        let conn = create_test_db();
-        create_migrations_table(&conn).unwrap();
-        let result = conn.execute("INSERT INTO schema_migrations(version) VALUES(null)", ());
+        let connection = Connection::open_in_memory().unwrap();
+        create_migrations_table(&connection).unwrap();
+        let result = connection.execute("INSERT INTO schema_migrations(version) VALUES(null)", ());
         let err = result.expect_err("Expected null insert to fail");
         match err {
             rusqlite::Error::SqliteFailure(a, _) => {
@@ -382,9 +390,9 @@ mod tests {
 
     #[test]
     fn init_migrations_table_already_exists() {
-        let conn = create_test_db();
-        create_migrations_table(&conn).unwrap();
-        create_migrations_table(&conn).unwrap();
-        create_migrations_table(&conn).unwrap();
+        let connection = Connection::open_in_memory().unwrap();
+        create_migrations_table(&connection).unwrap();
+        create_migrations_table(&connection).unwrap();
+        create_migrations_table(&connection).unwrap();
     }
 }

@@ -48,10 +48,10 @@ fn main() -> mukwa::Result<()> {
                 info!("Created migration: {:?}", path)
             }
             MigrateCommand::Up => {
-                let mut connection = Connection::open(path)?;
+                let connection = Connection::open(path)?;
                 let mut migrator = Migrator::new();
                 migrator.load_from_dir(&migrations_dir)?;
-                migrator.migrate(&mut connection)?;
+                migrator.migrate(&connection)?;
             }
         },
     }

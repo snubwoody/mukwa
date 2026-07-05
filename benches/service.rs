@@ -1,6 +1,8 @@
 use divan::Bencher;
-use mukwa::service::{Service, Transaction, UpdateTransactionOpts};
 use mukwa::Money;
+use mukwa::migrator::Migrator;
+use mukwa::service::{Service, Transaction, UpdateTransactionOpts};
+use rusqlite::Connection;
 use tempfile::tempdir;
 
 fn main() {
@@ -8,23 +10,21 @@ fn main() {
 }
 
 #[divan::bench(consts = [1,10,50,100])]
-fn update_transaction<const N: usize>(bencher: Bencher) {
+fn create_account<const N: usize>(bencher: Bencher) {
     bencher
         .with_inputs(move || {
             let temp = tempdir().unwrap();
-            let path = temp.path().join("app.data");
-            let mut service = Service::open("temp.data");
-            for _ in 0..N {
-                service.create_transaction().unwrap();
-            }
-            let transaction = service.create_transaction().unwrap();
-            let update_opts = UpdateTransactionOpts {
-                id: transaction.id,
-                account_id: None,
-                amount: Some(Money::new(200)),
-                date: None,
-            };
-            (service, update_opts)
+            let path = temp.path().join("data.sqlite");
+            let mut connection = Connection::open(path).unwrap();
+            let mut migrator = Migrator::new();
+            migrator.load_from_dir("./migrations").unwrap();
+            migrator.migrate(&mut connection).unwrap();
+            let service = Service::new(connection);
+            (service, temp)
         })
-        .bench_refs(|(service, opts)| service.update_transaction(opts.clone()));
+        .bench_refs(|(service, _temp)| {
+            for _ in 0..N {
+                service.create_account("My account").unwrap();
+            }
+        });
 }
