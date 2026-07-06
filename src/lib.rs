@@ -1,15 +1,17 @@
 pub mod error;
+pub mod migrator;
 mod money;
-mod service;
+pub mod service;
 
 pub use error::Error;
 pub use error::Result;
 pub use money::Money;
-use std::cell::RefCell;
 
+use crate::migrator::Migrator;
 use crate::service::{Service, UpdateTransactionOpts};
 use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
+use rusqlite::Connection;
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
@@ -20,9 +22,9 @@ mod ui {
     slint::include_modules!();
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct AppState {
-    service: Rc<RefCell<Service>>,
+    service: Service,
     accounts: Rc<VecModel<ui::Account>>,
     // We can't map arrays in slint so we have to maintain duplicate arrays for comboboxes
     // see <https://github.com/slint-ui/slint/issues/1328>
@@ -31,12 +33,16 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(service: Service) -> AppState {
-        let transactions_list: Vec<ui::Transaction> =
-            service.transactions().iter().map(|t| t.into()).collect();
+    pub fn new(service: Service) -> Result<AppState> {
+        let transactions_list: Vec<ui::Transaction> = service
+            .fetch_transactions()?
+            .iter()
+            .map(|t| t.into())
+            .collect();
 
         let transactions_model = Rc::new(VecModel::from(transactions_list));
-        let account_list: Vec<ui::Account> = service.accounts().iter().map(|a| a.into()).collect();
+        let account_list: Vec<ui::Account> =
+            service.fetch_accounts()?.iter().map(|a| a.into()).collect();
         let account_options: Vec<_> = account_list
             .iter()
             .map(|a| (a.name.clone(), a.id.clone()))
@@ -44,16 +50,16 @@ impl AppState {
         let accounts_model = Rc::new(VecModel::from(account_list));
         let account_options_model = Rc::new(VecModel::from(account_options));
 
-        AppState {
-            service: Rc::new(RefCell::new(service)),
+        Ok(AppState {
+            service,
             accounts: accounts_model,
             account_options: account_options_model,
             transactions: transactions_model,
-        }
+        })
     }
     /// Creates a new account.
     pub fn create_account(&mut self, name: &str) -> Result<()> {
-        let account = self.service.borrow_mut().create_account(name)?;
+        let account = self.service.create_account(name)?;
         info!(id=?account.id,"Created new account");
         self.accounts.push(account.clone().into());
         self.account_options.push((
@@ -64,7 +70,7 @@ impl AppState {
     }
 
     pub fn create_transaction(&mut self) -> Result<()> {
-        let transaction = self.service.borrow_mut().create_transaction()?;
+        let transaction = self.service.create_transaction(Default::default())?;
         info!(id=?transaction.id,"Created new transaction");
         self.transactions.push(transaction.into());
         Ok(())
@@ -85,9 +91,10 @@ impl AppState {
             account_id,
             amount,
             date,
+            ..Default::default()
         };
 
-        let transaction = self.service.borrow_mut().update_transaction(opts)?;
+        let transaction = self.service.update_transaction(opts)?;
         let transactions: Vec<ui::Transaction> = self
             .transactions
             .iter()
@@ -209,11 +216,15 @@ fn setup_calendar_state(window: &ui::MainWindow) {
 }
 
 pub fn run() -> Result<()> {
-    let mut service = Service::open("app.data");
-    service.read()?;
+    let connection = Connection::open("data.sqlite")?;
+    let mut migrator = Migrator::new();
+    migrator.load_from_dir("./migrations")?;
+    migrator.migrate(&connection)?;
+
+    let service = Service::new(connection);
     let main_window = ui::MainWindow::new().unwrap();
 
-    let state = AppState::new(service);
+    let state = AppState::new(service)?;
     let transactions_model_rc = ModelRc::new(state.transactions.clone());
     let accounts_model_rc = ModelRc::new(state.accounts.clone());
     let account_options_rc = ModelRc::new(state.account_options.clone());
@@ -260,4 +271,13 @@ pub fn run() -> Result<()> {
 
     main_window.run().unwrap();
     Ok(())
+}
+
+/// Opens an in memory sqlite database for testing.
+pub fn create_test_db() -> Connection {
+    let connection = Connection::open_in_memory().expect("Failed to open sqlite connection");
+    let mut migrator = Migrator::new();
+    migrator.load_from_dir("./migrations").unwrap();
+    migrator.migrate(&connection).unwrap();
+    connection
 }
