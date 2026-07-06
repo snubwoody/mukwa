@@ -70,6 +70,40 @@ fn create_transaction() -> mukwa::Result<()> {
 }
 
 #[test]
+fn delete_transaction() -> mukwa::Result<()> {
+    let connection = create_test_db();
+
+    let service = Service::new(connection);
+    service.create_account("")?;
+
+    let transaction = service.create_transaction(Default::default())?;
+    service.delete_transaction(transaction.id)?;
+    let transactions = service.fetch_transactions()?;
+    assert!(transactions.is_empty());
+
+    Ok(())
+}
+
+#[test]
+fn duplicate_transaction() -> mukwa::Result<()> {
+    let connection = create_test_db();
+
+    let service = Service::new(connection);
+    service.create_account("")?;
+
+    let transaction = service.create_transaction(Default::default())?;
+    service.duplicate_transaction(transaction.id)?;
+    let transactions = service.fetch_transactions()?;
+    assert_eq!(transactions.len(), 2);
+    assert_eq!(transactions[0].date, transactions[1].date);
+    assert_eq!(transactions[0].amount, transactions[1].amount);
+    assert_eq!(transactions[0].account_id, transactions[1].account_id);
+    assert_eq!(transactions[0].category_id, transactions[1].category_id);
+
+    Ok(())
+}
+
+#[test]
 fn update_transaction() -> mukwa::Result<()> {
     let connection = create_test_db();
 

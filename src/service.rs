@@ -283,6 +283,28 @@ impl Service {
         Ok(transaction)
     }
 
+    pub fn delete_transaction(&self, id: Uuid) -> crate::Result<()> {
+        let connection = self.connection();
+        let mut stmt = connection.prepare_cached("DELETE FROM transactions WHERE id = ?")?;
+        stmt.execute([id.to_string()])?;
+        Ok(())
+    }
+
+    pub fn duplicate_transaction(&self, id: Uuid) -> crate::Result<Transaction> {
+        let connection = self.connection();
+        let sql = "INSERT INTO transactions(id,account_id,category_id,transaction_date,amount) \
+        SELECT ?1,account_id,category_id,transaction_date,amount FROM transactions \
+        WHERE id = ?2 RETURNING *";
+
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt
+            .query_and_then([Uuid::now_v7().to_string(), id.to_string()], |row| {
+                Transaction::try_from(row)
+            })?;
+        let transaction = rows.next().unwrap()?;
+        Ok(transaction)
+    }
+
     pub fn create_transaction(&self, opts: CreateTransactionOpts) -> crate::Result<Transaction> {
         let account_id = match opts.account_id {
             Some(id) => id,

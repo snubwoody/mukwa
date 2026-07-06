@@ -20,6 +20,8 @@ export struct TransactionOption {
 export global State {
     callback create_account(name: string);
     callback create_transaction();
+    callback duplicate_transaction(id: string);
+    callback delete_transaction(id: string);
     pure callback get_account_name(id: string) -> string;
     pure callback get_category_name(id: string) -> string;
     pure callback update_transaction(id: string, account-id: string, amount: string, date: string);
