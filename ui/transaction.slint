@@ -6,19 +6,24 @@ import {
     LineEdit,
 } from "std-widgets.slint";
 import { Colors } from "./colors.slint";
-import { Account, Transaction, State } from "./globals.slint";
+import { Account, Transaction, State,UpdateTransactionOpts } from "./globals.slint";
 import { Sidebar } from "./sidebar.slint";
 export { Account, Transaction, State } from "./globals.slint";
 import { Button, ComboBox } from "./widgets.slint";
 import { FocusBorder } from "widgets/focus-border.slint";
 import { Calendar } from "./widgets/calendar.slint";
 
+// TODO: maybe enter should submit?
 component EditingRow inherits VerticalLayout {
     in property <Transaction> transaction;
     out property <string> selected-account-id: transaction.account-id;
     // FIXME
-    out property <string> selected-amount: transaction.outflow;
+    // TODO: if both outflow and inflow are not empty then return an error
+    // too ambigous
+    out property <string> outflow: transaction.outflow;
+    out property <string> inflow: transaction.inflow;
     out property <string> selected-date: transaction.date;
+    out property <UpdateTransactionOpts> update-opts;
     callback cancel();
     callback confirm();
 
@@ -83,20 +88,14 @@ component EditingRow inherits VerticalLayout {
             border-radius: 4px;
             background: white;
 
-            money-input := TextInput {
-                text: transaction.outflow;
+            outflow-input := TextInput {
+                text: outflow;
                 color: Colors.textBody;
                 input-type: decimal;
-                // TODO: change when edited
                 edited => {
-                }
-
-                key-pressed(event) => {
-                    if (event.text == Key.Escape || event.text == Key.Return) {
-                        selected-amount = money-input.text;
-                        return accept;
-                    }
-                    return reject;
+                    outflow = outflow-input.text;
+                    inflow = "";
+                    inflow-input.text = "";
                 }
             }
         }
@@ -111,16 +110,14 @@ component EditingRow inherits VerticalLayout {
             background: white;
 
             inflow-input := TextInput {
-                text: transaction.inflow;
+                text: inflow;
                 color: Colors.textBody;
                 input-type: decimal;
 
-                key-pressed(event) => {
-                    if (event.text == Key.Escape || event.text == Key.Return) {
-                        selected-amount = money-input.text;
-                        return accept;
-                    }
-                    return reject;
+                edited => {
+                    inflow = inflow-input.text;
+                    outflow = "";
+                    outflow-input.text = "";
                 }
             }
         }
@@ -267,7 +264,7 @@ component TransactionRow inherits Rectangle {
         visible: is-active;
         transaction: transaction;
         confirm => {
-            State.update_transaction(transaction.id, edit-row.selected-account-id, edit-row.selected-amount,edit-row.selected-date);
+            State.update_transaction(transaction.id, edit-row.selected-account-id, edit-row.outflow,edit-row.inflow,edit-row.selected-date);
             select-row(-1);
         }
         cancel => {

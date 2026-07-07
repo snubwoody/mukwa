@@ -1,13 +1,13 @@
 use crate::service::{Service, UpdateTransactionOpts};
-use crate::{ui, Money};
+use crate::{Money, ui};
 use jiff::civil::Date;
-use slint::{Model, SharedString, ToSharedString, VecModel};
+use slint::{Model, SharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
 use tracing::info;
 use uuid::Uuid;
 
-// TODO: test this and the global state
+// TODO: set the new transaction to editing
 #[derive(Clone)]
 pub struct AppState {
     service: Service,
@@ -100,34 +100,52 @@ impl AppState {
         &mut self,
         id: &str,
         account_id: &str,
-        amount: &str,
+        outflow: &str,
+        inflow: &str,
         date: &str,
     ) -> crate::Result<()> {
         let account_id = Uuid::parse_str(account_id).ok();
-        let amount = Money::from_str(amount).ok();
+        let outflow = Money::from_str(outflow).ok();
+        let inflow = Money::from_str(inflow).ok();
         let date = Date::strptime("%Y-%m-%d", date).ok();
+
+        let mut sender_id = None;
+        let mut receiver_id = None;
+        let mut amount = None;
+
+        if let Some(value) = outflow {
+            amount = Some(value);
+            sender_id = account_id;
+        }
+
+        if let Some(value) = inflow {
+            amount = Some(value);
+            receiver_id = account_id;
+        }
+
         let opts = UpdateTransactionOpts {
             id: Uuid::parse_str(id)?,
-            account_id,
-            amount,
             date,
-            ..Default::default()
+            sender_id,
+            amount,
+            category_id: None,
+            receiver_id,
         };
 
-        let transaction = self.service.update_transaction(opts)?;
+        self.service.update_transaction(opts)?;
+        info!(id=?id,"Updated transaction");
+        self.reset_transactions()?;
+        Ok(())
+    }
+
+    fn reset_transactions(&mut self) -> crate::Result<()> {
         let transactions: Vec<ui::Transaction> = self
-            .transactions
+            .service
+            .fetch_transactions()?
             .iter()
-            .map(move |mut t| {
-                if t.id == transaction.id.to_shared_string() {
-                    // FIXME
-                    t.account_id = transaction.sender_id.unwrap().to_shared_string()
-                }
-                t
-            })
+            .map(|t| t.into())
             .collect();
         self.transactions.set_vec(transactions);
-        info!(id=?id,"Updated transaction");
         Ok(())
     }
 

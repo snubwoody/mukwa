@@ -1,7 +1,7 @@
-use crate::{ui, Error, Money};
-use jiff::civil::Date;
+use crate::{Error, Money, ui};
 use jiff::Zoned;
-use rusqlite::{params, Connection, Row};
+use jiff::civil::Date;
+use rusqlite::{Connection, Row, params};
 use slint::{SharedString, ToSharedString};
 use std::path::Path;
 use std::rc::Rc;
@@ -88,7 +88,7 @@ pub struct Transaction {
 }
 
 impl Transaction {
-    fn transaction_type(&self) -> TransactionType {
+    pub fn transaction_type(&self) -> TransactionType {
         if self.sender_id.is_some() && self.receiver_id.is_some() {
             return TransactionType::Transfer;
         }
@@ -103,6 +103,7 @@ impl Transaction {
 
 impl<'a> TryFrom<&Row<'a>> for Transaction {
     type Error = Error;
+
     fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
         let id: String = value.get("id")?;
         let sender_id: Option<String> = value.get("sender_id")?;
@@ -214,7 +215,12 @@ impl From<&Transaction> for ui::Transaction {
 
         Self {
             id: value.id.to_string().into(),
-            account_id: value.sender_id.unwrap().to_string().into(),
+            account_id: value
+                .sender_id
+                .or(value.receiver_id)
+                .unwrap()
+                .to_string()
+                .into(),
             category_id: category_id.into(),
             date: value.date.to_string().into(),
             outflow,
@@ -228,7 +234,8 @@ impl From<&Transaction> for ui::Transaction {
 pub struct UpdateTransactionOpts {
     /// The transaction id.
     pub id: Uuid,
-    pub account_id: Option<Uuid>,
+    pub sender_id: Option<Uuid>,
+    pub receiver_id: Option<Uuid>,
     pub category_id: Option<Uuid>,
     pub amount: Option<Money>,
     pub date: Option<Date>,
@@ -315,28 +322,53 @@ impl Service {
         Ok(account)
     }
 
-    pub fn update_transaction(&self, opts: UpdateTransactionOpts) -> crate::Result<Transaction> {
-        // FIXME create a more detailed solution
-        let sql = "UPDATE transactions \
-        SET \
-            sender_id = COALESCE(?1,sender_id), \
-            category_id = COALESCE(?2,category_id), \
-            amount = COALESCE(?3,amount), \
-            transaction_date = COALESCE(?4,transaction_date) \
-        WHERE id = ?5 \
-        RETURNING *";
-
-        let params = params![
-            opts.account_id.map(|id| id.to_string()),
-            opts.category_id.map(|id| id.to_string()),
-            opts.amount.map(|a| a.inner()),
-            opts.date.map(|d| d.to_string()),
-            opts.id.to_string()
-        ];
-
+    pub fn get_transaction(&self, id: Uuid) -> crate::Result<Transaction> {
         let connection = self.connection();
-        let mut stmt = connection.prepare_cached(sql)?;
-        let mut rows = stmt.query_and_then(params, |row| Transaction::try_from(row))?;
+        let mut stmt = connection.prepare_cached("SELECT * FROM transactions WHERE id = ?")?;
+        let mut rows = stmt.query_and_then([id.to_string()], |row| Transaction::try_from(row))?;
+        rows.next().ok_or(Error::new("Transaction not found"))?
+    }
+
+    pub fn update_transaction(&self, opts: UpdateTransactionOpts) -> crate::Result<Transaction> {
+        let transaction = self.get_transaction(opts.id)?;
+        let mut connection = self.connection();
+
+        let tx = connection.transaction()?;
+        if let Some(date) = opts.date {
+            tx.execute(
+                "UPDATE transactions SET transaction_date = ?1 WHERE id = ?2",
+                [date.to_string(), opts.id.to_string()],
+            )?;
+        }
+
+        if let Some(amount) = opts.amount {
+            let sql = "UPDATE transactions SET amount = ?1 WHERE id = ?2";
+            tx.execute(sql, params![amount.inner(), opts.id.to_string()])?;
+        }
+
+        if let Some(id) = opts.sender_id {
+            let sql = if transaction.transaction_type() == TransactionType::Income {
+                "UPDATE transactions SET sender_id = ?1, receiver_id = NULL WHERE id = ?2"
+            } else {
+                "UPDATE transactions SET sender_id = ?1 WHERE id = ?2"
+            };
+            tx.execute(sql, [id.to_string(), opts.id.to_string()])?;
+        }
+
+        if let Some(id) = opts.receiver_id {
+            let sql = if transaction.transaction_type() == TransactionType::Expense {
+                "UPDATE transactions SET receiver_id = ?1, sender_id = NULL WHERE id = ?2"
+            } else {
+                "UPDATE transactions SET receiver_id = ?1 WHERE id = ?2"
+            };
+            tx.execute(sql, [id.to_string(), opts.id.to_string()])?;
+        }
+
+        tx.commit()?;
+
+        let mut stmt = connection.prepare_cached("SELECT * FROM transactions WHERE id = ?1")?;
+        let mut rows =
+            stmt.query_and_then([opts.id.to_string()], |row| Transaction::try_from(row))?;
         let transaction = rows.next().unwrap()?;
         Ok(transaction)
     }

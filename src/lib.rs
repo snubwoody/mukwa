@@ -2,7 +2,7 @@ pub mod error;
 pub mod migrator;
 mod money;
 pub mod service;
-mod state;
+pub mod state;
 
 pub use error::Error;
 pub use error::Result;
@@ -19,7 +19,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 use tracing::warn;
 
-mod ui {
+pub mod ui {
     slint::include_modules!();
 }
 
@@ -151,8 +151,8 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     global_state.on_update_transaction({
         let mut state = state.clone();
-        move |id, account_id, amount, date| {
-            if let Err(err) = state.update_transaction(&id, &account_id, &amount, &date) {
+        move |id, account_id, outflow, inflow, date| {
+            if let Err(err) = state.update_transaction(&id, &account_id, &outflow, &inflow, &date) {
                 warn!("Failed to update transaction: {err}");
             }
         }

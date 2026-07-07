@@ -25,6 +25,14 @@ export struct TransactionOption {
     text: string,
 }
 
+export struct UpdateTransactionOpts {
+    id: string,
+    account-id: string,
+    outflow: string,
+    inflow: string,
+    date: string,
+}
+
 export global State {
     callback create_account(name: string);
     callback create_transaction();
@@ -33,7 +41,7 @@ export global State {
     pure callback get_account_name(id: string) -> string;
     pure callback total_balance() -> string;
     pure callback get_category_name(id: string) -> string;
-    pure callback update_transaction(id: string, account-id: string, amount: string, date: string);
+    pure callback update_transaction(id: string, account-id: string, outflow: string, inflow: string, date: string);
     in-out property <[Transaction]> transactions;
     // Account options for combo boxes
     in-out property <[{ value: string, text: string}]> account-options;
