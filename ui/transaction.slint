@@ -16,7 +16,8 @@ import { Calendar } from "./widgets/calendar.slint";
 component EditingRow inherits VerticalLayout {
     in property <Transaction> transaction;
     out property <string> selected-account-id: transaction.account-id;
-    out property <string> selected-amount: transaction.amount;
+    // FIXME
+    out property <string> selected-amount: transaction.outflow;
     out property <string> selected-date: transaction.date;
     callback cancel();
     callback confirm();
@@ -81,12 +82,38 @@ component EditingRow inherits VerticalLayout {
             height: 36px;
             border-radius: 4px;
             background: white;
+
             money-input := TextInput {
-                text: transaction.amount;
+                text: transaction.outflow;
                 color: Colors.textBody;
                 input-type: decimal;
+                // TODO: change when edited
                 edited => {
                 }
+
+                key-pressed(event) => {
+                    if (event.text == Key.Escape || event.text == Key.Return) {
+                        selected-amount = money-input.text;
+                        return accept;
+                    }
+                    return reject;
+                }
+            }
+        }
+
+        Rectangle {
+            border-width: 1px;
+            border-color: Colors.blue500;
+            clip: true;
+            width: 250px;
+            height: 36px;
+            border-radius: 4px;
+            background: white;
+
+            inflow-input := TextInput {
+                text: transaction.inflow;
+                color: Colors.textBody;
+                input-type: decimal;
 
                 key-pressed(event) => {
                     if (event.text == Key.Escape || event.text == Key.Return) {
@@ -220,7 +247,17 @@ component TransactionRow inherits Rectangle {
             Text {
                 width: 100%;
                 horizontal-alignment: start;
-                text: transaction.amount;
+                text: transaction.outflow;
+                color: Colors.textBody;
+            }
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+            Text {
+                width: 100%;
+                horizontal-alignment: start;
+                text: transaction.inflow;
                 color: Colors.textBody;
             }
         }

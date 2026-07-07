@@ -4,12 +4,20 @@ export struct Account {
     balance: string,
 }
 
+export enum TransactionType {
+    income,
+    expense,
+    transfer
+}
+
 export struct Transaction {
     id: string,
     date: string,
     account-id: string,
     category-id: string,
-    amount: string,
+    transaction-type: TransactionType,
+    outflow: string,
+    inflow: string,
 }
 
 export struct TransactionOption {

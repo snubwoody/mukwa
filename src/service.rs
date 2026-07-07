@@ -65,6 +65,16 @@ pub enum TransactionType {
     Transfer,
 }
 
+impl From<TransactionType> for ui::TransactionType {
+    fn from(value: TransactionType) -> Self {
+        match value {
+            TransactionType::Expense => ui::TransactionType::Expense,
+            TransactionType::Income => ui::TransactionType::Income,
+            TransactionType::Transfer => ui::TransactionType::Transfer,
+        }
+    }
+}
+
 #[derive(PartialOrd, PartialEq, Debug, Default, Clone)]
 pub struct Transaction {
     pub id: Uuid,
@@ -77,7 +87,21 @@ pub struct Transaction {
     pub amount: Money,
 }
 
-impl<'a> TryFrom<&rusqlite::Row<'a>> for Transaction {
+impl Transaction {
+    fn transaction_type(&self) -> TransactionType {
+        if self.sender_id.is_some() && self.receiver_id.is_some() {
+            return TransactionType::Transfer;
+        }
+
+        if self.receiver_id.is_some() {
+            return TransactionType::Income;
+        }
+
+        TransactionType::Expense
+    }
+}
+
+impl<'a> TryFrom<&Row<'a>> for Transaction {
     type Error = Error;
     fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
         let id: String = value.get("id")?;
@@ -136,13 +160,31 @@ impl From<Transaction> for ui::Transaction {
             None => String::new(),
         };
 
+        let transaction_type = value.transaction_type();
+        let inflow = if transaction_type == TransactionType::Income {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
+        // FIXME
+        let outflow = if transaction_type == TransactionType::Transfer
+            || transaction_type == TransactionType::Expense
+        {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
         Self {
             id: value.id.to_shared_string(),
             // FIXME
             account_id: value.sender_id.unwrap().to_shared_string(),
             category_id: category_id.to_shared_string(),
             date: value.date.to_shared_string(),
-            amount: value.amount.to_shared_string(),
+            outflow,
+            inflow,
+            transaction_type: transaction_type.into(),
         }
     }
 }
@@ -154,12 +196,30 @@ impl From<&Transaction> for ui::Transaction {
             None => String::new(),
         };
 
+        let transaction_type = value.transaction_type();
+        let inflow = if transaction_type == TransactionType::Income {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
+        // FIXME
+        let outflow = if transaction_type == TransactionType::Transfer
+            || transaction_type == TransactionType::Expense
+        {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
         Self {
             id: value.id.to_string().into(),
             account_id: value.sender_id.unwrap().to_string().into(),
             category_id: category_id.into(),
             date: value.date.to_string().into(),
-            amount: value.amount.to_shared_string(),
+            outflow,
+            inflow,
+            transaction_type: transaction_type.into(),
         }
     }
 }

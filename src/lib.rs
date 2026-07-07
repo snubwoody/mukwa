@@ -162,7 +162,8 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         move || {
             let mut total = Money::ZERO;
             for transaction in state.transactions().iter() {
-                total -= Money::from_str(transaction.amount.as_str()).unwrap_or_default();
+                total -= Money::from_str(transaction.outflow.as_str()).unwrap_or_default();
+                total += Money::from_str(transaction.inflow.as_str()).unwrap_or_default();
             }
             total.to_shared_string()
         }

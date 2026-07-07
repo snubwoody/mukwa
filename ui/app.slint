@@ -24,7 +24,7 @@ export component MainWindow inherits Window {
         }
 
         TransactionTable {
-            columns: [@tr("Date"), @tr("Account"), @tr("Category"), @tr("Amount")];
+            columns: [@tr("Date"), @tr("Account"), @tr("Category"), @tr("Outflow"), @tr("Inflow")];
             transactions: State.transactions;
         }
     }
