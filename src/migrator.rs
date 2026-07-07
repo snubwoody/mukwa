@@ -93,25 +93,25 @@ impl Migrator {
         let file_name = path
             .as_ref()
             .file_name()
-            .ok_or(Error::invalid_migration("failed to read file name"))?;
+            .ok_or(Error::new("Failed to read file name"))?;
         let split = file_name
             .to_str()
-            .ok_or(Error::invalid_migration("failed to read file name"))?
+            .ok_or(Error::new("Failed to read file name"))?
             .split("_")
             .collect::<Vec<_>>();
         let version = split[0]
             .parse::<i64>()
-            .map_err(|_| Error::invalid_migration("failed to parse version"))?;
+            .map_err(|_| Error::new("Failed to parse migration version"))?;
 
         let buffer = fs::read_to_string(&path)?;
 
         let (up, down) = parse_migration(&buffer);
         if down.is_none() {
-            return Err(Error::invalid_migration("missing down migration"));
+            return Err(Error::new("Missing down migration"));
         }
 
         if up.is_none() {
-            return Err(Error::invalid_migration("missing up migration"));
+            return Err(Error::new("Missing up migration"));
         }
 
         let migration = Migration::new(up.unwrap().as_str(), down.unwrap().as_str(), version);

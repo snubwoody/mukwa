@@ -20,7 +20,6 @@ path = "src/bin/cli.rs"
 slint = { version = "1.17.0", features = ["backend-winit", "renderer-skia"] }
 tracing = "0.1.44"
 tempfile = "3.27.0"
-thiserror = "2.0.18"
 jiff = "0.2.29"
 tracing-subscriber = "0.3.23"
 uuid = { version = "1.23.4", features = ["v7"] }
