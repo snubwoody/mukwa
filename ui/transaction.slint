@@ -165,6 +165,20 @@ component TransactionRow inherits Rectangle {
         }
     ]
 
+    ContextMenuArea {
+        Menu {
+            MenuItem {
+                title: @tr("Duplicate");
+                activated => State.duplicate_transaction(transaction.id);
+            }
+
+            MenuItem {
+                title: @tr("Delete");
+                activated => State.delete_transaction(transaction.id);
+            }
+        }
+    }
+
     row := HorizontalLayout {
         vertical-stretch: 0;
         padding: 8px;

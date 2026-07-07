@@ -2,117 +2,24 @@ pub mod error;
 pub mod migrator;
 mod money;
 pub mod service;
+mod state;
 
 pub use error::Error;
 pub use error::Result;
 pub use money::Money;
 
 use crate::migrator::Migrator;
-use crate::service::{Service, UpdateTransactionOpts};
+use crate::service::Service;
+use crate::state::AppState;
 use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
 use rusqlite::Connection;
-use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
+use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 use std::rc::Rc;
-use std::str::FromStr;
-use tracing::{info, warn};
-use uuid::Uuid;
+use tracing::warn;
 
 mod ui {
     slint::include_modules!();
-}
-
-#[derive(Clone)]
-pub struct AppState {
-    service: Service,
-    accounts: Rc<VecModel<ui::Account>>,
-    // We can't map arrays in slint so we have to maintain duplicate arrays for comboboxes
-    // see <https://github.com/slint-ui/slint/issues/1328>
-    account_options: Rc<VecModel<(SharedString, SharedString)>>,
-    transactions: Rc<VecModel<ui::Transaction>>,
-}
-
-impl AppState {
-    pub fn new(service: Service) -> Result<AppState> {
-        let transactions_list: Vec<ui::Transaction> = service
-            .fetch_transactions()?
-            .iter()
-            .map(|t| t.into())
-            .collect();
-
-        let transactions_model = Rc::new(VecModel::from(transactions_list));
-        let account_list: Vec<ui::Account> =
-            service.fetch_accounts()?.iter().map(|a| a.into()).collect();
-        let account_options: Vec<_> = account_list
-            .iter()
-            .map(|a| (a.name.clone(), a.id.clone()))
-            .collect();
-        let accounts_model = Rc::new(VecModel::from(account_list));
-        let account_options_model = Rc::new(VecModel::from(account_options));
-
-        Ok(AppState {
-            service,
-            accounts: accounts_model,
-            account_options: account_options_model,
-            transactions: transactions_model,
-        })
-    }
-    /// Creates a new account.
-    pub fn create_account(&mut self, name: &str) -> Result<()> {
-        let account = self.service.create_account(name)?;
-        info!(id=?account.id,"Created new account");
-        self.accounts.push(account.clone().into());
-        self.account_options.push((
-            SharedString::from(account.id.to_string()),
-            account.name.into(),
-        ));
-        Ok(())
-    }
-
-    pub fn create_transaction(&mut self) -> Result<()> {
-        let transaction = self.service.create_transaction(Default::default())?;
-        info!(id=?transaction.id,"Created new transaction");
-        self.transactions.push(transaction.into());
-        Ok(())
-    }
-
-    pub fn update_transaction(
-        &mut self,
-        id: &str,
-        account_id: &str,
-        amount: &str,
-        date: &str,
-    ) -> Result<()> {
-        let account_id = Uuid::parse_str(account_id).ok();
-        let amount = Money::from_str(amount).ok();
-        let date = Date::strptime("%Y-%m-%d", date).ok();
-        let opts = UpdateTransactionOpts {
-            id: Uuid::parse_str(id)?,
-            account_id,
-            amount,
-            date,
-            ..Default::default()
-        };
-
-        let transaction = self.service.update_transaction(opts)?;
-        let transactions: Vec<ui::Transaction> = self
-            .transactions
-            .iter()
-            .map(move |mut t| {
-                if t.id == transaction.id.to_shared_string() {
-                    t.account_id = transaction.account_id.to_shared_string()
-                }
-                t
-            })
-            .collect();
-        self.transactions.set_vec(transactions);
-        info!(id=?id,"Updated transaction");
-        Ok(())
-    }
-
-    pub fn get_account(&self, id: SharedString) -> Option<ui::Account> {
-        self.accounts.iter().find(|a| a.id == id)
-    }
 }
 
 impl From<Date> for ui::Date {
@@ -215,21 +122,12 @@ fn setup_calendar_state(window: &ui::MainWindow) {
     });
 }
 
-pub fn run() -> Result<()> {
-    let connection = Connection::open("data.sqlite")?;
-    let mut migrator = Migrator::new();
-    migrator.load_from_dir("./migrations")?;
-    migrator.migrate(&connection)?;
+fn setup_global_state(state: AppState, window: &ui::MainWindow) {
+    let transactions_model_rc = ModelRc::new(state.transactions());
+    let accounts_model_rc = ModelRc::new(state.accounts());
+    let account_options_rc = ModelRc::new(state.account_options());
 
-    let service = Service::new(connection);
-    let main_window = ui::MainWindow::new().unwrap();
-
-    let state = AppState::new(service)?;
-    let transactions_model_rc = ModelRc::new(state.transactions.clone());
-    let accounts_model_rc = ModelRc::new(state.accounts.clone());
-    let account_options_rc = ModelRc::new(state.account_options.clone());
-
-    let global_state = main_window.global::<ui::State>();
+    let global_state = window.global::<ui::State>();
     global_state.set_transactions(transactions_model_rc.clone());
     global_state.set_accounts(accounts_model_rc.clone());
 
@@ -259,6 +157,24 @@ pub fn run() -> Result<()> {
         }
     });
 
+    global_state.on_delete_transaction({
+        let mut state = state.clone();
+        move |id| {
+            if let Err(err) = state.delete_transaction(&id) {
+                warn!("Failed to delete transaction: {err}");
+            }
+        }
+    });
+
+    global_state.on_duplicate_transaction({
+        let mut state = state.clone();
+        move |id| {
+            if let Err(err) = state.duplicate_transaction(&id) {
+                warn!("Failed to duplicate transaction: {err}");
+            }
+        }
+    });
+
     global_state.on_get_account_name({
         let state = state.clone();
         move |id| match state.get_account(id) {
@@ -266,7 +182,20 @@ pub fn run() -> Result<()> {
             None => SharedString::new(),
         }
     });
+}
 
+pub fn run() -> Result<()> {
+    let connection = Connection::open("data.sqlite")?;
+    let mut migrator = Migrator::new();
+    migrator.load_from_dir("./migrations")?;
+    migrator.migrate(&connection)?;
+
+    let service = Service::new(connection);
+    let main_window = ui::MainWindow::new().unwrap();
+
+    let state = AppState::new(service)?;
+
+    setup_global_state(state, &main_window);
     setup_calendar_state(&main_window);
 
     main_window.run().unwrap();
