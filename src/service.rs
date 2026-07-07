@@ -72,12 +72,9 @@ impl Transaction {
     /// Parses a `Transaction` from a `&str`.
     pub fn parse(value: &str) -> crate::Result<Transaction> {
         let parts: Vec<_> = value.split("|").collect();
-        let id = Uuid::parse_str(parts[0])
-            .map_err(|_| Error::ParseError("Invalid transaction id".to_string()))?;
-        let date =
-            Date::from_str(parts[1]).map_err(|_| Error::ParseError("Invalid date".to_string()))?;
-        let account_id = Uuid::parse_str(parts[2])
-            .map_err(|_| Error::ParseError("Invalid account id".to_string()))?;
+        let id = Uuid::parse_str(parts[0]).map_err(|_| Error::new("Invalid transaction id"))?;
+        let date = Date::from_str(parts[1]).map_err(|_| Error::new("Invalid date"))?;
+        let account_id = Uuid::parse_str(parts[2]).map_err(|_| Error::new("Invalid account id"))?;
         let category_id = Uuid::parse_str(parts[3]).ok();
         let amount = Money::from_scaled(parts[4].parse::<i64>()?);
 
@@ -311,9 +308,7 @@ impl Service {
             None => {
                 let accounts = self.fetch_accounts()?;
                 if accounts.is_empty() {
-                    return Err(Error::generic(
-                        "Cannot create a transaction without an account",
-                    ));
+                    return Err(Error::new("Cannot create a transaction without an account"));
                 }
                 accounts[0].id
             }
