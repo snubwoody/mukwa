@@ -1,5 +1,5 @@
 use crate::service::{Service, UpdateTransactionOpts};
-use crate::{Money, ui};
+use crate::{ui, Money};
 use jiff::civil::Date;
 use slint::{Model, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
@@ -120,7 +120,8 @@ impl AppState {
             .iter()
             .map(move |mut t| {
                 if t.id == transaction.id.to_shared_string() {
-                    t.account_id = transaction.account_id.to_shared_string()
+                    // FIXME
+                    t.account_id = transaction.sender_id.unwrap().to_shared_string()
                 }
                 t
             })

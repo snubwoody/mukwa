@@ -23,6 +23,7 @@ export global State {
     callback duplicate_transaction(id: string);
     callback delete_transaction(id: string);
     pure callback get_account_name(id: string) -> string;
+    pure callback total_balance() -> string;
     pure callback get_category_name(id: string) -> string;
     pure callback update_transaction(id: string, account-id: string, amount: string, date: string);
     in-out property <[Transaction]> transactions;

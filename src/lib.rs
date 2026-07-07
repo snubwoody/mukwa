@@ -14,8 +14,9 @@ use crate::state::AppState;
 use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
 use rusqlite::Connection;
-use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
+use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
+use std::str::FromStr;
 use tracing::warn;
 
 mod ui {
@@ -154,6 +155,16 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
             if let Err(err) = state.update_transaction(&id, &account_id, &amount, &date) {
                 warn!("Failed to update transaction: {err}");
             }
+        }
+    });
+    global_state.on_total_balance({
+        let state = state.clone();
+        move || {
+            let mut total = Money::ZERO;
+            for transaction in state.transactions().iter() {
+                total -= Money::from_str(transaction.amount.as_str()).unwrap_or_default();
+            }
+            total.to_shared_string()
         }
     });
 

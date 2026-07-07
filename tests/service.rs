@@ -1,6 +1,6 @@
 use jiff::civil::date;
 use mukwa::service::{CreateTransactionOpts, Service, UpdateTransactionOpts};
-use mukwa::{Money, create_test_db};
+use mukwa::{create_test_db, Money};
 
 #[test]
 fn create_account() -> mukwa::Result<()> {
@@ -34,7 +34,7 @@ fn create_transaction_selects_first_account() -> mukwa::Result<()> {
     let service = Service::new(connection);
     let account = service.create_account("")?;
     let transaction = service.create_transaction(Default::default())?;
-    assert_eq!(transaction.account_id, account.id);
+    assert_eq!(transaction.sender_id.unwrap(), account.id);
     Ok(())
 }
 
@@ -51,7 +51,7 @@ fn create_transaction() -> mukwa::Result<()> {
         ..Default::default()
     };
     let transaction = service.create_transaction(opts)?;
-    assert_eq!(transaction.account_id, account.id);
+    assert_eq!(transaction.sender_id.unwrap(), account.id);
     assert_eq!(transaction.category_id, None);
     assert_eq!(transaction.amount, Money::new(200));
     assert_eq!(transaction.date, date(2020, 10, 20));
@@ -97,7 +97,10 @@ fn duplicate_transaction() -> mukwa::Result<()> {
     assert_eq!(transactions.len(), 2);
     assert_eq!(transactions[0].date, transactions[1].date);
     assert_eq!(transactions[0].amount, transactions[1].amount);
-    assert_eq!(transactions[0].account_id, transactions[1].account_id);
+    assert_eq!(
+        transactions[0].sender_id.unwrap(),
+        transactions[1].sender_id.unwrap()
+    );
     assert_eq!(transactions[0].category_id, transactions[1].category_id);
 
     Ok(())
@@ -132,7 +135,7 @@ fn update_transaction() -> mukwa::Result<()> {
         .query_one("SELECT * FROM transactions", [], |row| {
             let amount: i64 = row.get("amount")?;
             let date: String = row.get("transaction_date")?;
-            let account_id: String = row.get("account_id")?;
+            let account_id: String = row.get("sender_id")?;
             assert_eq!(amount, Money::new(500).inner());
             assert_eq!(date, "1990-01-01");
             assert_eq!(account_id, account2.id.to_string());
