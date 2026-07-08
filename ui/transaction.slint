@@ -6,18 +6,24 @@ import {
     LineEdit,
 } from "std-widgets.slint";
 import { Colors } from "./colors.slint";
-import { Account, Transaction, State } from "./globals.slint";
+import { Account, Transaction, State,UpdateTransactionOpts } from "./globals.slint";
 import { Sidebar } from "./sidebar.slint";
 export { Account, Transaction, State } from "./globals.slint";
 import { Button, ComboBox } from "./widgets.slint";
 import { FocusBorder } from "widgets/focus-border.slint";
 import { Calendar } from "./widgets/calendar.slint";
 
+// TODO: maybe enter should submit?
 component EditingRow inherits VerticalLayout {
     in property <Transaction> transaction;
     out property <string> selected-account-id: transaction.account-id;
-    out property <string> selected-amount: transaction.amount;
+    // FIXME
+    // TODO: if both outflow and inflow are not empty then return an error
+    // too ambigous
+    out property <string> outflow: transaction.outflow;
+    out property <string> inflow: transaction.inflow;
     out property <string> selected-date: transaction.date;
+    out property <UpdateTransactionOpts> update-opts;
     callback cancel();
     callback confirm();
 
@@ -81,19 +87,37 @@ component EditingRow inherits VerticalLayout {
             height: 36px;
             border-radius: 4px;
             background: white;
-            money-input := TextInput {
-                text: transaction.amount;
+
+            outflow-input := TextInput {
+                text: outflow;
                 color: Colors.textBody;
                 input-type: decimal;
                 edited => {
+                    outflow = outflow-input.text;
+                    inflow = "";
+                    inflow-input.text = "";
                 }
+            }
+        }
 
-                key-pressed(event) => {
-                    if (event.text == Key.Escape || event.text == Key.Return) {
-                        selected-amount = money-input.text;
-                        return accept;
-                    }
-                    return reject;
+        Rectangle {
+            border-width: 1px;
+            border-color: Colors.blue500;
+            clip: true;
+            width: 250px;
+            height: 36px;
+            border-radius: 4px;
+            background: white;
+
+            inflow-input := TextInput {
+                text: inflow;
+                color: Colors.textBody;
+                input-type: decimal;
+
+                edited => {
+                    inflow = inflow-input.text;
+                    outflow = "";
+                    outflow-input.text = "";
                 }
             }
         }
@@ -220,7 +244,17 @@ component TransactionRow inherits Rectangle {
             Text {
                 width: 100%;
                 horizontal-alignment: start;
-                text: transaction.amount;
+                text: transaction.outflow;
+                color: Colors.textBody;
+            }
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+            Text {
+                width: 100%;
+                horizontal-alignment: start;
+                text: transaction.inflow;
                 color: Colors.textBody;
             }
         }
@@ -230,7 +264,7 @@ component TransactionRow inherits Rectangle {
         visible: is-active;
         transaction: transaction;
         confirm => {
-            State.update_transaction(transaction.id, edit-row.selected-account-id, edit-row.selected-amount,edit-row.selected-date);
+            State.update_transaction(transaction.id, edit-row.selected-account-id, edit-row.outflow,edit-row.inflow,edit-row.selected-date);
             select-row(-1);
         }
         cancel => {
@@ -249,9 +283,30 @@ export component TransactionTable inherits VerticalLayout {
         active-row = index;
     }
 
+    VerticalLayout {
+        padding: 12px;
+        spacing: 12px;
+
+        Text {
+            text: @tr("All accounts");
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: Colors.textHeading;
+        }
+
+        Text {
+            text: State.total_balance();
+            font-size: 1.25rem;
+            color: Colors.textHeading;
+        }
+    }
+
     HorizontalLayout {
         alignment: end;
-        padding: 16px;
+        padding-left: 16px;
+        padding-right: 16px;
+        padding-top: 8px;
+        padding-bottom: 8px;
 
         Button {
             text: @tr("Add transaction");

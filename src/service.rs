@@ -5,7 +5,6 @@ use rusqlite::{Connection, Row, params};
 use slint::{SharedString, ToSharedString};
 use std::path::Path;
 use std::rc::Rc;
-use std::str::FromStr;
 use std::sync::{Mutex, MutexGuard};
 use uuid::Uuid;
 
@@ -59,43 +58,56 @@ impl Category {
     }
 }
 
+#[derive(PartialOrd, PartialEq, Debug, Clone, Copy, Eq, Ord)]
+pub enum TransactionType {
+    Expense,
+    Income,
+    Transfer,
+}
+
+impl From<TransactionType> for ui::TransactionType {
+    fn from(value: TransactionType) -> Self {
+        match value {
+            TransactionType::Expense => ui::TransactionType::Expense,
+            TransactionType::Income => ui::TransactionType::Income,
+            TransactionType::Transfer => ui::TransactionType::Transfer,
+        }
+    }
+}
+
 #[derive(PartialOrd, PartialEq, Debug, Default, Clone)]
 pub struct Transaction {
     pub id: Uuid,
-    pub account_id: Uuid,
+    /// The sending account.
+    pub sender_id: Option<Uuid>,
+    /// The receiving account.
+    pub receiver_id: Option<Uuid>,
     pub category_id: Option<Uuid>,
     pub date: Date,
     pub amount: Money,
 }
 
 impl Transaction {
-    /// Parses a `Transaction` from a `&str`.
-    pub fn parse(value: &str) -> crate::Result<Transaction> {
-        let parts: Vec<_> = value.split("|").collect();
-        let id = Uuid::parse_str(parts[0]).map_err(|_| Error::new("Invalid transaction id"))?;
-        let date = Date::from_str(parts[1]).map_err(|_| Error::new("Invalid date"))?;
-        let account_id = Uuid::parse_str(parts[2]).map_err(|_| Error::new("Invalid account id"))?;
-        let category_id = Uuid::parse_str(parts[3]).ok();
-        let amount = Money::from_scaled(parts[4].parse::<i64>()?);
+    pub fn transaction_type(&self) -> TransactionType {
+        if self.sender_id.is_some() && self.receiver_id.is_some() {
+            return TransactionType::Transfer;
+        }
 
-        let transaction = Transaction {
-            id,
-            account_id,
-            date,
-            category_id,
-            amount,
-        };
+        if self.receiver_id.is_some() {
+            return TransactionType::Income;
+        }
 
-        Ok(transaction)
+        TransactionType::Expense
     }
 }
 
-impl<'a> TryFrom<&rusqlite::Row<'a>> for Transaction {
+impl<'a> TryFrom<&Row<'a>> for Transaction {
     type Error = Error;
+
     fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
-        // FIXME
         let id: String = value.get("id")?;
-        let account_id: String = value.get("account_id")?;
+        let sender_id: Option<String> = value.get("sender_id")?;
+        let receiver_id: Option<String> = value.get("receiver_id")?;
         let category_id: Option<String> = value.get("category_id")?;
         let transaction_date: String = value.get("transaction_date")?;
         let amount: i64 = value.get("amount")?;
@@ -105,11 +117,22 @@ impl<'a> TryFrom<&rusqlite::Row<'a>> for Transaction {
             None => None,
         };
 
+        let sender_id = match sender_id {
+            Some(id) => Some(Uuid::parse_str(&id)?),
+            None => None,
+        };
+
+        let receiver_id = match receiver_id {
+            Some(id) => Some(Uuid::parse_str(&id)?),
+            None => None,
+        };
+
         let transaction = Transaction {
             id: Uuid::parse_str(&id)?,
             amount: Money::from_scaled(amount),
             date: Date::strptime("%Y-%m-%d", transaction_date)?,
-            account_id: Uuid::parse_str(&account_id)?,
+            sender_id,
+            receiver_id,
             category_id,
         };
 
@@ -138,12 +161,31 @@ impl From<Transaction> for ui::Transaction {
             None => String::new(),
         };
 
+        let transaction_type = value.transaction_type();
+        let inflow = if transaction_type == TransactionType::Income {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
+        // FIXME
+        let outflow = if transaction_type == TransactionType::Transfer
+            || transaction_type == TransactionType::Expense
+        {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
         Self {
             id: value.id.to_shared_string(),
-            account_id: value.account_id.to_shared_string(),
+            // FIXME
+            account_id: value.sender_id.unwrap().to_shared_string(),
             category_id: category_id.to_shared_string(),
             date: value.date.to_shared_string(),
-            amount: value.amount.to_shared_string(),
+            outflow,
+            inflow,
+            transaction_type: transaction_type.into(),
         }
     }
 }
@@ -155,12 +197,35 @@ impl From<&Transaction> for ui::Transaction {
             None => String::new(),
         };
 
+        let transaction_type = value.transaction_type();
+        let inflow = if transaction_type == TransactionType::Income {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
+        // FIXME
+        let outflow = if transaction_type == TransactionType::Transfer
+            || transaction_type == TransactionType::Expense
+        {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
         Self {
             id: value.id.to_string().into(),
-            account_id: value.account_id.to_string().into(),
+            account_id: value
+                .sender_id
+                .or(value.receiver_id)
+                .unwrap()
+                .to_string()
+                .into(),
             category_id: category_id.into(),
             date: value.date.to_string().into(),
-            amount: value.amount.to_shared_string(),
+            outflow,
+            inflow,
+            transaction_type: transaction_type.into(),
         }
     }
 }
@@ -169,7 +234,8 @@ impl From<&Transaction> for ui::Transaction {
 pub struct UpdateTransactionOpts {
     /// The transaction id.
     pub id: Uuid,
-    pub account_id: Option<Uuid>,
+    pub sender_id: Option<Uuid>,
+    pub receiver_id: Option<Uuid>,
     pub category_id: Option<Uuid>,
     pub amount: Option<Money>,
     pub date: Option<Date>,
@@ -177,6 +243,7 @@ pub struct UpdateTransactionOpts {
 
 #[derive(Clone, PartialEq, PartialOrd, Ord, Eq, Debug, Copy)]
 pub struct CreateTransactionOpts {
+    /// The sending account
     pub account_id: Option<Uuid>,
     pub date: Date,
     pub amount: Money,
@@ -255,27 +322,53 @@ impl Service {
         Ok(account)
     }
 
-    pub fn update_transaction(&self, opts: UpdateTransactionOpts) -> crate::Result<Transaction> {
-        let sql = "UPDATE transactions \
-        SET \
-            account_id = COALESCE(?1,account_id), \
-            category_id = COALESCE(?2,category_id), \
-            amount = COALESCE(?3,amount), \
-            transaction_date = COALESCE(?4,transaction_date) \
-        WHERE id = ?5 \
-        RETURNING *";
-
-        let params = params![
-            opts.account_id.map(|id| id.to_string()),
-            opts.category_id.map(|id| id.to_string()),
-            opts.amount.map(|a| a.inner()),
-            opts.date.map(|d| d.to_string()),
-            opts.id.to_string()
-        ];
-
+    pub fn get_transaction(&self, id: Uuid) -> crate::Result<Transaction> {
         let connection = self.connection();
-        let mut stmt = connection.prepare_cached(sql)?;
-        let mut rows = stmt.query_and_then(params, |row| Transaction::try_from(row))?;
+        let mut stmt = connection.prepare_cached("SELECT * FROM transactions WHERE id = ?")?;
+        let mut rows = stmt.query_and_then([id.to_string()], |row| Transaction::try_from(row))?;
+        rows.next().ok_or(Error::new("Transaction not found"))?
+    }
+
+    pub fn update_transaction(&self, opts: UpdateTransactionOpts) -> crate::Result<Transaction> {
+        let transaction = self.get_transaction(opts.id)?;
+        let mut connection = self.connection();
+
+        let tx = connection.transaction()?;
+        if let Some(date) = opts.date {
+            tx.execute(
+                "UPDATE transactions SET transaction_date = ?1 WHERE id = ?2",
+                [date.to_string(), opts.id.to_string()],
+            )?;
+        }
+
+        if let Some(amount) = opts.amount {
+            let sql = "UPDATE transactions SET amount = ?1 WHERE id = ?2";
+            tx.execute(sql, params![amount.inner(), opts.id.to_string()])?;
+        }
+
+        if let Some(id) = opts.sender_id {
+            let sql = if transaction.transaction_type() == TransactionType::Income {
+                "UPDATE transactions SET sender_id = ?1, receiver_id = NULL WHERE id = ?2"
+            } else {
+                "UPDATE transactions SET sender_id = ?1 WHERE id = ?2"
+            };
+            tx.execute(sql, [id.to_string(), opts.id.to_string()])?;
+        }
+
+        if let Some(id) = opts.receiver_id {
+            let sql = if transaction.transaction_type() == TransactionType::Expense {
+                "UPDATE transactions SET receiver_id = ?1, sender_id = NULL WHERE id = ?2"
+            } else {
+                "UPDATE transactions SET receiver_id = ?1 WHERE id = ?2"
+            };
+            tx.execute(sql, [id.to_string(), opts.id.to_string()])?;
+        }
+
+        tx.commit()?;
+
+        let mut stmt = connection.prepare_cached("SELECT * FROM transactions WHERE id = ?1")?;
+        let mut rows =
+            stmt.query_and_then([opts.id.to_string()], |row| Transaction::try_from(row))?;
         let transaction = rows.next().unwrap()?;
         Ok(transaction)
     }
@@ -289,8 +382,8 @@ impl Service {
 
     pub fn duplicate_transaction(&self, id: Uuid) -> crate::Result<Transaction> {
         let connection = self.connection();
-        let sql = "INSERT INTO transactions(id,account_id,category_id,transaction_date,amount) \
-        SELECT ?1,account_id,category_id,transaction_date,amount FROM transactions \
+        let sql = "INSERT INTO transactions(id,sender_id,receiver_id,category_id,transaction_date,amount) \
+        SELECT ?1,sender_id,receiver_id,category_id,transaction_date,amount FROM transactions \
         WHERE id = ?2 RETURNING *";
 
         let mut stmt = connection.prepare_cached(sql)?;
@@ -315,7 +408,7 @@ impl Service {
         };
 
         let connection = self.connection.lock().unwrap();
-        let sql = "INSERT INTO transactions(id,transaction_date,account_id,category_id,amount) \
+        let sql = "INSERT INTO transactions(id,transaction_date,sender_id,category_id,amount) \
             VALUES(?1,?2,?3,?4,?5) \
             RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;

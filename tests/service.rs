@@ -34,7 +34,7 @@ fn create_transaction_selects_first_account() -> mukwa::Result<()> {
     let service = Service::new(connection);
     let account = service.create_account("")?;
     let transaction = service.create_transaction(Default::default())?;
-    assert_eq!(transaction.account_id, account.id);
+    assert_eq!(transaction.sender_id.unwrap(), account.id);
     Ok(())
 }
 
@@ -51,7 +51,7 @@ fn create_transaction() -> mukwa::Result<()> {
         ..Default::default()
     };
     let transaction = service.create_transaction(opts)?;
-    assert_eq!(transaction.account_id, account.id);
+    assert_eq!(transaction.sender_id.unwrap(), account.id);
     assert_eq!(transaction.category_id, None);
     assert_eq!(transaction.amount, Money::new(200));
     assert_eq!(transaction.date, date(2020, 10, 20));
@@ -97,14 +97,53 @@ fn duplicate_transaction() -> mukwa::Result<()> {
     assert_eq!(transactions.len(), 2);
     assert_eq!(transactions[0].date, transactions[1].date);
     assert_eq!(transactions[0].amount, transactions[1].amount);
-    assert_eq!(transactions[0].account_id, transactions[1].account_id);
+    assert_eq!(
+        transactions[0].sender_id.unwrap(),
+        transactions[1].sender_id.unwrap()
+    );
     assert_eq!(transactions[0].category_id, transactions[1].category_id);
 
     Ok(())
 }
 
 #[test]
-fn update_transaction() -> mukwa::Result<()> {
+fn update_expense_amount() -> mukwa::Result<()> {
+    let connection = create_test_db();
+
+    let service = Service::new(connection);
+    let account = service.create_account("")?;
+
+    let create_opts = CreateTransactionOpts {
+        account_id: Some(account.id),
+        ..Default::default()
+    };
+
+    let transaction = service.create_transaction(create_opts)?;
+    let update_opts = UpdateTransactionOpts {
+        id: transaction.id,
+        amount: Some(Money::new(500)),
+        ..Default::default()
+    };
+
+    let transaction = service.update_transaction(update_opts)?;
+    assert_eq!(transaction.amount, Money::new(500));
+    service
+        .connection()
+        .query_one("SELECT * FROM transactions", [], |row| {
+            let amount: i64 = row.get("amount")?;
+            let sender_id: String = row.get("sender_id")?;
+            let receiver_id: Option<String> = row.get("receiver_id")?;
+            assert_eq!(amount, Money::new(500).inner());
+            assert_eq!(sender_id, account.id.to_string());
+            assert!(receiver_id.is_none());
+            Ok(())
+        })?;
+
+    Ok(())
+}
+
+#[test]
+fn update_expense_account() -> mukwa::Result<()> {
     let connection = create_test_db();
 
     let service = Service::new(connection);
@@ -119,8 +158,75 @@ fn update_transaction() -> mukwa::Result<()> {
     let transaction = service.create_transaction(create_opts)?;
     let update_opts = UpdateTransactionOpts {
         id: transaction.id,
-        account_id: Some(account2.id),
+        sender_id: Some(account2.id),
+        ..Default::default()
+    };
+
+    let transaction = service.update_transaction(update_opts)?;
+    assert_eq!(transaction.sender_id, Some(account2.id));
+    service
+        .connection()
+        .query_one("SELECT * FROM transactions", [], |row| {
+            let sender_id: String = row.get("sender_id")?;
+            let receiver_id: Option<String> = row.get("receiver_id")?;
+            assert_eq!(sender_id, account2.id.to_string());
+            assert!(receiver_id.is_none());
+            Ok(())
+        })?;
+
+    Ok(())
+}
+
+#[test]
+fn update_transaction_date() -> mukwa::Result<()> {
+    let connection = create_test_db();
+
+    let service = Service::new(connection);
+    let account = service.create_account("")?;
+
+    let create_opts = CreateTransactionOpts {
+        account_id: Some(account.id),
+        ..Default::default()
+    };
+
+    let transaction = service.create_transaction(create_opts)?;
+    let update_opts = UpdateTransactionOpts {
+        id: transaction.id,
+        date: Some(date(1990, 1, 1)),
+        ..Default::default()
+    };
+
+    let transaction = service.update_transaction(update_opts)?;
+    assert_eq!(transaction.date, date(1990, 1, 1));
+    service
+        .connection()
+        .query_one("SELECT * FROM transactions", [], |row| {
+            let date: String = row.get("transaction_date")?;
+            assert_eq!(date, "1990-01-01");
+            Ok(())
+        })?;
+
+    Ok(())
+}
+
+#[test]
+fn convert_expense_to_income() -> mukwa::Result<()> {
+    let connection = create_test_db();
+
+    let service = Service::new(connection);
+    let account = service.create_account("")?;
+    let account2 = service.create_account("")?;
+
+    let create_opts = CreateTransactionOpts {
+        account_id: Some(account.id),
+        ..Default::default()
+    };
+
+    let transaction = service.create_transaction(create_opts)?;
+    let update_opts = UpdateTransactionOpts {
+        id: transaction.id,
         amount: Some(Money::new(500)),
+        receiver_id: Some(account2.id),
         date: Some(date(1990, 1, 1)),
         ..Default::default()
     };
@@ -132,10 +238,12 @@ fn update_transaction() -> mukwa::Result<()> {
         .query_one("SELECT * FROM transactions", [], |row| {
             let amount: i64 = row.get("amount")?;
             let date: String = row.get("transaction_date")?;
-            let account_id: String = row.get("account_id")?;
+            let sender_id: Option<String> = row.get("sender_id")?;
+            let receiver_id: Option<String> = row.get("receiver_id")?;
             assert_eq!(amount, Money::new(500).inner());
             assert_eq!(date, "1990-01-01");
-            assert_eq!(account_id, account2.id.to_string());
+            assert_eq!(receiver_id, Some(account2.id.to_string()));
+            assert!(sender_id.is_none());
             Ok(())
         })?;
 

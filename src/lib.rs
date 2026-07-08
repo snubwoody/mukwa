@@ -2,7 +2,7 @@ pub mod error;
 pub mod migrator;
 mod money;
 pub mod service;
-mod state;
+pub mod state;
 
 pub use error::Error;
 pub use error::Result;
@@ -14,11 +14,12 @@ use crate::state::AppState;
 use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
 use rusqlite::Connection;
-use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
+use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
+use std::str::FromStr;
 use tracing::warn;
 
-mod ui {
+pub mod ui {
     slint::include_modules!();
 }
 
@@ -150,10 +151,21 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     global_state.on_update_transaction({
         let mut state = state.clone();
-        move |id, account_id, amount, date| {
-            if let Err(err) = state.update_transaction(&id, &account_id, &amount, &date) {
+        move |id, account_id, outflow, inflow, date| {
+            if let Err(err) = state.update_transaction(&id, &account_id, &outflow, &inflow, &date) {
                 warn!("Failed to update transaction: {err}");
             }
+        }
+    });
+    global_state.on_total_balance({
+        let state = state.clone();
+        move || {
+            let mut total = Money::ZERO;
+            for transaction in state.transactions().iter() {
+                total -= Money::from_str(transaction.outflow.as_str()).unwrap_or_default();
+                total += Money::from_str(transaction.inflow.as_str()).unwrap_or_default();
+            }
+            total.to_shared_string()
         }
     });
 
