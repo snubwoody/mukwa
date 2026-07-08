@@ -21,6 +21,18 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/cache@v6
+        with:
+          key: ${{runner.os}}-Rust-${{hashFiles('**/Cargo.toml')}}-${{hashFiles('**/Cargo.lock')}}
+          restore-keys: |
+            ${{runner.os}}-Rust-${{hashFiles('Cargo.toml')}}-
+            ${{runner.os}}-Rust-
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
       - run: cargo clippy --all-features -- -Dwarnings
   test:
     strategy:

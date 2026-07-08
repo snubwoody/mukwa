@@ -8,7 +8,6 @@ import { Colors } from "./colors.slint";
 import { Account, State } from "./globals.slint";
 import { Button } from "./widgets.slint";
 
-
 export component Sidebar inherits VerticalLayout {
     in-out property <[Account]> accounts;
     width: 350px;
@@ -36,6 +35,8 @@ export component Sidebar inherits VerticalLayout {
             max-height: 250px;
             viewport-height: content.preferred-height;
 
+            // TODO: use dialog for creating account
+            // TODO: context menu with rename that opens a popup
             content := VerticalLayout {
                 for account in accounts: HorizontalLayout {
                     alignment: space-between;
