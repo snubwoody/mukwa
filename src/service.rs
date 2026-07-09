@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Error, Money, ui};
-use jiff::Zoned;
+use crate::{create_test_db, ui, Error, Money};
 use jiff::civil::Date;
-use rusqlite::{Connection, Row, params};
+use jiff::Zoned;
+use rusqlite::{params, Connection, Row};
 use slint::{SharedString, ToSharedString};
 use std::path::Path;
 use std::rc::Rc;
@@ -114,6 +114,20 @@ impl Transaction {
         }
 
         TransactionType::Expense
+    }
+}
+
+impl<'a> TryFrom<&Row<'a>> for Category {
+    type Error = Error;
+
+    fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
+        let id: String = value.get("id")?;
+        let title: String = value.get("title")?;
+
+        Ok(Category {
+            id: Uuid::parse_str(&id)?,
+            title: title.to_string(),
+        })
     }
 }
 
@@ -301,6 +315,16 @@ impl Service {
         Ok(service)
     }
 
+    pub fn open_in_memory() -> crate::Result<Service> {
+        let connection = create_test_db();
+        let service = Service {
+            connection: Rc::new(Mutex::new(connection)),
+        };
+
+        Ok(service)
+    }
+
+    /// Fetches all accounts from the database.
     pub fn fetch_accounts(&self) -> crate::Result<Vec<Account>> {
         let mut accounts = vec![];
         let connection = self.connection.lock().unwrap();
@@ -314,6 +338,7 @@ impl Service {
         Ok(accounts)
     }
 
+    /// Fetches all transactions from the database.
     pub fn fetch_transactions(&self) -> crate::Result<Vec<Transaction>> {
         let mut transactions = vec![];
         let connection = self.connection.lock().unwrap();
@@ -327,6 +352,21 @@ impl Service {
         Ok(transactions)
     }
 
+    /// Fetches all categories from the database.
+    pub fn fetch_categories(&self) -> crate::Result<Vec<Category>> {
+        let mut categories = vec![];
+        let connection = self.connection.lock().unwrap();
+        let sql = "SELECT * FROM categories";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows = stmt.query_and_then([], |row| Category::try_from(row))?;
+
+        for row in rows {
+            categories.push(row?);
+        }
+        Ok(categories)
+    }
+
+    /// Creates a new [`Account`].
     pub fn create_account(&self, name: &str) -> crate::Result<Account> {
         let connection = self.connection.lock().unwrap();
         let sql = "INSERT INTO accounts(id,name) VALUES(?1,?2) RETURNING *";
@@ -336,6 +376,29 @@ impl Service {
         })?;
         let account = rows.next().unwrap()?;
         Ok(account)
+    }
+
+    /// Creates a new [`Category`].
+    pub fn create_category(&self, title: &str) -> crate::Result<Category> {
+        let connection = self.connection.lock().unwrap();
+        let sql = "INSERT INTO categories(id,title) VALUES(?1,?2) RETURNING *";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt.query_and_then([&Uuid::now_v7().to_string(), title], |row| {
+            Category::try_from(row)
+        })?;
+        let category = rows.next().unwrap()?;
+        Ok(category)
+    }
+
+    pub fn update_category(&self, id: Uuid, title: &str) -> crate::Result<Category> {
+        let connection = self.connection.lock().unwrap();
+        let sql = "UPDATE categories SET title = ?1 WHERE id = ?2 RETURNING *";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt.query_and_then([title, id.to_string().as_str()], |row| {
+            Category::try_from(row)
+        })?;
+        let category = rows.next().unwrap()?;
+        Ok(category)
     }
 
     pub fn get_transaction(&self, id: Uuid) -> crate::Result<Transaction> {
@@ -396,6 +459,8 @@ impl Service {
         Ok(())
     }
 
+    /// Duplicates a transactions. A new transaction with all the same columns, except the `id`, will
+    /// be created.
     pub fn duplicate_transaction(&self, id: Uuid) -> crate::Result<Transaction> {
         let connection = self.connection();
         let sql = "INSERT INTO transactions(id,sender_id,receiver_id,category_id,transaction_date,amount) \
@@ -411,6 +476,7 @@ impl Service {
         Ok(transaction)
     }
 
+    /// Creates a new [`Transaction`].
     pub fn create_transaction(&self, opts: CreateTransactionOpts) -> crate::Result<Transaction> {
         let account_id = match opts.account_id {
             Some(id) => id,

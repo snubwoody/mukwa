@@ -16,7 +16,7 @@
 
 use jiff::civil::date;
 use mukwa::service::{CreateTransactionOpts, Service, UpdateTransactionOpts};
-use mukwa::{Money, create_test_db};
+use mukwa::{create_test_db, Money};
 
 #[test]
 fn create_account() -> mukwa::Result<()> {
@@ -32,6 +32,24 @@ fn create_account() -> mukwa::Result<()> {
         |row| row.get::<_, String>(0),
     )?;
     assert_eq!(name, account.name);
+    Ok(())
+}
+
+#[test]
+fn create_category() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let category = service.create_category("Groceries")?;
+    assert_eq!(category.title, "Groceries");
+
+    service
+        .connection()
+        .query_one("SELECT * FROM categories", [], |row| {
+            let deleted_at: Option<i64> = row.get("deleted_at")?;
+            let title: String = row.get("title")?;
+            assert!(deleted_at.is_none());
+            assert_eq!(title, "Groceries");
+            Ok(())
+        })?;
     Ok(())
 }
 
@@ -294,6 +312,21 @@ fn fetch_transactions() -> mukwa::Result<()> {
     assert!(transactions.contains(&t1));
     assert!(transactions.contains(&t2));
     assert!(transactions.contains(&t3));
+    Ok(())
+}
+
+#[test]
+fn fetch_categories() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let c1 = service.create_category("")?;
+    let c2 = service.create_category("")?;
+    let c3 = service.create_category("")?;
+
+    let categories = service.fetch_categories()?;
+    assert_eq!(categories.len(), 3);
+    assert!(categories.contains(&c1));
+    assert!(categories.contains(&c2));
+    assert!(categories.contains(&c3));
     Ok(())
 }
 
