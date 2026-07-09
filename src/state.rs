@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::service::{Service, UpdateTransactionOpts};
+use crate::service::{CreateBudgetOpts, Service, UpdateTransactionOpts};
 use crate::{ui, Money};
 use jiff::civil::Date;
 use slint::{Model, SharedString, VecModel};
@@ -103,7 +103,20 @@ impl AppState {
     pub fn create_category(&mut self, title: &str) -> crate::Result<()> {
         let category = self.service.create_category(title)?;
         info!(id=?category.id,"Created new category");
+
+        let opts = CreateBudgetOpts {
+            category_id: category.id,
+            ..Default::default()
+        };
+        self.create_budget(opts)?;
         self.categories.push(category.into());
+        Ok(())
+    }
+
+    /// Creates a new budget.
+    pub fn create_budget(&mut self, opts: CreateBudgetOpts) -> crate::Result<()> {
+        let budget = self.service.create_budget(opts)?;
+        info!(id=?budget.id,"Created new budget");
         Ok(())
     }
 

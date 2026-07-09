@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use jiff::civil::date;
-use mukwa::service::{CreateTransactionOpts, Service, UpdateTransactionOpts};
+use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, UpdateTransactionOpts};
 use mukwa::{create_test_db, Money};
 
 #[test]
@@ -48,6 +48,39 @@ fn create_category() -> mukwa::Result<()> {
             let title: String = row.get("title")?;
             assert!(deleted_at.is_none());
             assert_eq!(title, "Groceries");
+            Ok(())
+        })?;
+    Ok(())
+}
+
+#[test]
+fn create_budget() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let category = service.create_category("Groceries")?;
+
+    let opts = CreateBudgetOpts {
+        category_id: category.id,
+        month: Some(date(1990, 12, 31)),
+        amount: Some(Money::new(200)),
+    };
+    let budget = service.create_budget(opts)?;
+
+    assert_eq!(budget.month, 12);
+    assert_eq!(budget.year, 1990);
+    assert_eq!(budget.amount, Money::new(200));
+    assert_eq!(budget.category_id, category.id);
+
+    service
+        .connection()
+        .query_one("SELECT * FROM budgets", [], |row| {
+            let category_id: String = row.get("category_id")?;
+            let amount: i64 = row.get("amount")?;
+            let year: i64 = row.get("year")?;
+            let month: i64 = row.get("month")?;
+            assert_eq!(category_id, category.id.to_string());
+            assert_eq!(amount, Money::new(200).inner());
+            assert_eq!(year, 1990);
+            assert_eq!(month, 12);
             Ok(())
         })?;
     Ok(())

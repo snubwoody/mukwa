@@ -30,6 +30,7 @@ import { TransactionTable } from "./transaction.slint";
 export { Date, CalendarState } from "./widgets/calendar.slint";
 
 // TODO: add category groups
+// TODO: add month switcher
 
 component SpendingPage inherits VerticalLayout {
     alignment: start;
@@ -91,6 +92,8 @@ component SpendingPage inherits VerticalLayout {
         }
     }
 
+    // TODO: use scroll view
+    // TODO: add Notion-like icon on the left side
     VerticalLayout {
         alignment: start;
         cross-axis-alignment: start;

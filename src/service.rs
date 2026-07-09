@@ -59,6 +59,44 @@ impl From<&Account> for ui::Account {
     }
 }
 
+// TODO: could maybe use default struct values
+#[derive(PartialOrd, PartialEq, Debug, Default, Clone, Copy)]
+pub struct CreateBudgetOpts {
+    pub amount: Option<Money>,
+    /// The budget month, defaults to the current month.
+    pub month: Option<Date>,
+    pub category_id: Uuid,
+}
+
+#[derive(PartialOrd, PartialEq, Debug, Default, Clone, Copy)]
+pub struct Budget {
+    pub id: Uuid,
+    pub amount: Money,
+    pub month: i64,
+    pub year: i64,
+    pub category_id: Uuid,
+}
+
+impl<'a> TryFrom<&Row<'a>> for Budget {
+    type Error = Error;
+
+    fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
+        let id: String = value.get("id")?;
+        let category_id: String = value.get("category_id")?;
+        let amount: i64 = value.get("amount")?;
+        let year: i64 = value.get("year")?;
+        let month: i64 = value.get("month")?;
+
+        Ok(Budget {
+            id: Uuid::parse_str(&id)?,
+            year,
+            month,
+            amount: Money::from_scaled(amount),
+            category_id: Uuid::parse_str(&category_id)?,
+        })
+    }
+}
+
 #[derive(PartialOrd, PartialEq, Debug, Default, Clone)]
 pub struct Category {
     pub id: Uuid,
@@ -307,6 +345,7 @@ impl Default for CreateTransactionOpts {
     }
 }
 
+// TODO: add year and month ints and make them unique
 #[derive(Clone)]
 pub struct Service {
     connection: Rc<Mutex<Connection>>,
@@ -406,6 +445,30 @@ impl Service {
         })?;
         let category = rows.next().unwrap()?;
         Ok(category)
+    }
+
+    /// Creates a new [`Budget`].
+    pub fn create_budget(&self, opts: CreateBudgetOpts) -> crate::Result<Budget> {
+        let connection = self.connection();
+        let amount = opts.amount.unwrap_or_default().inner();
+        let date = opts.month.unwrap_or(Zoned::now().date());
+
+        let sql = "INSERT INTO budgets(id,amount,category_id,month,year) \
+        VALUES(?1,?2,?3,?4,?5) \
+        RETURNING *";
+
+        let mut stmt = connection.prepare_cached(sql)?;
+        let params = params![
+            Uuid::now_v7().to_string(),
+            amount,
+            opts.category_id.to_string(),
+            date.month(),
+            date.year()
+        ];
+        let mut rows = stmt.query_and_then(params, |row| Budget::try_from(row))?;
+        let budget = rows.next().unwrap()?;
+
+        Ok(budget)
     }
 
     pub fn update_category(&self, id: Uuid, title: &str) -> crate::Result<Category> {

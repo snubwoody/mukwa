@@ -8,7 +8,7 @@ ADD COLUMN deleted_at INT NULL;
 
 CREATE TABLE budgets(
     id TEXT PRIMARY KEY,
-    category_id TEXT NOT NULL REFERENCES categories_id(id),
+    category_id TEXT NOT NULL REFERENCES categories(id),
     month INT NOT NULL,
     year INT NOT NULL,
     amount INT DEFAULT 0,
