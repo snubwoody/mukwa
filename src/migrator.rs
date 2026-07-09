@@ -26,7 +26,7 @@ use std::{
     path::Path,
     str,
 };
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 struct Migration {
@@ -169,6 +169,35 @@ impl Migrator {
 
         Ok(())
     }
+
+    /// Reverts the most recently applied migration.
+    pub fn rollback(&self, conn: &Connection) -> crate::Result<()> {
+        if !conn.table_exists(Some("main"), "schema_migrations")? {
+            warn!("No migrations to roll back");
+        }
+
+        let applied_migrations = self.applied_migrations(conn)?;
+
+        let mut migrations = self.migrations.clone();
+        migrations.sort_by_key(|a| a.version);
+
+        if let Some(migration) = migrations.last()
+            && applied_migrations.contains(&migration.version)
+        {
+            conn.execute_batch(&migration.down)?;
+
+            conn.execute(
+                "DELETE FROM schema_migrations WHERE version = ?",
+                [migration.version],
+            )?;
+
+            info!("Reverted migration {}", migration.version)
+        } else {
+            warn!("No migrations to roll back")
+        }
+
+        Ok(())
+    }
 }
 
 pub fn create_migration_file(dir: impl AsRef<Path>, name: &str) -> crate::Result<PathBuf> {
@@ -302,6 +331,24 @@ mod tests {
         )?;
 
         assert_eq!(row, "Player 1");
+        Ok(())
+    }
+
+    #[test]
+    fn rollback_migration() -> crate::Result<()> {
+        let connection = Connection::open_in_memory()?;
+        let mut migrator = Migrator::new();
+        let migration = Migration::new(
+            "CREATE TABLE users(id TEXT PRIMARY KEY)",
+            "DROP TABLE users",
+            0,
+        );
+        migrator.add_migration(migration);
+        migrator.migrate(&connection)?;
+        migrator.rollback(&connection)?;
+
+        let table_exists = connection.table_exists(Some("main"), "users")?;
+        assert!(!table_exists);
         Ok(())
     }
 
