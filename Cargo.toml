@@ -2,14 +2,14 @@
 name = "mukwa"
 version = "0.1.0-alpha.1"
 edition = "2024"
-default-run = "app"
+default-run = "mukwa"
 
 [[bench]]
 name = "service"
 harness = false
 
 [[bin]]
-name = "app"
+name = "mukwa"
 path = "src/bin/main.rs"
 
 [[bin]]

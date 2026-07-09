@@ -19,18 +19,78 @@ import {
     VerticalBox,
     ListView,
     Palette,
+    LineEdit,
 } from "std-widgets.slint";
 import { Colors } from "./colors.slint";
 import { Account, Transaction, State } from "./globals.slint";
 import { Sidebar } from "./sidebar.slint";
 export { Account, Transaction, State } from "./globals.slint";
-import { Button } from "./widgets.slint";
+import { Button, TextField } from "./widgets.slint";
 import { TransactionTable } from "./transaction.slint";
 export { Date, CalendarState } from "./widgets/calendar.slint";
 
 // TODO: add category groups
 
-component SpendingPage {
+component SpendingPage inherits VerticalLayout {
+    alignment: start;
+    cross-axis-alignment: start;
+    spacing: 12px;
+
+    // TODO: add icon button
+    // TODO: maybe ActionButton and base Button with all styles
+    button := Button {
+        text: "New category";
+        clicked => {
+            popup.show();
+        }
+    }
+
+    // TODO: add focus-scope
+    // TODO: maybe just make component
+    popup := PopupWindow {
+        width: 250px;
+        x: button.x;
+        y: button.y + button.height + 4px;
+        height: layout.preferred-height;
+
+        close-policy: close-on-click-outside;
+
+        Rectangle {
+            background: white;
+            border-width: 1px;
+            border-radius: 4px;
+            border-color: Colors.neutral50;
+        }
+
+        layout := VerticalLayout {
+            alignment: start;
+            padding: 8px;
+            spacing: 12px;
+
+            text-field := TextField {
+                placeholder-text: "New category";
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                cross-axis-alignment: start;
+
+                Button {
+                    text: "Cancel";
+                    clicked => popup.close();
+                }
+
+                Button {
+                    text: "Confirm";
+                    clicked => {
+                        State.create-category(text-field.text);
+                        popup.close();
+                    }
+                }
+            }
+        }
+    }
+
     VerticalLayout {
         alignment: start;
         cross-axis-alignment: start;
