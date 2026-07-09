@@ -16,7 +16,7 @@
 
 use mukwa::service::{Service, TransactionType};
 use mukwa::state::AppState;
-use mukwa::{Money, create_test_db};
+use mukwa::{create_test_db, Money};
 use slint::Model;
 
 #[test]
@@ -94,5 +94,16 @@ fn state_loads_data_from_service() -> mukwa::Result<()> {
     let state = AppState::new(service)?;
     assert_eq!(state.transactions().iter().len(), 3);
     assert_eq!(state.accounts().iter().len(), 2);
+    Ok(())
+}
+
+#[test]
+fn state_loads_categories_from_service() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    service.create_category(Default::default())?;
+    service.create_category(Default::default())?;
+
+    let state = AppState::new(service)?;
+    assert_eq!(state.categories().iter().len(), 2);
     Ok(())
 }

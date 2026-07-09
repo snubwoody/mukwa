@@ -28,6 +28,23 @@ import { Button } from "./widgets.slint";
 import { TransactionTable } from "./transaction.slint";
 export { Date, CalendarState } from "./widgets/calendar.slint";
 
+// TODO: add category groups
+
+component SpendingPage {
+    VerticalLayout {
+        alignment: start;
+        cross-axis-alignment: start;
+        spacing: 8px;
+
+        for category in State.categories: Rectangle {
+            Text {
+                text: category.title;
+                color: Colors.textBody;
+            }
+        }
+    }
+}
+
 export component MainWindow inherits Window {
     preferred-width: 750px;
     preferred-height: 750px;
@@ -39,9 +56,11 @@ export component MainWindow inherits Window {
             accounts: State.accounts;
         }
 
-        TransactionTable {
-            columns: [@tr("Date"), @tr("Account"), @tr("Category"), @tr("Outflow"), @tr("Inflow")];
-            transactions: State.transactions;
-        }
+        SpendingPage { }
+
+        //        TransactionTable {
+//            columns: [@tr("Date"), @tr("Account"), @tr("Category"), @tr("Outflow"), @tr("Inflow")];
+//            transactions: State.transactions;
+//        }
     }
 }

@@ -74,6 +74,24 @@ impl Category {
     }
 }
 
+impl From<Category> for ui::Category {
+    fn from(value: Category) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
+        }
+    }
+}
+
+impl From<&Category> for ui::Category {
+    fn from(value: &Category) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
+        }
+    }
+}
+
 #[derive(PartialOrd, PartialEq, Debug, Clone, Copy, Eq, Ord)]
 pub enum TransactionType {
     Expense,
@@ -459,8 +477,8 @@ impl Service {
         Ok(())
     }
 
-    /// Duplicates a transactions. A new transaction with all the same columns, except the `id`, will
-    /// be created.
+    /// Duplicates a transaction, the new transaction will have all the same values as the old transaction
+    /// except the `id`.
     pub fn duplicate_transaction(&self, id: Uuid) -> crate::Result<Transaction> {
         let connection = self.connection();
         let sql = "INSERT INTO transactions(id,sender_id,receiver_id,category_id,transaction_date,amount) \

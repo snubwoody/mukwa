@@ -142,11 +142,14 @@ fn setup_calendar_state(window: &ui::MainWindow) {
 fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     let transactions_model_rc = ModelRc::new(state.transactions());
     let accounts_model_rc = ModelRc::new(state.accounts());
+    let categories_model_rc = ModelRc::new(state.categories());
     let account_options_rc = ModelRc::new(state.account_options());
 
     let global_state = window.global::<ui::State>();
+
     global_state.set_transactions(transactions_model_rc.clone());
     global_state.set_accounts(accounts_model_rc.clone());
+    global_state.set_categories(categories_model_rc.clone());
 
     global_state.set_account_options(account_options_rc);
 
@@ -157,7 +160,20 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     global_state.on_create_transaction({
         let mut state = state.clone();
-        move || state.create_transaction().unwrap()
+        move || {
+            if let Err(err) = state.create_transaction() {
+                warn!("Failed to create transaction: {err}")
+            }
+        }
+    });
+
+    global_state.on_create_category({
+        let mut state = state.clone();
+        move |title| {
+            if let Err(err) = state.create_category(&title) {
+                warn!("Failed to create category: {err}")
+            }
+        }
     });
 
     global_state.on_get_category_name(|_| {
@@ -173,6 +189,7 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
             }
         }
     });
+
     global_state.on_total_balance({
         let state = state.clone();
         move || {
@@ -219,6 +236,7 @@ pub fn run() -> Result<()> {
     migrator.migrate(&connection)?;
 
     let service = Service::new(connection);
+
     let main_window = ui::MainWindow::new().unwrap();
 
     let state = AppState::new(service)?;

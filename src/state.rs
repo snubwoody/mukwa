@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::service::{Service, UpdateTransactionOpts};
-use crate::{Money, ui};
+use crate::{ui, Money};
 use jiff::civil::Date;
 use slint::{Model, SharedString, VecModel};
 use std::rc::Rc;
@@ -28,6 +28,7 @@ use uuid::Uuid;
 pub struct AppState {
     service: Service,
     accounts: Rc<VecModel<ui::Account>>,
+    categories: Rc<VecModel<ui::Category>>,
     // We can't map arrays in slint so we have to maintain duplicate arrays for comboboxes
     // see <https://github.com/slint-ui/slint/issues/1328>
     account_options: Rc<VecModel<(SharedString, SharedString)>>,
@@ -43,18 +44,28 @@ impl AppState {
             .collect();
 
         let transactions_model = Rc::new(VecModel::from(transactions_list));
+
+        let category_list: Vec<ui::Category> = service
+            .fetch_categories()?
+            .iter()
+            .map(|a| a.into())
+            .collect();
+        let category_model = Rc::new(VecModel::from(category_list));
+
         let account_list: Vec<ui::Account> =
             service.fetch_accounts()?.iter().map(|a| a.into()).collect();
         let account_options: Vec<_> = account_list
             .iter()
             .map(|a| (a.name.clone(), a.id.clone()))
             .collect();
+
         let accounts_model = Rc::new(VecModel::from(account_list));
         let account_options_model = Rc::new(VecModel::from(account_options));
 
         Ok(AppState {
             service,
             accounts: accounts_model,
+            categories: category_model,
             account_options: account_options_model,
             transactions: transactions_model,
         })
@@ -66,6 +77,10 @@ impl AppState {
 
     pub fn accounts(&self) -> Rc<VecModel<ui::Account>> {
         self.accounts.clone()
+    }
+
+    pub fn categories(&self) -> Rc<VecModel<ui::Category>> {
+        self.categories.clone()
     }
 
     pub fn account_options(&self) -> Rc<VecModel<(SharedString, SharedString)>> {
@@ -84,6 +99,15 @@ impl AppState {
         Ok(())
     }
 
+    /// Creates a new category.
+    pub fn create_category(&mut self, title: &str) -> crate::Result<()> {
+        let category = self.service.create_category(title)?;
+        info!(id=?category.id,"Created new category");
+        self.categories.push(category.into());
+        Ok(())
+    }
+
+    /// Creates a new expense.
     pub fn create_transaction(&mut self) -> crate::Result<()> {
         let transaction = self.service.create_transaction(Default::default())?;
         info!(id=?transaction.id,"Created new transaction");
