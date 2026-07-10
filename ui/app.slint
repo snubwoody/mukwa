@@ -1,4 +1,4 @@
-// Mukwa - Personal finance
+ // Mukwa - Personal finance
 // Copyright (C) 2026  Wakunguma Kalimukwa
 //
 // This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@ import {
     LineEdit,
 } from "std-widgets.slint";
 import { Colors } from "./colors.slint";
-import { Account, Transaction, State } from "./globals.slint";
+import { Account, Transaction, State, Category } from "./globals.slint";
 import { Sidebar } from "./sidebar.slint";
 export { Account, Transaction, State } from "./globals.slint";
 import { Button, TextField } from "./widgets.slint";
@@ -34,7 +34,6 @@ export { Date, CalendarState } from "./widgets/calendar.slint";
 
 component SpendingPage inherits VerticalLayout {
     alignment: start;
-    cross-axis-alignment: start;
     spacing: 12px;
 
     // TODO: add icon button
@@ -56,6 +55,7 @@ component SpendingPage inherits VerticalLayout {
 
         close-policy: close-on-click-outside;
 
+        // TODO: add box shadow xs with just a border color
         Rectangle {
             background: white;
             border-width: 1px;
@@ -72,6 +72,7 @@ component SpendingPage inherits VerticalLayout {
                 placeholder-text: "New category";
             }
 
+            // TODO: submit on enter
             HorizontalLayout {
                 spacing: 8px;
                 cross-axis-alignment: start;
@@ -96,12 +97,18 @@ component SpendingPage inherits VerticalLayout {
     // TODO: add Notion-like icon on the left side
     VerticalLayout {
         alignment: start;
-        cross-axis-alignment: start;
         spacing: 8px;
 
-        for category in State.categories: Rectangle {
+        for budget in State.budgets: HorizontalLayout {
+            property <Category> category: State.get-category(budget.category-id);
+            alignment: space-between;
             Text {
                 text: category.title;
+                color: Colors.textBody;
+            }
+
+            Text {
+                text: budget.amount;
                 color: Colors.textBody;
             }
         }

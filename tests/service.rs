@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use jiff::civil::date;
+use jiff::Zoned;
 use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, UpdateTransactionOpts};
 use mukwa::{create_test_db, Money};
 
@@ -83,6 +84,28 @@ fn create_budget() -> mukwa::Result<()> {
             assert_eq!(month, 12);
             Ok(())
         })?;
+    Ok(())
+}
+
+#[test]
+fn fetch_budgets_by_month() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let category = service.create_category("Groceries")?;
+
+    let opts = CreateBudgetOpts {
+        category_id: category.id,
+        month: Some(date(1990, 12, 31)),
+        amount: Some(Money::new(200)),
+    };
+    let budget1 = service.create_budget(opts)?;
+    let budget2 = service.create_budget(CreateBudgetOpts {
+        category_id: category.id,
+        ..Default::default()
+    })?;
+
+    let budgets = service.fetch_budgets_by_month(Zoned::now().date())?;
+    assert!(budgets.contains(&budget2));
+    assert!(!budgets.contains(&budget1));
     Ok(())
 }
 

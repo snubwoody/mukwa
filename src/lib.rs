@@ -143,6 +143,7 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     let transactions_model_rc = ModelRc::new(state.transactions());
     let accounts_model_rc = ModelRc::new(state.accounts());
     let categories_model_rc = ModelRc::new(state.categories());
+    let budgets_model_rc = ModelRc::new(state.budgets());
     let account_options_rc = ModelRc::new(state.account_options());
 
     let global_state = window.global::<ui::State>();
@@ -150,12 +151,24 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     global_state.set_transactions(transactions_model_rc.clone());
     global_state.set_accounts(accounts_model_rc.clone());
     global_state.set_categories(categories_model_rc.clone());
+    global_state.set_budgets(budgets_model_rc.clone());
 
     global_state.set_account_options(account_options_rc);
 
     global_state.on_create_account({
         let mut state = state.clone();
         move |name| state.create_account(name.as_str()).unwrap()
+    });
+
+    global_state.on_get_category({
+        let state = state.clone();
+        move |id| {
+            state
+                .categories()
+                .iter()
+                .find(|c| c.id == id)
+                .unwrap_or_default()
+        }
     });
 
     global_state.on_create_transaction({

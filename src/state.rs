@@ -20,6 +20,7 @@ use jiff::civil::Date;
 use slint::{Model, SharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
+use jiff::Zoned;
 use tracing::info;
 use uuid::Uuid;
 
@@ -29,6 +30,8 @@ pub struct AppState {
     service: Service,
     accounts: Rc<VecModel<ui::Account>>,
     categories: Rc<VecModel<ui::Category>>,
+    /// The budgets of the active month.
+    budgets: Rc<VecModel<ui::Budget>>,
     // We can't map arrays in slint so we have to maintain duplicate arrays for comboboxes
     // see <https://github.com/slint-ui/slint/issues/1328>
     account_options: Rc<VecModel<(SharedString, SharedString)>>,
@@ -48,12 +51,18 @@ impl AppState {
         let category_list: Vec<ui::Category> = service
             .fetch_categories()?
             .iter()
-            .map(|a| a.into())
+            .map(|c| c.into())
             .collect();
         let category_model = Rc::new(VecModel::from(category_list));
 
-        let account_list: Vec<ui::Account> =
-            service.fetch_accounts()?.iter().map(|a| a.into()).collect();
+        let budgets_list: Vec<ui::Budget> = service
+            .fetch_budgets_by_month(Zoned::now().date())?
+            .iter()
+            .map(|b| b.into())
+            .collect();
+        let budget_model = Rc::new(VecModel::from(budgets_list));
+
+        let account_list: Vec<ui::Account> = service.fetch_accounts()?.iter().map(|a| a.into()).collect();
         let account_options: Vec<_> = account_list
             .iter()
             .map(|a| (a.name.clone(), a.id.clone()))
@@ -68,6 +77,7 @@ impl AppState {
             categories: category_model,
             account_options: account_options_model,
             transactions: transactions_model,
+            budgets: budget_model
         })
     }
 
@@ -81,6 +91,10 @@ impl AppState {
 
     pub fn categories(&self) -> Rc<VecModel<ui::Category>> {
         self.categories.clone()
+    }
+    
+    pub fn budgets(&self) -> Rc<VecModel<ui::Budget>> {
+        self.budgets.clone()
     }
 
     pub fn account_options(&self) -> Rc<VecModel<(SharedString, SharedString)>> {
@@ -117,6 +131,7 @@ impl AppState {
     pub fn create_budget(&mut self, opts: CreateBudgetOpts) -> crate::Result<()> {
         let budget = self.service.create_budget(opts)?;
         info!(id=?budget.id,"Created new budget");
+        self.budgets.push(budget.into());
         Ok(())
     }
 

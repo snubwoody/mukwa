@@ -14,7 +14,7 @@ CREATE TABLE budgets(
     amount INT DEFAULT 0,
 
     -- Only one budget per month
-    UNIQUE(month,year),
+    UNIQUE(category_id,month,year),
 
     CHECK (month >= 0 AND year >= 0 AND amount >= 0)
 );

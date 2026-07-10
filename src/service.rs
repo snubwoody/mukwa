@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{create_test_db, ui, Error, Money};
-use jiff::civil::Date;
+use crate::{Error, Money, create_test_db, ui};
 use jiff::Zoned;
-use rusqlite::{params, Connection, Row};
+use jiff::civil::Date;
+use rusqlite::{Connection, Row, params};
 use slint::{SharedString, ToSharedString};
 use std::path::Path;
 use std::rc::Rc;
@@ -75,6 +75,30 @@ pub struct Budget {
     pub month: i64,
     pub year: i64,
     pub category_id: Uuid,
+}
+
+impl From<Budget> for ui::Budget {
+    fn from(value: Budget) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            amount: value.amount.to_shared_string(),
+            year: value.year as i32,
+            month: value.month as i32,
+            category_id: value.category_id.to_shared_string(),
+        }
+    }
+}
+
+impl From<&Budget> for ui::Budget {
+    fn from(value: &Budget) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            amount: value.amount.to_shared_string(),
+            year: value.year as i32,
+            month: value.month as i32,
+            category_id: value.category_id.to_shared_string(),
+        }
+    }
 }
 
 impl<'a> TryFrom<&Row<'a>> for Budget {
@@ -393,6 +417,22 @@ impl Service {
             accounts.push(row?);
         }
         Ok(accounts)
+    }
+
+    /// Fetches all the budgets in a specific month.
+    pub fn fetch_budgets_by_month(&self, date: Date) -> crate::Result<Vec<Budget>> {
+        let mut budgets = vec![];
+        let connection = self.connection.lock().unwrap();
+        let sql = "SELECT * FROM budgets WHERE month = ?1 AND year = ?2";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows = stmt.query_and_then(params![date.month(), date.year()], |row| {
+            Budget::try_from(row)
+        })?;
+
+        for row in rows {
+            budgets.push(row?);
+        }
+        Ok(budgets)
     }
 
     /// Fetches all transactions from the database.
