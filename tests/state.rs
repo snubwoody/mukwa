@@ -16,7 +16,7 @@
 
 use mukwa::service::{Service, TransactionType};
 use mukwa::state::AppState;
-use mukwa::{create_test_db, Money};
+use mukwa::{Money, create_test_db};
 use slint::Model;
 
 #[test]

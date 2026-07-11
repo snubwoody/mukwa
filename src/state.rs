@@ -15,12 +15,12 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::service::{CreateBudgetOpts, Service, UpdateTransactionOpts};
-use crate::{ui, Money};
+use crate::{Money, ui};
+use jiff::Zoned;
 use jiff::civil::Date;
 use slint::{Model, SharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
-use jiff::Zoned;
 use tracing::info;
 use uuid::Uuid;
 
@@ -62,7 +62,8 @@ impl AppState {
             .collect();
         let budget_model = Rc::new(VecModel::from(budgets_list));
 
-        let account_list: Vec<ui::Account> = service.fetch_accounts()?.iter().map(|a| a.into()).collect();
+        let account_list: Vec<ui::Account> =
+            service.fetch_accounts()?.iter().map(|a| a.into()).collect();
         let account_options: Vec<_> = account_list
             .iter()
             .map(|a| (a.name.clone(), a.id.clone()))
@@ -77,7 +78,7 @@ impl AppState {
             categories: category_model,
             account_options: account_options_model,
             transactions: transactions_model,
-            budgets: budget_model
+            budgets: budget_model,
         })
     }
 
@@ -92,7 +93,7 @@ impl AppState {
     pub fn categories(&self) -> Rc<VecModel<ui::Category>> {
         self.categories.clone()
     }
-    
+
     pub fn budgets(&self) -> Rc<VecModel<ui::Budget>> {
         self.budgets.clone()
     }
