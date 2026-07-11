@@ -355,6 +355,7 @@ pub struct UpdateTransactionOpts {
 pub struct CreateTransactionOpts {
     /// The sending account
     pub account_id: Option<Uuid>,
+    pub category_id: Option<Uuid>,
     pub date: Date,
     pub amount: Money,
 }
@@ -363,6 +364,7 @@ impl Default for CreateTransactionOpts {
     fn default() -> Self {
         CreateTransactionOpts {
             account_id: None,
+            category_id: None,
             date: Zoned::now().date(),
             amount: Money::ZERO,
         }
@@ -447,6 +449,29 @@ impl Service {
             transactions.push(row?);
         }
         Ok(transactions)
+    }
+
+    /// Returns the total amount spent in the category in a specific month.
+    pub fn total_spent(&self, category_id: Uuid, month: Date) -> crate::Result<Money> {
+        let connection = self.connection();
+        let sql = "SELECT * FROM transactions WHERE category_id = ?1";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows =
+            stmt.query_and_then([category_id.to_string()], |row| Transaction::try_from(row))?;
+
+        let mut total = Money::ZERO;
+        for row in rows {
+            let transaction = row?;
+            let is_same_month = transaction.date.month() == month.month()
+                && transaction.date.year() == month.year();
+
+            if !is_same_month {
+                continue;
+            }
+
+            total += transaction.amount;
+        }
+        Ok(total)
     }
 
     /// Fetches all categories from the database.
@@ -610,12 +635,13 @@ impl Service {
             }
         };
 
+        let category_id = opts.category_id.map(|id| id.to_string());
+
         let connection = self.connection.lock().unwrap();
         let sql = "INSERT INTO transactions(id,transaction_date,sender_id,category_id,amount) \
             VALUES(?1,?2,?3,?4,?5) \
             RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
-        let category_id: Option<String> = None;
         let params = params![
             Uuid::now_v7().to_string(),
             opts.date.to_string(),

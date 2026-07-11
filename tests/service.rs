@@ -160,6 +160,33 @@ fn create_transaction() -> mukwa::Result<()> {
 }
 
 #[test]
+fn total_spent() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    service.create_account("")?;
+
+    let date = date(2020, 12, 14);
+    let category = service.create_category("")?;
+    let opts = CreateTransactionOpts {
+        date,
+        category_id: Some(category.id),
+        ..Default::default()
+    };
+    service.create_transaction(CreateTransactionOpts {
+        amount: Money::new(500),
+        ..opts
+    })?;
+
+    service.create_transaction(CreateTransactionOpts {
+        amount: Money::new(150),
+        ..opts
+    })?;
+
+    let total = service.total_spent(category.id, date)?;
+    assert_eq!(total, Money::new(650));
+    Ok(())
+}
+
+#[test]
 fn delete_transaction() -> mukwa::Result<()> {
     let connection = create_test_db();
 
