@@ -1,4 +1,4 @@
- // Mukwa - Personal finance
+// Mukwa - Personal finance
 // Copyright (C) 2026  Wakunguma Kalimukwa
 //
 // This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,6 @@ import {
 } from "std-widgets.slint";
 import { Colors } from "./colors.slint";
 import { Account, Transaction, State, Category } from "./globals.slint";
-import { Sidebar } from "./sidebar.slint";
 export { Account, Transaction, State } from "./globals.slint";
 import { Button, TextField } from "./widgets.slint";
 import { TransactionTable } from "./transaction.slint";
@@ -31,6 +30,11 @@ export { Date, CalendarState } from "./widgets/calendar.slint";
 
 // TODO: add category groups
 // TODO: add month switcher
+
+enum Page {
+    spending,
+    transactions
+}
 
 component SpendingPage inherits VerticalLayout {
     alignment: start;
@@ -115,7 +119,73 @@ component SpendingPage inherits VerticalLayout {
     }
 }
 
+
+component Sidebar inherits VerticalLayout {
+    in-out property <[Account]> accounts;
+    width: 350px;
+    spacing: 8px;
+    padding: 8px;
+    alignment: start;
+    callback select-page(Page);
+
+    Button {
+        text: "Spending";
+        clicked => select-page(Page.spending);
+    }
+
+    Button {
+        text: "All accounts";
+        clicked => select-page(Page.transactions);
+    }
+
+    HorizontalLayout {
+        alignment: space-between;
+        Text {
+            text: "Accounts";
+            color: black;
+            font-weight: 600;
+        }
+
+        Text {
+            text: "0.00";
+            color: black;
+            font-weight: 600;
+        }
+    }
+
+    VerticalLayout {
+        Flickable {
+            max-height: 250px;
+            viewport-height: content.preferred-height;
+
+            // TODO: use dialog for creating account
+            // TODO: context menu with rename that opens a popup
+            content := VerticalLayout {
+                for account in accounts: HorizontalLayout {
+                    alignment: space-between;
+                    Text {
+                        text: account.name;
+                        color: black;
+                    }
+
+                    Text {
+                        text: account.balance;
+                        color: Colors.textBody;
+                    }
+                }
+            }
+        }
+    }
+
+    // TODO: custom button with focus border
+    Button {
+        text: @tr("Create account");
+        clicked => State.create_account("New account");
+    }
+}
+
 export component MainWindow inherits Window {
+    property <Page> active-page: Page.transactions;
     preferred-width: 750px;
     preferred-height: 750px;
     background: white;
@@ -124,13 +194,16 @@ export component MainWindow inherits Window {
     HorizontalLayout {
         Sidebar {
             accounts: State.accounts;
+            select-page(page) => {
+                active-page = page;
+            }
         }
 
-        SpendingPage { }
+        if active-page == Page.spending: SpendingPage { }
 
-        //        TransactionTable {
-//            columns: [@tr("Date"), @tr("Account"), @tr("Category"), @tr("Outflow"), @tr("Inflow")];
-//            transactions: State.transactions;
-//        }
+        if active-page == Page.transactions: TransactionTable {
+            columns: [@tr("Date"), @tr("Account"), @tr("Category"), @tr("Outflow"), @tr("Inflow")];
+            transactions: State.transactions;
+        }
     }
 }
