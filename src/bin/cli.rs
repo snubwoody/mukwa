@@ -46,6 +46,8 @@ enum MigrateCommand {
     New { name: String },
     /// Apply all migrations
     Up,
+    /// Revert the most recently applied migration
+    Rollback,
 }
 fn main() -> mukwa::Result<()> {
     tracing_subscriber::fmt()
@@ -68,6 +70,12 @@ fn main() -> mukwa::Result<()> {
                 let mut migrator = Migrator::new();
                 migrator.load_from_dir(&migrations_dir)?;
                 migrator.migrate(&connection)?;
+            }
+            MigrateCommand::Rollback => {
+                let connection = Connection::open(path)?;
+                let mut migrator = Migrator::new();
+                migrator.load_from_dir(&migrations_dir)?;
+                migrator.rollback(&connection)?;
             }
         },
     }

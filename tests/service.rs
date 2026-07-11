@@ -14,8 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use jiff::Zoned;
 use jiff::civil::date;
-use mukwa::service::{CreateTransactionOpts, Service, UpdateTransactionOpts};
+use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, UpdateTransactionOpts};
 use mukwa::{Money, create_test_db};
 
 #[test]
@@ -32,6 +33,79 @@ fn create_account() -> mukwa::Result<()> {
         |row| row.get::<_, String>(0),
     )?;
     assert_eq!(name, account.name);
+    Ok(())
+}
+
+#[test]
+fn create_category() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let category = service.create_category("Groceries")?;
+    assert_eq!(category.title, "Groceries");
+
+    service
+        .connection()
+        .query_one("SELECT * FROM categories", [], |row| {
+            let deleted_at: Option<i64> = row.get("deleted_at")?;
+            let title: String = row.get("title")?;
+            assert!(deleted_at.is_none());
+            assert_eq!(title, "Groceries");
+            Ok(())
+        })?;
+    Ok(())
+}
+
+#[test]
+fn create_budget() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let category = service.create_category("Groceries")?;
+
+    let opts = CreateBudgetOpts {
+        category_id: category.id,
+        month: Some(date(1990, 12, 31)),
+        amount: Some(Money::new(200)),
+    };
+    let budget = service.create_budget(opts)?;
+
+    assert_eq!(budget.month, 12);
+    assert_eq!(budget.year, 1990);
+    assert_eq!(budget.amount, Money::new(200));
+    assert_eq!(budget.category_id, category.id);
+
+    service
+        .connection()
+        .query_one("SELECT * FROM budgets", [], |row| {
+            let category_id: String = row.get("category_id")?;
+            let amount: i64 = row.get("amount")?;
+            let year: i64 = row.get("year")?;
+            let month: i64 = row.get("month")?;
+            assert_eq!(category_id, category.id.to_string());
+            assert_eq!(amount, Money::new(200).inner());
+            assert_eq!(year, 1990);
+            assert_eq!(month, 12);
+            Ok(())
+        })?;
+    Ok(())
+}
+
+#[test]
+fn fetch_budgets_by_month() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let category = service.create_category("Groceries")?;
+
+    let opts = CreateBudgetOpts {
+        category_id: category.id,
+        month: Some(date(1990, 12, 31)),
+        amount: Some(Money::new(200)),
+    };
+    let budget1 = service.create_budget(opts)?;
+    let budget2 = service.create_budget(CreateBudgetOpts {
+        category_id: category.id,
+        ..Default::default()
+    })?;
+
+    let budgets = service.fetch_budgets_by_month(Zoned::now().date())?;
+    assert!(budgets.contains(&budget2));
+    assert!(!budgets.contains(&budget1));
     Ok(())
 }
 
@@ -82,6 +156,33 @@ fn create_transaction() -> mukwa::Result<()> {
             Ok(())
         })?;
 
+    Ok(())
+}
+
+#[test]
+fn total_spent() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    service.create_account("")?;
+
+    let date = date(2020, 12, 14);
+    let category = service.create_category("")?;
+    let opts = CreateTransactionOpts {
+        date,
+        category_id: Some(category.id),
+        ..Default::default()
+    };
+    service.create_transaction(CreateTransactionOpts {
+        amount: Money::new(500),
+        ..opts
+    })?;
+
+    service.create_transaction(CreateTransactionOpts {
+        amount: Money::new(150),
+        ..opts
+    })?;
+
+    let total = service.total_spent(category.id, date)?;
+    assert_eq!(total, Money::new(650));
     Ok(())
 }
 
@@ -294,6 +395,21 @@ fn fetch_transactions() -> mukwa::Result<()> {
     assert!(transactions.contains(&t1));
     assert!(transactions.contains(&t2));
     assert!(transactions.contains(&t3));
+    Ok(())
+}
+
+#[test]
+fn fetch_categories() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let c1 = service.create_category("")?;
+    let c2 = service.create_category("")?;
+    let c3 = service.create_category("")?;
+
+    let categories = service.fetch_categories()?;
+    assert_eq!(categories.len(), 3);
+    assert!(categories.contains(&c1));
+    assert!(categories.contains(&c2));
+    assert!(categories.contains(&c3));
     Ok(())
 }
 

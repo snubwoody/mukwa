@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Error, Money, ui};
+use crate::{Error, Money, create_test_db, ui};
 use jiff::Zoned;
 use jiff::civil::Date;
 use rusqlite::{Connection, Row, params};
@@ -59,6 +59,68 @@ impl From<&Account> for ui::Account {
     }
 }
 
+// TODO: could maybe use default struct values
+#[derive(PartialOrd, PartialEq, Debug, Default, Clone, Copy)]
+pub struct CreateBudgetOpts {
+    pub amount: Option<Money>,
+    /// The budget month, defaults to the current month.
+    pub month: Option<Date>,
+    pub category_id: Uuid,
+}
+
+#[derive(PartialOrd, PartialEq, Debug, Default, Clone, Copy)]
+pub struct Budget {
+    pub id: Uuid,
+    pub amount: Money,
+    pub month: i64,
+    pub year: i64,
+    pub category_id: Uuid,
+}
+
+impl From<Budget> for ui::Budget {
+    fn from(value: Budget) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            amount: value.amount.to_shared_string(),
+            year: value.year as i32,
+            month: value.month as i32,
+            category_id: value.category_id.to_shared_string(),
+        }
+    }
+}
+
+impl From<&Budget> for ui::Budget {
+    fn from(value: &Budget) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            amount: value.amount.to_shared_string(),
+            year: value.year as i32,
+            month: value.month as i32,
+            category_id: value.category_id.to_shared_string(),
+        }
+    }
+}
+
+impl<'a> TryFrom<&Row<'a>> for Budget {
+    type Error = Error;
+
+    fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
+        let id: String = value.get("id")?;
+        let category_id: String = value.get("category_id")?;
+        let amount: i64 = value.get("amount")?;
+        let year: i64 = value.get("year")?;
+        let month: i64 = value.get("month")?;
+
+        Ok(Budget {
+            id: Uuid::parse_str(&id)?,
+            year,
+            month,
+            amount: Money::from_scaled(amount),
+            category_id: Uuid::parse_str(&category_id)?,
+        })
+    }
+}
+
 #[derive(PartialOrd, PartialEq, Debug, Default, Clone)]
 pub struct Category {
     pub id: Uuid,
@@ -70,6 +132,24 @@ impl Category {
         Category {
             id: Uuid::now_v7(),
             title: title.to_string(),
+        }
+    }
+}
+
+impl From<Category> for ui::Category {
+    fn from(value: Category) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
+        }
+    }
+}
+
+impl From<&Category> for ui::Category {
+    fn from(value: &Category) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
         }
     }
 }
@@ -114,6 +194,20 @@ impl Transaction {
         }
 
         TransactionType::Expense
+    }
+}
+
+impl<'a> TryFrom<&Row<'a>> for Category {
+    type Error = Error;
+
+    fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
+        let id: String = value.get("id")?;
+        let title: String = value.get("title")?;
+
+        Ok(Category {
+            id: Uuid::parse_str(&id)?,
+            title: title.to_string(),
+        })
     }
 }
 
@@ -261,6 +355,7 @@ pub struct UpdateTransactionOpts {
 pub struct CreateTransactionOpts {
     /// The sending account
     pub account_id: Option<Uuid>,
+    pub category_id: Option<Uuid>,
     pub date: Date,
     pub amount: Money,
 }
@@ -269,12 +364,14 @@ impl Default for CreateTransactionOpts {
     fn default() -> Self {
         CreateTransactionOpts {
             account_id: None,
+            category_id: None,
             date: Zoned::now().date(),
             amount: Money::ZERO,
         }
     }
 }
 
+// TODO: add year and month ints and make them unique
 #[derive(Clone)]
 pub struct Service {
     connection: Rc<Mutex<Connection>>,
@@ -301,6 +398,16 @@ impl Service {
         Ok(service)
     }
 
+    pub fn open_in_memory() -> crate::Result<Service> {
+        let connection = create_test_db();
+        let service = Service {
+            connection: Rc::new(Mutex::new(connection)),
+        };
+
+        Ok(service)
+    }
+
+    /// Fetches all accounts from the database.
     pub fn fetch_accounts(&self) -> crate::Result<Vec<Account>> {
         let mut accounts = vec![];
         let connection = self.connection.lock().unwrap();
@@ -314,6 +421,23 @@ impl Service {
         Ok(accounts)
     }
 
+    /// Fetches all the budgets in a specific month.
+    pub fn fetch_budgets_by_month(&self, date: Date) -> crate::Result<Vec<Budget>> {
+        let mut budgets = vec![];
+        let connection = self.connection.lock().unwrap();
+        let sql = "SELECT * FROM budgets WHERE month = ?1 AND year = ?2";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows = stmt.query_and_then(params![date.month(), date.year()], |row| {
+            Budget::try_from(row)
+        })?;
+
+        for row in rows {
+            budgets.push(row?);
+        }
+        Ok(budgets)
+    }
+
+    /// Fetches all transactions from the database.
     pub fn fetch_transactions(&self) -> crate::Result<Vec<Transaction>> {
         let mut transactions = vec![];
         let connection = self.connection.lock().unwrap();
@@ -327,6 +451,44 @@ impl Service {
         Ok(transactions)
     }
 
+    /// Returns the total amount spent in the category in a specific month.
+    pub fn total_spent(&self, category_id: Uuid, month: Date) -> crate::Result<Money> {
+        let connection = self.connection();
+        let sql = "SELECT * FROM transactions WHERE category_id = ?1";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows =
+            stmt.query_and_then([category_id.to_string()], |row| Transaction::try_from(row))?;
+
+        let mut total = Money::ZERO;
+        for row in rows {
+            let transaction = row?;
+            let is_same_month = transaction.date.month() == month.month()
+                && transaction.date.year() == month.year();
+
+            if !is_same_month {
+                continue;
+            }
+
+            total += transaction.amount;
+        }
+        Ok(total)
+    }
+
+    /// Fetches all categories from the database.
+    pub fn fetch_categories(&self) -> crate::Result<Vec<Category>> {
+        let mut categories = vec![];
+        let connection = self.connection.lock().unwrap();
+        let sql = "SELECT * FROM categories";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows = stmt.query_and_then([], |row| Category::try_from(row))?;
+
+        for row in rows {
+            categories.push(row?);
+        }
+        Ok(categories)
+    }
+
+    /// Creates a new [`Account`].
     pub fn create_account(&self, name: &str) -> crate::Result<Account> {
         let connection = self.connection.lock().unwrap();
         let sql = "INSERT INTO accounts(id,name) VALUES(?1,?2) RETURNING *";
@@ -336,6 +498,53 @@ impl Service {
         })?;
         let account = rows.next().unwrap()?;
         Ok(account)
+    }
+
+    /// Creates a new [`Category`].
+    pub fn create_category(&self, title: &str) -> crate::Result<Category> {
+        let connection = self.connection.lock().unwrap();
+        let sql = "INSERT INTO categories(id,title) VALUES(?1,?2) RETURNING *";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt.query_and_then([&Uuid::now_v7().to_string(), title], |row| {
+            Category::try_from(row)
+        })?;
+        let category = rows.next().unwrap()?;
+        Ok(category)
+    }
+
+    /// Creates a new [`Budget`].
+    pub fn create_budget(&self, opts: CreateBudgetOpts) -> crate::Result<Budget> {
+        let connection = self.connection();
+        let amount = opts.amount.unwrap_or_default().inner();
+        let date = opts.month.unwrap_or(Zoned::now().date());
+
+        let sql = "INSERT INTO budgets(id,amount,category_id,month,year) \
+        VALUES(?1,?2,?3,?4,?5) \
+        RETURNING *";
+
+        let mut stmt = connection.prepare_cached(sql)?;
+        let params = params![
+            Uuid::now_v7().to_string(),
+            amount,
+            opts.category_id.to_string(),
+            date.month(),
+            date.year()
+        ];
+        let mut rows = stmt.query_and_then(params, |row| Budget::try_from(row))?;
+        let budget = rows.next().unwrap()?;
+
+        Ok(budget)
+    }
+
+    pub fn update_category(&self, id: Uuid, title: &str) -> crate::Result<Category> {
+        let connection = self.connection.lock().unwrap();
+        let sql = "UPDATE categories SET title = ?1 WHERE id = ?2 RETURNING *";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt.query_and_then([title, id.to_string().as_str()], |row| {
+            Category::try_from(row)
+        })?;
+        let category = rows.next().unwrap()?;
+        Ok(category)
     }
 
     pub fn get_transaction(&self, id: Uuid) -> crate::Result<Transaction> {
@@ -396,6 +605,8 @@ impl Service {
         Ok(())
     }
 
+    /// Duplicates a transaction, the new transaction will have all the same values as the old transaction
+    /// except the `id`.
     pub fn duplicate_transaction(&self, id: Uuid) -> crate::Result<Transaction> {
         let connection = self.connection();
         let sql = "INSERT INTO transactions(id,sender_id,receiver_id,category_id,transaction_date,amount) \
@@ -411,6 +622,7 @@ impl Service {
         Ok(transaction)
     }
 
+    /// Creates a new [`Transaction`].
     pub fn create_transaction(&self, opts: CreateTransactionOpts) -> crate::Result<Transaction> {
         let account_id = match opts.account_id {
             Some(id) => id,
@@ -423,12 +635,13 @@ impl Service {
             }
         };
 
+        let category_id = opts.category_id.map(|id| id.to_string());
+
         let connection = self.connection.lock().unwrap();
         let sql = "INSERT INTO transactions(id,transaction_date,sender_id,category_id,amount) \
             VALUES(?1,?2,?3,?4,?5) \
             RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
-        let category_id: Option<String> = None;
         let params = params![
             Uuid::now_v7().to_string(),
             opts.date.to_string(),

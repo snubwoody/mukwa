@@ -96,3 +96,14 @@ fn state_loads_data_from_service() -> mukwa::Result<()> {
     assert_eq!(state.accounts().iter().len(), 2);
     Ok(())
 }
+
+#[test]
+fn state_loads_categories_from_service() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    service.create_category(Default::default())?;
+    service.create_category(Default::default())?;
+
+    let state = AppState::new(service)?;
+    assert_eq!(state.categories().iter().len(), 2);
+    Ok(())
+}

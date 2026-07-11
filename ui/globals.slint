@@ -17,7 +17,21 @@
 export struct Account {
     id: string,
     name: string,
+    // TODO: fetch on demand instead
     balance: string,
+}
+
+export struct Category {
+    id: string,
+    title: string,
+}
+
+export struct Budget {
+    id: string,
+    category-id: string,
+    amount: string,
+    year: int,
+    month: int,
 }
 
 export enum TransactionType {
@@ -49,6 +63,7 @@ export struct UpdateTransactionOpts {
     date: string,
 }
 
+// FIXME: use title-case for all methods
 export global State {
     callback create_account(name: string);
     callback create_transaction();
@@ -57,8 +72,13 @@ export global State {
     pure callback get_account_name(id: string) -> string;
     pure callback total_balance() -> string;
     pure callback get_category_name(id: string) -> string;
+    pure callback get-category(id: string) -> Category;
     pure callback update_transaction(id: string, account-id: string, outflow: string, inflow: string, date: string);
+    pure callback update-category(id: string, title: string);
+    pure callback create-category(title: string);
     in-out property <[Transaction]> transactions;
+    in-out property <[Category]> categories;
+    in-out property <[Budget]> budgets;
     // Account options for combo boxes
     in-out property <[{ value: string, text: string}]> account-options;
     in-out property <[Account]> accounts;
