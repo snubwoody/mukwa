@@ -27,6 +27,7 @@ export { Account, Transaction, State } from "./globals.slint";
 import { Button, TextField } from "./widgets.slint";
 import { TransactionTable } from "./transaction.slint";
 import { SpendingPage } from "spending-page.slint";
+import { PrimaryButton } from "widgets/button.slint";
 export { Date, CalendarState } from "./widgets/calendar.slint";
 
 enum Page {
@@ -36,6 +37,7 @@ enum Page {
 
 component Sidebar inherits VerticalLayout {
     in-out property <[Account]> accounts;
+    in property <Page> current-page;
     width: 350px;
     spacing: 8px;
     padding: 8px;
@@ -44,11 +46,15 @@ component Sidebar inherits VerticalLayout {
 
     Button {
         text: "Spending";
+        alignment: start;
+        text-color: current-page == Page.spending ? Colors.accent : Colors.textBody;
         clicked => select-page(Page.spending);
     }
 
     Button {
         text: "All accounts";
+        alignment: start;
+        text-color: current-page == Page.transactions ? Colors.accent : Colors.textBody;
         clicked => select-page(Page.transactions);
     }
 
@@ -91,8 +97,8 @@ component Sidebar inherits VerticalLayout {
         }
     }
 
-    // TODO: custom button with focus border
-    Button {
+    PrimaryButton {
+        theme: neutral;
         text: @tr("Create account");
         clicked => State.create_account("New account");
     }
@@ -108,6 +114,7 @@ export component MainWindow inherits Window {
     HorizontalLayout {
         Sidebar {
             accounts: State.accounts;
+            current-page: active-page;
             select-page(page) => {
                 active-page = page;
             }
