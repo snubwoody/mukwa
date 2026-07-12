@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::service::{CreateBudgetOpts, Service, UpdateTransactionOpts};
+use crate::ui::ComboBoxItem;
 use crate::{Money, ui};
 use jiff::Zoned;
 use jiff::civil::Date;
@@ -34,7 +35,7 @@ pub struct AppState {
     budgets: Rc<VecModel<ui::Budget>>,
     // We can't map arrays in slint so we have to maintain duplicate arrays for comboboxes
     // see <https://github.com/slint-ui/slint/issues/1328>
-    account_options: Rc<VecModel<(SharedString, SharedString)>>,
+    account_options: Rc<VecModel<ui::ComboBoxItem>>,
     transactions: Rc<VecModel<ui::Transaction>>,
 }
 
@@ -62,12 +63,9 @@ impl AppState {
             .collect();
         let budget_model = Rc::new(VecModel::from(budgets_list));
 
-        let account_list: Vec<ui::Account> =
-            service.fetch_accounts()?.iter().map(|a| a.into()).collect();
-        let account_options: Vec<_> = account_list
-            .iter()
-            .map(|a| (a.name.clone(), a.id.clone()))
-            .collect();
+        let accounts = service.fetch_accounts()?;
+        let account_list: Vec<ui::Account> = accounts.iter().map(|a| a.into()).collect();
+        let account_options: Vec<ui::ComboBoxItem> = accounts.iter().map(|a| a.into()).collect();
 
         let accounts_model = Rc::new(VecModel::from(account_list));
         let account_options_model = Rc::new(VecModel::from(account_options));
@@ -98,7 +96,7 @@ impl AppState {
         self.budgets.clone()
     }
 
-    pub fn account_options(&self) -> Rc<VecModel<(SharedString, SharedString)>> {
+    pub fn account_options(&self) -> Rc<VecModel<ComboBoxItem>> {
         self.account_options.clone()
     }
 
@@ -107,10 +105,7 @@ impl AppState {
         let account = self.service.create_account(name)?;
         info!(id=?account.id,"Created new account");
         self.accounts.push(account.clone().into());
-        self.account_options.push((
-            SharedString::from(account.id.to_string()),
-            account.name.into(),
-        ));
+        self.account_options.push(account.into());
         Ok(())
     }
 

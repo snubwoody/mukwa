@@ -49,6 +49,24 @@ impl From<Account> for ui::Account {
     }
 }
 
+impl From<Account> for ui::ComboBoxItem {
+    fn from(account: Account) -> Self {
+        Self {
+            value: account.id.to_string().into(),
+            text: account.name.to_string().into(),
+        }
+    }
+}
+
+impl From<&Account> for ui::ComboBoxItem {
+    fn from(account: &Account) -> Self {
+        Self {
+            value: account.id.to_string().into(),
+            text: account.name.to_string().into(),
+        }
+    }
+}
+
 impl From<&Account> for ui::Account {
     fn from(account: &Account) -> Self {
         Self {

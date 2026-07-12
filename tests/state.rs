@@ -34,6 +34,28 @@ fn create_transaction_creates_expense() -> mukwa::Result<()> {
 }
 
 #[test]
+fn create_account_adds_to_account_list() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let mut state = AppState::new(service)?;
+    state.create_account("")?;
+    state.create_account("")?;
+
+    assert_eq!(state.accounts().iter().len(), 2);
+    Ok(())
+}
+
+#[test]
+fn create_account_adds_to_account_options() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let mut state = AppState::new(service)?;
+    state.create_account("")?;
+    state.create_account("")?;
+
+    assert_eq!(state.account_options().iter().len(), 2);
+    Ok(())
+}
+
+#[test]
 fn update_expense() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
