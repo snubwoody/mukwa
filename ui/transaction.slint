@@ -32,6 +32,7 @@ export { Account, Transaction, State } from "./globals.slint";
 import { Button, ComboBox } from "./widgets.slint";
 import { FocusBorder } from "widgets/focus-border.slint";
 import { Calendar } from "./widgets/calendar.slint";
+import { PrimaryButton } from "widgets/button.slint";
 
 // TODO: maybe enter should submit?
 component EditingRow inherits VerticalLayout {
@@ -146,12 +147,14 @@ component EditingRow inherits VerticalLayout {
     HorizontalLayout {
         alignment: end;
         spacing: 8px;
-        Button {
+
+        PrimaryButton {
+            theme: ghost;
             text: "Cancel";
             clicked => cancel();
         }
 
-        Button {
+        PrimaryButton {
             text: "Confirm";
             clicked => confirm();
         }
@@ -328,7 +331,7 @@ export component TransactionTable inherits VerticalLayout {
         padding-top: 8px;
         padding-bottom: 8px;
 
-        Button {
+        PrimaryButton {
             text: @tr("Add transaction");
             clicked => State.create_transaction();
         }

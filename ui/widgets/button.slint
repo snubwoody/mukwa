@@ -19,8 +19,10 @@ import { FocusBorder } from "./focus-border.slint";
 
 export component Button inherits Rectangle {
     in property <string> text;
+    in property <color> text-color: Colors.textBody;
     in property <bool> enabled <=> touch-area.enabled;
     out property <bool> has-focus: focus-scope.has-focus;
+    in property <LayoutAlignment> alignment: center;
     callback clicked <=> touch-area.clicked;
 
     accessible-label: text;
@@ -32,21 +34,19 @@ export component Button inherits Rectangle {
     }
 
     forward-focus: focus-scope;
-    background: Colors.surfacePrimary;
-    border-radius: 4px;
 
     HorizontalLayout {
         padding-right: 12px;
         padding-left: 12px;
         padding-top: 4px;
         padding-bottom: 4px;
-        alignment: center;
+        alignment: alignment;
         vertical-stretch: 0;
         cross-axis-alignment: center;
 
         Text {
             text: text;
-            color: white;
+            color: text-color;
         }
     }
 
@@ -70,5 +70,43 @@ export component Button inherits Rectangle {
 
     if root.has-focus: FocusBorder {
         border-radius: root.border-radius;
+    }
+}
+
+export enum PrimaryButtonTheme {
+    accent,
+    neutral,
+    ghost
+}
+
+// TODO: test focus scope
+export component PrimaryButton {
+    in property <PrimaryButtonTheme> theme: accent;
+    in property <string> text;
+    callback clicked <=> button.clicked;
+
+    function background-color(button-theme: PrimaryButtonTheme) -> color {
+        if (button-theme == PrimaryButtonTheme.accent) {
+            return Colors.accent;
+        }
+        if (button-theme == PrimaryButtonTheme.neutral) {
+            return Colors.neutral50;
+        }
+        return transparent;
+    }
+
+    function text-color(button-theme: PrimaryButtonTheme) -> color {
+        if (button-theme == PrimaryButtonTheme.accent) {
+            return white;
+        }
+        return Colors.textBody;
+    }
+
+    button := Button {
+        text: text;
+        background: background-color(theme);
+        text-color: text-color(theme);
+
+        border-radius: 4px;
     }
 }

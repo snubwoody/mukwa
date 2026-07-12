@@ -22,6 +22,7 @@ import { Account, Transaction, State, Category } from "./globals.slint";
 export { Account, Transaction, State } from "./globals.slint";
 import { Button, TextField } from "./widgets.slint";
 import { TransactionTable } from "./transaction.slint";
+import { PrimaryButton } from "widgets/button.slint";
 export { Date, CalendarState } from "./widgets/calendar.slint";
 
 
@@ -33,8 +34,7 @@ export component SpendingPage inherits VerticalLayout {
     spacing: 12px;
 
     // TODO: add icon button
-    // TODO: maybe ActionButton and base Button with all styles
-    button := Button {
+    button := PrimaryButton {
         text: "New category";
         clicked => {
             popup.show();
@@ -74,12 +74,13 @@ export component SpendingPage inherits VerticalLayout {
                 spacing: 8px;
                 cross-axis-alignment: start;
 
-                Button {
+                PrimaryButton {
+                    theme: ghost;
                     text: "Cancel";
                     clicked => popup.close();
                 }
 
-                Button {
+                PrimaryButton {
                     text: "Confirm";
                     clicked => {
                         State.create-category(text-field.text);
