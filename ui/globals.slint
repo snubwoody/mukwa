@@ -75,7 +75,7 @@ export global State {
     pure callback total_balance() -> string;
     pure callback get_category_name(id: string) -> string;
     pure callback get-category(id: string) -> Category;
-    pure callback update_transaction(id: string, account-id: string, outflow: string, inflow: string, date: string);
+    pure callback update-transaction(id: string, account-id: string, category-id: string, outflow: string, inflow: string, date: string);
     pure callback update-category(id: string, title: string);
     pure callback create-category(title: string);
     in-out property <[Transaction]> transactions;
@@ -83,5 +83,7 @@ export global State {
     in-out property <[Budget]> budgets;
     // Account options for combo boxes
     in-out property <[ComboBoxItem]> account-options;
+    // Category options for combo boxes
+    in-out property <[ComboBoxItem]> category-options;
     in-out property <[Account]> accounts;
 }

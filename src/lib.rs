@@ -148,12 +148,13 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     let global_state = window.global::<ui::State>();
 
-    global_state.set_transactions(transactions_model_rc.clone());
-    global_state.set_accounts(accounts_model_rc.clone());
-    global_state.set_categories(categories_model_rc.clone());
-    global_state.set_budgets(budgets_model_rc.clone());
+    global_state.set_transactions(transactions_model_rc);
+    global_state.set_accounts(accounts_model_rc);
+    global_state.set_categories(categories_model_rc);
+    global_state.set_budgets(budgets_model_rc);
 
     global_state.set_account_options(account_options_rc);
+    global_state.set_category_options(ModelRc::new(state.category_options()));
 
     global_state.on_create_account({
         let mut state = state.clone();
@@ -196,8 +197,10 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     global_state.on_update_transaction({
         let mut state = state.clone();
-        move |id, account_id, outflow, inflow, date| {
-            if let Err(err) = state.update_transaction(&id, &account_id, &outflow, &inflow, &date) {
+        move |id, account_id, category_id, outflow, inflow, date| {
+            if let Err(err) =
+                state.update_transaction(&id, &account_id, &category_id, &outflow, &inflow, &date)
+            {
                 warn!("Failed to update transaction: {err}");
             }
         }

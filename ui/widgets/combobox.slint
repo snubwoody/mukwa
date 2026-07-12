@@ -137,6 +137,7 @@ export component ComboBox {
                     TouchArea {
                         clicked => {
                             root.select(i);
+                            changed(options[current-index].value);
                             popup.close();
                         }
                     }

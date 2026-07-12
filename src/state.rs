@@ -36,6 +36,7 @@ pub struct AppState {
     // We can't map arrays in slint so we have to maintain duplicate arrays for comboboxes
     // see <https://github.com/slint-ui/slint/issues/1328>
     account_options: Rc<VecModel<ui::ComboBoxItem>>,
+    category_options: Rc<VecModel<ui::ComboBoxItem>>,
     transactions: Rc<VecModel<ui::Transaction>>,
 }
 
@@ -49,12 +50,12 @@ impl AppState {
 
         let transactions_model = Rc::new(VecModel::from(transactions_list));
 
-        let category_list: Vec<ui::Category> = service
-            .fetch_categories()?
-            .iter()
-            .map(|c| c.into())
-            .collect();
+        let categories = service.fetch_categories()?;
+        let category_list: Vec<ui::Category> = categories.iter().map(|c| c.into()).collect();
+        let category_options: Vec<ui::ComboBoxItem> = categories.iter().map(|c| c.into()).collect();
+
         let category_model = Rc::new(VecModel::from(category_list));
+        let category_options_model = Rc::new(VecModel::from(category_options));
 
         let budgets_list: Vec<ui::Budget> = service
             .fetch_budgets_by_month(Zoned::now().date())?
@@ -76,6 +77,7 @@ impl AppState {
             categories: category_model,
             account_options: account_options_model,
             transactions: transactions_model,
+            category_options: category_options_model,
             budgets: budget_model,
         })
     }
@@ -100,6 +102,10 @@ impl AppState {
         self.account_options.clone()
     }
 
+    pub fn category_options(&self) -> Rc<VecModel<ComboBoxItem>> {
+        self.category_options.clone()
+    }
+
     /// Creates a new account.
     pub fn create_account(&mut self, name: &str) -> crate::Result<()> {
         let account = self.service.create_account(name)?;
@@ -119,6 +125,7 @@ impl AppState {
             ..Default::default()
         };
         self.create_budget(opts)?;
+        self.category_options.push(category.clone().into());
         self.categories.push(category.into());
         Ok(())
     }
@@ -164,11 +171,13 @@ impl AppState {
         &mut self,
         id: &str,
         account_id: &str,
+        category_id: &str,
         outflow: &str,
         inflow: &str,
         date: &str,
     ) -> crate::Result<()> {
         let account_id = Uuid::parse_str(account_id).ok();
+        let category_id = Uuid::parse_str(category_id).ok();
         let outflow = Money::from_str(outflow).ok();
         let inflow = Money::from_str(inflow).ok();
         let date = Date::strptime("%Y-%m-%d", date).ok();
@@ -192,7 +201,7 @@ impl AppState {
             date,
             sender_id,
             amount,
-            category_id: None,
+            category_id,
             receiver_id,
         };
 

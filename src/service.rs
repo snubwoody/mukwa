@@ -172,6 +172,24 @@ impl From<&Category> for ui::Category {
     }
 }
 
+impl From<Category> for ui::ComboBoxItem {
+    fn from(value: Category) -> Self {
+        Self {
+            value: value.id.to_string().into(),
+            text: value.title.to_string().into(),
+        }
+    }
+}
+
+impl From<&Category> for ui::ComboBoxItem {
+    fn from(value: &Category) -> Self {
+        Self {
+            value: value.id.to_string().into(),
+            text: value.title.to_string().into(),
+        }
+    }
+}
+
 #[derive(PartialOrd, PartialEq, Debug, Clone, Copy, Eq, Ord)]
 pub enum TransactionType {
     Expense,
@@ -581,6 +599,13 @@ impl Service {
             tx.execute(
                 "UPDATE transactions SET transaction_date = ?1 WHERE id = ?2",
                 [date.to_string(), opts.id.to_string()],
+            )?;
+        }
+
+        if let Some(category_id) = opts.category_id {
+            tx.execute(
+                "UPDATE transactions SET category_id = ?1 WHERE id = ?2",
+                [category_id.to_string(), opts.id.to_string()],
             )?;
         }
 

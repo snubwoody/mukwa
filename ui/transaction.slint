@@ -38,9 +38,7 @@ import { PrimaryButton } from "widgets/button.slint";
 component EditingRow inherits VerticalLayout {
     in property <Transaction> transaction;
     out property <string> selected-account-id: transaction.account-id;
-    // FIXME
-    // TODO: if both outflow and inflow are not empty then return an error
-    // too ambigous
+    out property <string> category-id: transaction.category-id;
     out property <string> outflow: transaction.outflow;
     out property <string> inflow: transaction.inflow;
     out property <string> selected-date: transaction.date;
@@ -92,11 +90,10 @@ component EditingRow inherits VerticalLayout {
             }
         }
 
-        Rectangle {
-            horizontal-stretch: 1;
-            Text {
-                text: State.get_account_name(transaction.category-id);
-                color: Colors.textBody;
+        ComboBox {
+            options: State.category-options;
+            changed(value) => {
+                category-id = value;
             }
         }
 
@@ -257,7 +254,7 @@ component TransactionRow inherits Rectangle {
             Text {
                 width: 100%;
                 horizontal-alignment: start;
-                text: State.get_account_name(transaction.category-id);
+                text: State.get-category(transaction.category-id).title;
                 color: Colors.textBody;
             }
         }
@@ -287,7 +284,8 @@ component TransactionRow inherits Rectangle {
         visible: is-active;
         transaction: transaction;
         confirm => {
-            State.update_transaction(transaction.id, edit-row.selected-account-id, edit-row.outflow,edit-row.inflow,edit-row.selected-date);
+            // TODO: use struct
+            State.update-transaction(transaction.id, edit-row.selected-account-id,edit-row.category-id, edit-row.outflow,edit-row.inflow,edit-row.selected-date);
             select-row(-1);
         }
         cancel => {
