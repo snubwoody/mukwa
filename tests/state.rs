@@ -66,6 +66,7 @@ fn update_expense() -> mukwa::Result<()> {
     state.update_transaction(
         &transaction.id.to_string(),
         &account.id.to_string(),
+        "",
         "200",
         "",
         "",
@@ -87,6 +88,7 @@ fn convert_expense_to_income() -> mukwa::Result<()> {
     state.update_transaction(
         &transaction.id.to_string(),
         &account.id.to_string(),
+        "",
         "",
         "500",
         "",
