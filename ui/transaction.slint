@@ -21,18 +21,18 @@ import {
     Palette,
     LineEdit,
 } from "std-widgets.slint";
-import { Colors } from "./colors.slint";
+import { Colors } from "colors.slint";
 import {
     Account,
     Transaction,
     State,
     UpdateTransactionOpts,
-} from "./globals.slint";
-export { Account, Transaction, State } from "./globals.slint";
-import { Button, ComboBox } from "./widgets.slint";
+} from "globals.slint";
+import { Button, ComboBox } from "widgets.slint";
 import { FocusBorder } from "widgets/focus-border.slint";
-import { Calendar } from "./widgets/calendar.slint";
+import { Calendar } from "widgets/calendar.slint";
 import { PrimaryButton } from "widgets/button.slint";
+import { Table, TableRow, TableCell } from "tableview.slint";
 
 // TODO: maybe enter should submit?
 component EditingRow inherits VerticalLayout {
@@ -224,34 +224,37 @@ component TransactionRow inherits Rectangle {
     }
 
     row := HorizontalLayout {
-        vertical-stretch: 0;
         padding-top: 8px;
         padding-bottom: 8px;
         visible: !is-active;
         cross-axis-alignment: center;
 
         Rectangle {
-            horizontal-stretch: 1;
+//            horizontal-stretch: 1;
             Text {
                 width: 100%;
                 horizontal-alignment: start;
                 text: transaction.date;
                 color: Colors.textBody;
             }
+
+            background: Colors.blue50;
         }
 
         Rectangle {
-            horizontal-stretch: 1;
+//            horizontal-stretch: 1;
             Text {
                 width: 100%;
                 horizontal-alignment: start;
                 text: State.get_account_name(transaction.account-id);
                 color: Colors.textBody;
             }
+
+            background: Colors.neutral50;
         }
 
         Rectangle {
-            horizontal-stretch: 1;
+//            horizontal-stretch: 1;
             Text {
                 width: 100%;
                 horizontal-alignment: start;
@@ -261,7 +264,7 @@ component TransactionRow inherits Rectangle {
         }
 
         Rectangle {
-            horizontal-stretch: 1;
+//            horizontal-stretch: 1;
             Text {
                 width: 100%;
                 horizontal-alignment: start;
@@ -271,7 +274,7 @@ component TransactionRow inherits Rectangle {
         }
 
         Rectangle {
-            horizontal-stretch: 1;
+//            horizontal-stretch: 1;
             Text {
                 width: 100%;
                 horizontal-alignment: start;
@@ -336,42 +339,88 @@ export component TransactionTable inherits VerticalLayout {
         }
     }
 
-    VerticalLayout {
-        HorizontalLayout {
-            for column in columns: Rectangle {
+    Table {
+        width: 100%;
+        property <int> length: 5;
+        for transaction in transactions: TableRow {
+            TableCell {
+                width: parent.width / length;
                 Text {
-                    width: 100%;
-                    horizontal-alignment: start;
-                    text: column;
+                    text: transaction.date;
+                    color: Colors.textBody;
+                }
+            }
+
+            TableCell {
+                width: parent.width / length;
+                Text {
+                    text: State.get_account_name(transaction.account-id);
+                    color: Colors.textBody;
+                }
+            }
+
+            TableCell {
+                width: parent.width / length;
+                Text {
+                    text: State.get-category(transaction.category-id).title;
+                    color: Colors.textBody;
+                }
+            }
+
+            TableCell {
+                width: parent.width / length;
+                Text {
+                    text: transaction.outflow;
+                    color: Colors.textBody;
+                }
+            }
+
+            TableCell {
+                width: parent.width / length;
+                Text {
+                    text: transaction.inflow;
                     color: Colors.textBody;
                 }
             }
         }
-
-        Rectangle {
-            width: 100%;
-            height: 2px;
-            background: Colors.neutral50;
-        }
-        // TODO: focus when clicked
-        // - Use accessibilty
-        ListView {
-            for transaction[i] in transactions: VerticalLayout {
-                TransactionRow {
-                    is-active: active-row == i;
-                    transaction: transaction;
-                    index: i;
-                    select-row(index) => {
-                        select-row(index)
-                    }
-                }
-
-                Rectangle {
-                    width: 100%;
-                    height: 2px;
-                    background: Colors.neutral50;
-                }
-            }
-        }
     }
+
+    //    VerticalLayout {
+//        HorizontalLayout {
+//            for column in columns: Rectangle {
+//                Text {
+//                    width: 100%;
+//                    horizontal-alignment: start;
+//                    text: column;
+//                    color: Colors.textBody;
+//                }
+//            }
+//        }
+//
+//        Rectangle {
+//            width: 100%;
+//            height: 2px;
+//            background: Colors.neutral50;
+//        }
+//        // TODO: focus when clicked
+//        // - Use accessibilty
+//        ListView {
+//            for transaction[i] in transactions: VerticalLayout {
+//                TransactionRow {
+//                    is-active: active-row == i;
+//                    transaction: transaction;
+//                    index: i;
+//                    select-row(index) => {
+//                        select-row(index)
+//                    }
+//                }
+//
+//                Rectangle {
+//                    width: 100%;
+//                    height: 2px;
+//                    background: Colors.neutral50;
+//                }
+//            }
+//        }
+//    }
 }

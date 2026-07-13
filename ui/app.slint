@@ -30,6 +30,7 @@ import { SpendingPage } from "spending-page.slint";
 import { PrimaryButton } from "widgets/button.slint";
 import { ComboBoxItem } from "widgets/combobox.slint";
 export { Date, CalendarState } from "./widgets/calendar.slint";
+import { Table} from "tableview.slint";
 
 enum Page {
     spending,
@@ -127,5 +128,7 @@ export component MainWindow inherits Window {
             columns: [@tr("Date"), @tr("Account"), @tr("Category"), @tr("Outflow"), @tr("Inflow")];
             transactions: State.transactions;
         }
+
+//        if active-page == Page.transactions: Table { }
     }
 }
