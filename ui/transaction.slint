@@ -343,7 +343,17 @@ export component TransactionTable inherits VerticalLayout {
     Table {
         width: 100%;
         property <int> length: 5;
-        for transaction in transactions: TableRow {
+        for transaction[index] in transactions: TableRow {
+            is-editing: active-row == index;
+            clicked => {
+                select-row(index);
+            }
+            cancelled => {
+                select-row(-1);
+            }
+            confirmed => {
+                select-row(-1);
+            }
             TableCell {
                 width: parent.width / length;
                 Text {

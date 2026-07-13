@@ -18,6 +18,7 @@
 import { Colors } from "colors.slint";
 import { Button } from "widgets/button.slint";
 import { ListView, ScrollView } from "std-widgets.slint";
+import { PrimaryButton } from "widgets.slint";
 
 // TODO: maybe rename to data table
 export component TableCell inherits Rectangle {
@@ -29,10 +30,20 @@ export component TableCell inherits Rectangle {
     }
 }
 
-// TODO: maybe optional actions?
+// TODO: maybe optional actions? confirmed callback
 export component TableRow {
-    touch-area := TouchArea { }
+    in-out property <bool> is-editing;
+    callback confirmed();
+    callback cancelled();
+    callback clicked();
+    height: is-editing ? layout.preferred-height : layout.preferred-height - actions.preferred-height;
+    touch-area := TouchArea {
+        clicked => {
+            clicked();
+        }
+    }
 
+    // FIXME: background covering layout
     Rectangle {
         states [
             hovered when touch-area.has-hover: {
@@ -47,11 +58,28 @@ export component TableRow {
         ]
     }
 
-    VerticalLayout {
-        layout := HorizontalLayout {
+    layout := VerticalLayout {
+        HorizontalLayout {
             padding-top: 8px;
             padding-bottom: 8px;
             @children
+        }
+
+        actions := HorizontalLayout {
+            alignment: end;
+            visible: is-editing;
+            spacing: 8px;
+
+            cancel-btn := PrimaryButton {
+                theme: ghost;
+                text: "Cancel";
+                clicked => cancelled();
+            }
+
+            confirm-btn := PrimaryButton {
+                text: "Confirm";
+                clicked => confirmed();
+            }
         }
 
         Rectangle {
