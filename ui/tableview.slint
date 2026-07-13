@@ -19,6 +19,7 @@ import { Colors } from "colors.slint";
 import { Button } from "widgets/button.slint";
 import { ListView, ScrollView } from "std-widgets.slint";
 
+// TODO: maybe rename to data table
 export component TableCell inherits Rectangle {
     clip: true;
 
@@ -30,6 +31,22 @@ export component TableCell inherits Rectangle {
 
 // TODO: maybe optional actions?
 export component TableRow {
+    touch-area := TouchArea { }
+
+    Rectangle {
+        states [
+            hovered when touch-area.has-hover: {
+                background: Colors.neutral25;
+                in {
+                    animate background { duration: 50ms; }
+                }
+                out {
+                    animate background { duration: 50ms; }
+                }
+            }
+        ]
+    }
+
     VerticalLayout {
         layout := HorizontalLayout {
             padding-top: 8px;
