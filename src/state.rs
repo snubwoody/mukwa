@@ -16,15 +16,16 @@
 
 use crate::service::{CreateBudgetOpts, Service, UpdateTransactionOpts};
 use crate::ui::ComboBoxItem;
-use crate::{Money, ui};
-use jiff::Zoned;
+use crate::{ui, Money};
 use jiff::civil::Date;
+use jiff::Zoned;
 use slint::{Model, SharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
 use tracing::info;
 use uuid::Uuid;
 
+// TODO: maybe store settings path here?
 // TODO: set the new transaction to editing
 #[derive(Clone)]
 pub struct AppState {

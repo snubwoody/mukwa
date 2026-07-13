@@ -18,6 +18,7 @@ pub mod error;
 pub mod migrator;
 mod money;
 pub mod service;
+mod settings;
 pub mod state;
 
 pub use error::Error;
