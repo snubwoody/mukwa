@@ -18,8 +18,13 @@ import { Colors } from "../colors.slint";
 import { ListView } from "std-widgets.slint";
 import { FocusBorder } from "./focus-border.slint";
 
+export struct ComboBoxItem {
+    value: string,
+    text: string,
+}
+
 export component ComboBox {
-    in property <[{ value: string, text: string}]> options;
+    in property <[ComboBoxItem]> options;
     in-out property <int> current-index: 0;
     in-out property <string> current-value: options[current-index].value;
     in property <bool> enabled;
@@ -132,6 +137,7 @@ export component ComboBox {
                     TouchArea {
                         clicked => {
                             root.select(i);
+                            changed(options[current-index].value);
                             popup.close();
                         }
                     }

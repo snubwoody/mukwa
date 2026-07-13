@@ -49,6 +49,24 @@ impl From<Account> for ui::Account {
     }
 }
 
+impl From<Account> for ui::ComboBoxItem {
+    fn from(account: Account) -> Self {
+        Self {
+            value: account.id.to_string().into(),
+            text: account.name.to_string().into(),
+        }
+    }
+}
+
+impl From<&Account> for ui::ComboBoxItem {
+    fn from(account: &Account) -> Self {
+        Self {
+            value: account.id.to_string().into(),
+            text: account.name.to_string().into(),
+        }
+    }
+}
+
 impl From<&Account> for ui::Account {
     fn from(account: &Account) -> Self {
         Self {
@@ -150,6 +168,24 @@ impl From<&Category> for ui::Category {
         Self {
             id: value.id.to_shared_string(),
             title: value.title.to_shared_string(),
+        }
+    }
+}
+
+impl From<Category> for ui::ComboBoxItem {
+    fn from(value: Category) -> Self {
+        Self {
+            value: value.id.to_string().into(),
+            text: value.title.to_string().into(),
+        }
+    }
+}
+
+impl From<&Category> for ui::ComboBoxItem {
+    fn from(value: &Category) -> Self {
+        Self {
+            value: value.id.to_string().into(),
+            text: value.title.to_string().into(),
         }
     }
 }
@@ -563,6 +599,13 @@ impl Service {
             tx.execute(
                 "UPDATE transactions SET transaction_date = ?1 WHERE id = ?2",
                 [date.to_string(), opts.id.to_string()],
+            )?;
+        }
+
+        if let Some(category_id) = opts.category_id {
+            tx.execute(
+                "UPDATE transactions SET category_id = ?1 WHERE id = ?2",
+                [category_id.to_string(), opts.id.to_string()],
             )?;
         }
 
