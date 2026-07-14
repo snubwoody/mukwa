@@ -38,7 +38,6 @@ component TransactionRow inherits TableRow {
     in property <Transaction> transaction;
     in property <int> length;
     in property <int> index;
-    // TODO: reset properties on cancel or click
     out property <string> category-id: transaction.category-id;
     out property <string> account-id: transaction.account-id;
     out property <string> outflow: transaction.outflow;
@@ -153,30 +152,18 @@ component TransactionRow inherits TableRow {
             color: Colors.textBody;
         }
 
-        if parent.is-editing: Rectangle {
-            border-width: 1px;
-            border-color: Colors.blue500;
-            clip: true;
-            width: 250px;
-            height: 36px;
-            border-radius: 4px;
-            background: white;
-
-            outflow-input := TextInput {
-                text: outflow;
-                color: Colors.textBody;
-                input-type: decimal;
-                edited => {
-                    outflow = outflow-input.text;
-                    inflow = "";
-                    // FIXME
-                    //inflow-input.text = "";
-                }
+        if parent.is-editing: TextField {
+            text: outflow;
+            input-type: decimal;
+            edited => {
+                outflow = self.text;
+                inflow = "";
+                // FIXME
+                //inflow-input.text = "";
             }
         }
     }
 
-    // TODO: use TextField
     TableCell {
         width: parent.width / length;
         if !parent.is-editing: Text {
@@ -184,26 +171,14 @@ component TransactionRow inherits TableRow {
             color: Colors.textBody;
         }
 
-        if parent.is-editing: Rectangle {
-            border-width: 1px;
-            border-color: Colors.blue500;
-            clip: true;
-            width: 250px;
-            height: 36px;
-            border-radius: 4px;
-            background: white;
-
-            inflow-input := TextInput {
-                text: inflow;
-                color: Colors.textBody;
-                input-type: decimal;
-
-                edited => {
-                    inflow = inflow-input.text;
-                    outflow = "";
-                    // FIXME
-                    //outflow-input.text = "";
-                }
+        if parent.is-editing: TextField {
+            text: inflow;
+            input-type: decimal;
+            edited => {
+                inflow = self.text;
+                outflow = "";
+                // FIXME
+                //inflow-input.text = "";
             }
         }
     }
