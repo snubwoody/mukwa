@@ -46,6 +46,15 @@ export component TableRow {
     // FIXME: background covering layout
     Rectangle {
         states [
+            active when is-editing: {
+                background: Colors.accent.with-alpha(0.1);
+                in {
+                    animate background { duration: 50ms; }
+                }
+                out {
+                    animate background { duration: 50ms; }
+                }
+            }
             hovered when touch-area.has-hover: {
                 background: Colors.neutral25;
                 in {
@@ -91,6 +100,7 @@ export component TableRow {
 }
 
 export component Table {
+    accessible-role: table;
     ScrollView {
         layout := VerticalLayout {
             width: root.width;

@@ -28,145 +28,27 @@ import {
     State,
     UpdateTransactionOpts,
 } from "globals.slint";
-import { Button, ComboBox } from "widgets.slint";
+import { Button, ComboBox, TextField, PrimaryButton } from "widgets.slint";
 import { FocusBorder } from "widgets/focus-border.slint";
 import { Calendar } from "widgets/calendar.slint";
-import { PrimaryButton } from "widgets/button.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
 
-// TODO: maybe enter should submit?
-component EditingRow inherits VerticalLayout {
+component TransactionRow inherits TableRow {
+    // FIXME: combobox state not changing after updating
     in property <Transaction> transaction;
-    out property <string> selected-account-id: transaction.account-id;
+    in property <int> length;
+    in property <int> index;
+    // TODO: reset properties on cancel or click
     out property <string> category-id: transaction.category-id;
+    out property <string> account-id: transaction.account-id;
     out property <string> outflow: transaction.outflow;
     out property <string> inflow: transaction.inflow;
-    out property <string> selected-date: transaction.date;
-    out property <UpdateTransactionOpts> update-opts;
-    callback cancel();
-    callback confirm();
-
-    padding: 8px;
-    spacing: 8px;
-
-    HorizontalLayout {
-        vertical-stretch: 0;
-        cross-axis-alignment: center;
-
-        touch-area := TouchArea {
-            Text {
-                horizontal-stretch: 1;
-                horizontal-alignment: start;
-                text: selected-date;
-                color: Colors.textBody;
-            }
-
-            clicked => {
-                calendar-popup.show();
-            }
-        }
-
-        calendar-popup := PopupWindow {
-            x: touch-area.x;
-            y: touch-area.y;
-
-            width: 250px;
-            height: 250px;
-
-            close-policy: close-on-click-outside;
-
-            calendar := Calendar {
-                changed(date) => {
-                    selected-date = date.year + "-" + date.month + "-" + date.day;
-                    calendar-popup.close();
-                }
-            }
-        }
-
-        ComboBox {
-            options: State.account-options;
-            changed(value) => {
-                selected-account-id = value;
-            }
-        }
-
-        ComboBox {
-            options: State.category-options;
-            changed(value) => {
-                category-id = value;
-            }
-        }
-
-        Rectangle {
-            border-width: 1px;
-            border-color: Colors.blue500;
-            clip: true;
-            width: 250px;
-            height: 36px;
-            border-radius: 4px;
-            background: white;
-
-            outflow-input := TextInput {
-                text: outflow;
-                color: Colors.textBody;
-                input-type: decimal;
-                edited => {
-                    outflow = outflow-input.text;
-                    inflow = "";
-                    inflow-input.text = "";
-                }
-            }
-        }
-
-        Rectangle {
-            border-width: 1px;
-            border-color: Colors.blue500;
-            clip: true;
-            width: 250px;
-            height: 36px;
-            border-radius: 4px;
-            background: white;
-
-            inflow-input := TextInput {
-                text: inflow;
-                color: Colors.textBody;
-                input-type: decimal;
-
-                edited => {
-                    inflow = inflow-input.text;
-                    outflow = "";
-                    outflow-input.text = "";
-                }
-            }
-        }
-    }
-
-    HorizontalLayout {
-        alignment: end;
-        spacing: 8px;
-
-        PrimaryButton {
-            theme: ghost;
-            text: "Cancel";
-            clicked => cancel();
-        }
-
-        PrimaryButton {
-            text: "Confirm";
-            clicked => confirm();
-        }
-    }
-}
-
-component TransactionRow inherits Rectangle {
-    in-out property <bool> is-active;
-    in property <Transaction> transaction;
-    in property <int> index;
+    out property <string> date: transaction.date;
     callback select-row(int);
 
     forward-focus: focus-scope;
-    height: is-active ? edit-row.preferred-height : row.preferred-height;
 
+    // TODO: submit on enter
     focus-scope := FocusScope {
         key-pressed(event) => {
             if (event.text == Key.Space) {
@@ -179,36 +61,9 @@ component TransactionRow inherits Rectangle {
             }
             return reject;
         }
-        touch-area := TouchArea {
-            clicked => {
-                if (!is-active) {
-                    select-row(index);
-                }
-            }
-        }
     }
 
-    states [
-        active when is-active: {
-            background: Colors.blue50;
-            in {
-                animate background { duration: 50ms; }
-            }
-            out {
-                animate background { duration: 50ms; }
-            }
-        }
-        hovered when touch-area.has-hover: {
-            background: Colors.neutral25;
-            in {
-                animate background { duration: 50ms; }
-            }
-            out {
-                animate background { duration: 50ms; }
-            }
-        }
-    ]
-
+    // FIXME: context menu not working
     ContextMenuArea {
         Menu {
             MenuItem {
@@ -222,92 +77,6 @@ component TransactionRow inherits Rectangle {
             }
         }
     }
-
-    row := HorizontalLayout {
-        padding-top: 8px;
-        padding-bottom: 8px;
-        visible: !is-active;
-        cross-axis-alignment: center;
-
-        Rectangle {
-//            horizontal-stretch: 1;
-            Text {
-                width: 100%;
-                horizontal-alignment: start;
-                text: transaction.date;
-                color: Colors.textBody;
-            }
-
-            background: Colors.blue50;
-        }
-
-        Rectangle {
-//            horizontal-stretch: 1;
-            Text {
-                width: 100%;
-                horizontal-alignment: start;
-                text: State.get_account_name(transaction.account-id);
-                color: Colors.textBody;
-            }
-
-            background: Colors.neutral50;
-        }
-
-        Rectangle {
-//            horizontal-stretch: 1;
-            Text {
-                width: 100%;
-                horizontal-alignment: start;
-                text: State.get-category(transaction.category-id).title;
-                color: Colors.textBody;
-            }
-        }
-
-        Rectangle {
-//            horizontal-stretch: 1;
-            Text {
-                width: 100%;
-                horizontal-alignment: start;
-                text: transaction.outflow;
-                color: Colors.textBody;
-            }
-        }
-
-        Rectangle {
-//            horizontal-stretch: 1;
-            Text {
-                width: 100%;
-                horizontal-alignment: start;
-                text: transaction.inflow;
-                color: Colors.textBody;
-            }
-        }
-    }
-
-    edit-row := EditingRow {
-        visible: is-active;
-        transaction: transaction;
-        confirm => {
-            // TODO: use struct
-            State.update-transaction(transaction.id, edit-row.selected-account-id,edit-row.category-id, edit-row.outflow,edit-row.inflow,edit-row.selected-date);
-            select-row(-1);
-        }
-        cancel => {
-            select-row(-1);
-        }
-    }
-}
-
-component NewTransactionRow inherits TableRow {
-    // FIXME: combobox state not changing after updating
-    in property <Transaction> transaction;
-    in property <int> length;
-    // TODO: reset properties on cancel or click
-    out property <string> category-id: transaction.category-id;
-    out property <string> account-id: transaction.account-id;
-    out property <string> outflow: transaction.outflow;
-    out property <string> inflow: transaction.inflow;
-    out property <string> date: transaction.date;
 
     date-cell := TableCell {
         width: parent.width / length;
@@ -440,8 +209,7 @@ component NewTransactionRow inherits TableRow {
     }
 }
 
-// TODO: add focus scope, and make sure it continues from the current index
-export component TransactionTable inherits VerticalLayout {
+export component TransactionPage inherits VerticalLayout {
     in property <[string]> columns;
     in property <[Transaction]> transactions;
     property <int> active-row: -1;
@@ -496,10 +264,15 @@ export component TransactionTable inherits VerticalLayout {
             }
         }
 
-        for transaction[index] in transactions: NewTransactionRow {
+        for transaction[index] in transactions: TransactionRow {
             is-editing: active-row == index;
+            index: index;
             transaction: transaction;
             length: length;
+
+            select-row(value) => {
+                select-row(value);
+            }
             clicked => {
                 select-row(index);
             }
@@ -512,43 +285,4 @@ export component TransactionTable inherits VerticalLayout {
             }
         }
     }
-
-    //    VerticalLayout {
-//        HorizontalLayout {
-//            for column in columns: Rectangle {
-//                Text {
-//                    width: 100%;
-//                    horizontal-alignment: start;
-//                    text: column;
-//                    color: Colors.textBody;
-//                }
-//            }
-//        }
-//
-//        Rectangle {
-//            width: 100%;
-//            height: 2px;
-//            background: Colors.neutral50;
-//        }
-//        // TODO: focus when clicked
-//        // - Use accessibilty
-//        ListView {
-//            for transaction[i] in transactions: VerticalLayout {
-//                TransactionRow {
-//                    is-active: active-row == i;
-//                    transaction: transaction;
-//                    index: i;
-//                    select-row(index) => {
-//                        select-row(index)
-//                    }
-//                }
-//
-//                Rectangle {
-//                    width: 100%;
-//                    height: 2px;
-//                    background: Colors.neutral50;
-//                }
-//            }
-//        }
-//    }
 }
