@@ -72,12 +72,12 @@ export component TableRow {
 
             cancel-btn := PrimaryButton {
                 theme: ghost;
-                text: "Cancel";
+                text: @tr("Cancel");
                 clicked => cancelled();
             }
 
             confirm-btn := PrimaryButton {
-                text: "Confirm";
+                text: @tr("Confirm");
                 clicked => confirmed();
             }
         }
