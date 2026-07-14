@@ -36,7 +36,7 @@ export component TableRow {
     callback confirmed();
     callback cancelled();
     callback clicked();
-    height: is-editing ? layout.preferred-height : layout.preferred-height - actions.preferred-height;
+
     touch-area := TouchArea {
         clicked => {
             clicked();
@@ -65,9 +65,9 @@ export component TableRow {
             @children
         }
 
-        actions := HorizontalLayout {
+        if is-editing: HorizontalLayout {
             alignment: end;
-            visible: is-editing;
+            padding-bottom: 4px;
             spacing: 8px;
 
             cancel-btn := PrimaryButton {

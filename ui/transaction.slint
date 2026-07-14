@@ -354,12 +354,6 @@ export component TransactionTable inherits VerticalLayout {
             }
         }
 
-        Rectangle {
-            width: parent.width;
-            height: 2px;
-            background: Colors.neutral50;
-        }
-
         for transaction[index] in transactions: TableRow {
             is-editing: active-row == index;
             clicked => {
