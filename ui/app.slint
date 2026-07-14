@@ -25,11 +25,13 @@ import { Colors } from "./colors.slint";
 import { Account, Transaction, State, Category } from "./globals.slint";
 export { Account, Transaction, State, Category } from "./globals.slint";
 import { Button, TextField } from "./widgets.slint";
-import { TransactionTable } from "./transaction.slint";
+import { TransactionPage } from "./transaction.slint";
 import { SpendingPage } from "spending-page.slint";
 import { PrimaryButton } from "widgets/button.slint";
 import { ComboBoxItem } from "widgets/combobox.slint";
 export { Date, CalendarState } from "./widgets/calendar.slint";
+import { Table } from "tableview.slint";
+import { TransactionPage } from "transaction.slint";
 
 enum Page {
     spending,
@@ -45,6 +47,7 @@ component Sidebar inherits VerticalLayout {
     alignment: start;
     callback select-page(Page);
 
+    // TODO: add accessible-role: navigation
     Button {
         text: "Spending";
         alignment: start;
@@ -123,7 +126,7 @@ export component MainWindow inherits Window {
 
         if active-page == Page.spending: SpendingPage { }
 
-        if active-page == Page.transactions: TransactionTable {
+        if active-page == Page.transactions: TransactionPage {
             columns: [@tr("Date"), @tr("Account"), @tr("Category"), @tr("Outflow"), @tr("Inflow")];
             transactions: State.transactions;
         }
