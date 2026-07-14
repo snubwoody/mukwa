@@ -299,6 +299,7 @@ component TransactionRow inherits Rectangle {
 }
 
 component NewTransactionRow inherits TableRow {
+    // FIXME: combobox state not changing after updating
     in property <Transaction> transaction;
     in property <int> length;
     // TODO: reset properties on cancel or click
@@ -506,6 +507,7 @@ export component TransactionTable inherits VerticalLayout {
                 select-row(-1);
             }
             confirmed => {
+                State.update-transaction(transaction.id, self.account-id,self.category-id, self.outflow,self.inflow,self.date);
                 select-row(-1);
             }
         }
