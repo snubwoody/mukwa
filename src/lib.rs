@@ -35,7 +35,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::FromStr;
-use tracing::warn;
+use tracing::{info, warn};
 
 pub mod ui {
     slint::include_modules!();
@@ -267,7 +267,9 @@ pub fn run() -> Result<()> {
 
     fs::create_dir_all(&data_dir)?;
 
-    let connection = Connection::open(data_dir.join("data.sqlite"))?;
+    let database_path = data_dir.join("data.sqlite");
+    info!("Opening sqlite database at {:?}", database_path);
+    let connection = Connection::open(&database_path)?;
     let mut migrator = Migrator::new();
     migrator.load_from_dir("./migrations")?;
     migrator.migrate(&connection)?;
@@ -294,10 +296,32 @@ pub fn create_test_db() -> Connection {
     connection
 }
 
-/// Returns the path to the applications data directory.
+/// Returns the path to the application's data directory.
 ///
 /// # Panics
 /// Panics if the system data directory cannot be found.
 pub fn data_dir() -> PathBuf {
     dirs::data_dir().unwrap().join("Mukwa")
+}
+
+/// Returns the path to the application's log directory.
+///
+/// ## Platform specific
+///
+/// |Platform | Value                                |
+/// | ------- | ------------------------------------ |
+/// | Linux   | `$XDG_STATE_HOME`/Mukwa/logs         |
+/// | macOS   | `$HOME`/Library/Logs/Mukwa           |
+/// | Windows | `{FOLDERID_LocalAppData}`/Mukwa/logs |
+///
+/// ## Panics
+/// Panics if the system directories cannot be found.
+pub fn log_dir() -> PathBuf {
+    if cfg!(windows) {
+        dirs::data_local_dir().unwrap().join("Mukwa/logs")
+    } else if cfg!(target_os = "macos") {
+        dirs::home_dir().unwrap().join("Library/Logs/Mukwa")
+    } else {
+        dirs::state_dir().unwrap().join("Mukwa/logs")
+    }
 }
