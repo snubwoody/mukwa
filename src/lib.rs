@@ -271,7 +271,7 @@ pub fn run() -> Result<()> {
     info!("Opening sqlite database at {:?}", database_path);
     let connection = Connection::open(&database_path)?;
     let mut migrator = Migrator::new();
-    migrator.load_from_dir("./migrations")?;
+    migrator.load_embedded()?;
     migrator.migrate(&connection)?;
 
     let service = Service::new(connection);
