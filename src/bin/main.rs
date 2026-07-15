@@ -17,10 +17,49 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::fs;
+
 use tracing::error;
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{EnvFilter, fmt};
 
 fn main() {
-    tracing_subscriber::fmt::init();
+    #[cfg(debug_assertions)]
+    let log_dir = ".mukwa/logs";
+    #[cfg(not(debug_assertions))]
+    let log_dir = mukwa::log_dir();
+
+    fs::create_dir_all(log_dir).expect("Failed to create directory");
+
+    let file_appender = RollingFileAppender::builder()
+        .rotation(Rotation::DAILY)
+        .filename_prefix("mukwa")
+        .max_log_files(7)
+        .filename_suffix("log")
+        .build(log_dir)
+        .expect("Failed to setup logging");
+
+    // Keep guard in scope
+    let (file_writer, _guard) = tracing_appender::non_blocking(file_appender);
+
+    let std_io_layer = fmt::layer().with_writer(std::io::stdout);
+
+    let file_layer = fmt::layer()
+        .pretty()
+        .with_file(false)
+        .with_line_number(false)
+        .with_writer(file_writer)
+        .with_ansi(false);
+
+    tracing_subscriber::registry()
+        .with(EnvFilter::new("info,mukwa=debug"))
+        .with(std_io_layer)
+        .with(file_layer)
+        .try_init()
+        .expect("Failed to setup logging");
+
     if let Err(err) = mukwa::run() {
         error!("{}", err.report());
     }
