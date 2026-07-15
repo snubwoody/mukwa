@@ -14,13 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// TODO: move to widgets
 import { Colors } from "colors.slint";
 import { Button } from "widgets/button.slint";
 import { ListView, ScrollView } from "std-widgets.slint";
 import { PrimaryButton } from "widgets.slint";
 
-// TODO: maybe rename to data table
 export component TableCell inherits Rectangle {
     clip: true;
 
@@ -30,7 +28,6 @@ export component TableCell inherits Rectangle {
     }
 }
 
-// TODO: maybe optional actions? confirmed callback
 export component TableRow {
     in-out property <bool> is-editing;
     callback confirmed();
@@ -43,7 +40,6 @@ export component TableRow {
         }
     }
 
-    // FIXME: background covering layout
     Rectangle {
         states [
             active when is-editing: {

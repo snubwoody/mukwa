@@ -44,7 +44,6 @@ impl From<Account> for ui::Account {
         Self {
             id: account.id.to_string().into(),
             name: account.name.into(),
-            balance: SharedString::from("0.00"),
         }
     }
 }
@@ -72,7 +71,6 @@ impl From<&Account> for ui::Account {
         Self {
             id: account.id.to_string().into(),
             name: account.name.clone().into(),
-            balance: SharedString::from("0.00"),
         }
     }
 }
