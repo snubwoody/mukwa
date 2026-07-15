@@ -67,6 +67,10 @@ fn create_migrations_table(conn: &Connection) -> crate::Result<()> {
     Ok(())
 }
 
+#[derive(rust_embed::Embed)]
+#[folder = "migrations"]
+struct Migrations;
+
 // TODO: Run migrations in a transaction
 
 /// Sql migrator.
@@ -85,6 +89,30 @@ impl Migrator {
         Migrator {
             migrations: Vec::new(),
         }
+    }
+
+    pub fn load_embedded(&mut self) -> crate::Result<()> {
+        for file_name in Migrations::iter() {
+            let split = file_name.split("_").collect::<Vec<_>>();
+            let version = split[0]
+                .parse::<i64>()
+                .map_err(|_| Error::new("Failed to parse migration version"))?;
+            let file = Migrations::get(&file_name).ok_or(Error::new("Migration not found"))?;
+            let data = std::str::from_utf8(&file.data)?;
+            let (up, down) = parse_migration(data);
+            if down.is_none() {
+                return Err(Error::new("Missing down migration"));
+            }
+
+            if up.is_none() {
+                return Err(Error::new("Missing up migration"));
+            }
+
+            let migration = Migration::new(up.unwrap().as_str(), down.unwrap().as_str(), version);
+            self.add_migration(migration);
+        }
+
+        Ok(())
     }
 
     /// Returns a list of the applied migration versions.

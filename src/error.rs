@@ -137,5 +137,6 @@ from_error! {
     uuid::Error,
     ParseFloatError,
     ParseIntError,
-    rusqlite::Error
+    rusqlite::Error,
+    std::str::Utf8Error
 }
