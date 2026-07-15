@@ -44,7 +44,6 @@ impl From<Account> for ui::Account {
         Self {
             id: account.id.to_string().into(),
             name: account.name.into(),
-            balance: SharedString::from("0.00"),
         }
     }
 }
@@ -72,7 +71,6 @@ impl From<&Account> for ui::Account {
         Self {
             id: account.id.to_string().into(),
             name: account.name.clone().into(),
-            balance: SharedString::from("0.00"),
         }
     }
 }
@@ -510,6 +508,27 @@ impl Service {
         Ok(total)
     }
 
+    /// Calculates the account balance.
+    pub fn account_balance(&self, account_id: Uuid) -> crate::Result<Money> {
+        let connection = self.connection();
+        let mut expense_stmt = connection.prepare_cached(
+            "SELECT coalesce(sum(amount),0) FROM transactions WHERE sender_id = ?1",
+        )?;
+        let mut income_stmt = connection.prepare_cached(
+            "SELECT coalesce(sum(amount),0) FROM transactions WHERE receiver_id = ?1",
+        )?;
+        let total_expenses = expense_stmt.query_one([account_id.to_string()], |row| {
+            Ok(Money::from_scaled(row.get::<_, i64>(0)?))
+        })?;
+        let total_incomes = income_stmt.query_one([account_id.to_string()], |row| {
+            Ok(Money::from_scaled(row.get::<_, i64>(0)?))
+        })?;
+
+        let total = total_incomes - total_expenses;
+
+        Ok(total)
+    }
+
     /// Fetches all categories from the database.
     pub fn fetch_categories(&self) -> crate::Result<Vec<Category>> {
         let mut categories = vec![];
@@ -691,6 +710,26 @@ impl Service {
             account_id.to_string(),
             category_id,
             opts.amount.inner()
+        ];
+        let mut rows = stmt.query_and_then(params, |row| Transaction::try_from(row))?;
+        let transaction = rows.next().unwrap()?;
+        Ok(transaction)
+    }
+
+    /// Creates a new income.
+    #[allow(unused)]
+    pub fn create_income(&self, amount: Money, account_id: Uuid) -> crate::Result<Transaction> {
+        let connection = self.connection.lock().unwrap();
+        let sql = "INSERT INTO transactions(id,transaction_date,receiver_id,amount) \
+            VALUES(?1,?2,?3,?4) \
+            RETURNING *";
+        let date = Zoned::now().date();
+        let mut stmt = connection.prepare_cached(sql)?;
+        let params = params![
+            Uuid::now_v7().to_string(),
+            date.to_string(),
+            account_id.to_string(),
+            amount.inner()
         ];
         let mut rows = stmt.query_and_then(params, |row| Transaction::try_from(row))?;
         let transaction = rows.next().unwrap()?;
