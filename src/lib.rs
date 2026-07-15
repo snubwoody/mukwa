@@ -31,6 +31,8 @@ use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
 use rusqlite::Connection;
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
+use std::fs;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::FromStr;
 use tracing::warn;
@@ -257,7 +259,15 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 }
 
 pub fn run() -> Result<()> {
-    let connection = Connection::open("data.sqlite")?;
+    let data_dir = if cfg!(debug_assertions) {
+        PathBuf::from(".mukwa")
+    } else {
+        data_dir()
+    };
+
+    fs::create_dir_all(&data_dir)?;
+
+    let connection = Connection::open(data_dir.join("data.sqlite"))?;
     let mut migrator = Migrator::new();
     migrator.load_from_dir("./migrations")?;
     migrator.migrate(&connection)?;
@@ -282,4 +292,12 @@ pub fn create_test_db() -> Connection {
     migrator.load_from_dir("./migrations").unwrap();
     migrator.migrate(&connection).unwrap();
     connection
+}
+
+/// Returns the path to the applications data directory.
+///
+/// # Panics
+/// Panics if the system data directory cannot be found.
+pub fn data_dir() -> PathBuf {
+    dirs::data_dir().unwrap().join("Mukwa")
 }
