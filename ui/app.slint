@@ -71,7 +71,7 @@ component Sidebar inherits VerticalLayout {
         }
 
         Text {
-            text: "0.00";
+            text: State.total_balance();
             color: black;
             font-weight: 600;
         }
@@ -93,7 +93,8 @@ component Sidebar inherits VerticalLayout {
                     }
 
                     Text {
-                        text: account.balance;
+                        // TODO: remove balance field
+                        text: State.account-balance(account.id);
                         color: Colors.textBody;
                     }
                 }

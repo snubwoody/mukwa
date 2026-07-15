@@ -160,11 +160,16 @@ impl AppState {
     }
 
     pub fn duplicate_transaction(&mut self, id: &str) -> crate::Result<()> {
-        let tid = Uuid::parse_str(id)?;
-        let transaction = self.service.duplicate_transaction(tid)?;
+        let id = Uuid::parse_str(id)?;
+        let transaction = self.service.duplicate_transaction(id)?;
         self.transactions.push(transaction.into());
         info!("Duplicated transaction {id}");
         Ok(())
+    }
+
+    pub fn account_balance(&mut self, id: &str) -> crate::Result<Money> {
+        let id = Uuid::parse_str(id)?;
+        self.service.account_balance(id)
     }
 
     pub fn update_transaction(

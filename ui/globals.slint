@@ -75,6 +75,7 @@ export global State {
     pure callback total_balance() -> string;
     pure callback get_category_name(id: string) -> string;
     pure callback get-category(id: string) -> Category;
+    pure callback account-balance(id: string) -> string;
     pure callback update-transaction(id: string, account-id: string, category-id: string, outflow: string, inflow: string, date: string);
     pure callback update-category(id: string, title: string);
     pure callback create-category(title: string);

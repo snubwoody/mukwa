@@ -18,6 +18,7 @@ use jiff::Zoned;
 use jiff::civil::date;
 use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, UpdateTransactionOpts};
 use mukwa::{Money, create_test_db};
+use uuid::Uuid;
 
 #[test]
 fn create_account() -> mukwa::Result<()> {
@@ -183,6 +184,63 @@ fn total_spent() -> mukwa::Result<()> {
 
     let total = service.total_spent(category.id, date)?;
     assert_eq!(total, Money::new(650));
+    Ok(())
+}
+
+#[test]
+fn account_balance() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("")?;
+
+    let category = service.create_category("")?;
+    let opts = CreateTransactionOpts {
+        account_id: Some(account.id),
+        category_id: Some(category.id),
+        ..Default::default()
+    };
+    service.create_transaction(CreateTransactionOpts {
+        amount: Money::new(500),
+        ..opts
+    })?;
+    service.create_income(Money::new(700), account.id)?;
+
+    let total = service.account_balance(account.id)?;
+    assert_eq!(total, Money::new(200));
+    Ok(())
+}
+
+#[test]
+fn account_balance_negative() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("")?;
+
+    let category = service.create_category("")?;
+    let opts = CreateTransactionOpts {
+        account_id: Some(account.id),
+        category_id: Some(category.id),
+        ..Default::default()
+    };
+    service.create_transaction(CreateTransactionOpts {
+        amount: Money::new(900),
+        ..opts
+    })?;
+    service.create_income(Money::new(700), account.id)?;
+
+    let total = service.account_balance(account.id)?;
+    assert_eq!(total, Money::new(-200));
+    Ok(())
+}
+
+#[test]
+fn account_balance_with_no_transactions() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("")?;
+
+    let category = service.create_category("")?;
+    service.create_income(Money::new(700), account.id)?;
+
+    let total = service.account_balance(Uuid::now_v7())?;
+    assert_eq!(total, Money::ZERO);
     Ok(())
 }
 
