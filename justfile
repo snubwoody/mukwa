@@ -1,7 +1,7 @@
-set windows-shell := ["powershell","-c"]
+set windows-shell := ["powershell", "-c"]
 
 add-migration name:
-    cargo run --bin cli migrate new {{name}}
+    cargo run --bin cli migrate new {{ name }}
 
 migrate:
     cargo run --bin cli migrate up
@@ -31,3 +31,6 @@ check-format:
 # Run qmllint on all the *.qml files
 check-qml-lint:
     qmllint src/ui/*.qml --max-warnings 0
+
+bundle-windows:
+    scripts/bundle-windows.ps1
