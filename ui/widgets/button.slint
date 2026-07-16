@@ -23,6 +23,12 @@ export component Button inherits Rectangle {
     in property <bool> enabled <=> touch-area.enabled;
     out property <bool> has-focus: focus-scope.has-focus;
     in property <LayoutAlignment> alignment: center;
+
+    padding-right: 12px;
+    padding-left: 12px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+
     callback clicked <=> touch-area.clicked;
 
     accessible-label: text;
@@ -36,10 +42,10 @@ export component Button inherits Rectangle {
     forward-focus: focus-scope;
 
     HorizontalLayout {
-        padding-right: 12px;
-        padding-left: 12px;
-        padding-top: 4px;
-        padding-bottom: 4px;
+        padding-right: root.padding-right;
+        padding-left: root.padding-left;
+        padding-top: root.padding-top;
+        padding-bottom: root.padding-bottom;
         alignment: alignment;
         vertical-stretch: 0;
         cross-axis-alignment: center;
