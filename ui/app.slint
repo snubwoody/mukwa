@@ -88,48 +88,31 @@ component Sidebar {
                     }
                 }
 
-                SidebarButton {
-                    text: @tr("All accounts");
-                    selected: current-page == Page.transactions;
-                    clicked => select-page(Page.transactions);
-
-                    IconDisplay {
-                        icon: IconSet.PiggyBank;
-                        size: 14px;
-                        stroke-width: 1.5;
-                        stroke: Colors.textBody;
-                    }
-                }
-            }
-
-            VerticalLayout {
-                spacing: 12px;
-                padding-left: 4px;
-                HorizontalLayout {
-                    alignment: space-between;
-                    Text {
-                        text: @tr("Accounts");
-                        color: black;
-                        font-weight: 600;
-                    }
-
-                    Text {
-                        text: State.total_balance();
-                        color: black;
-                        font-weight: 600;
-                    }
-                }
-
                 VerticalLayout {
+                    SidebarButton {
+                        text: @tr("All accounts");
+                        selected: current-page == Page.transactions;
+                        clicked => select-page(Page.transactions);
+
+                        IconDisplay {
+                            icon: IconSet.PiggyBank;
+                            size: 14px;
+                            stroke-width: 1.5;
+                            stroke: Colors.textBody;
+                        }
+                    }
+
                     Flickable {
                         max-height: 250px;
                         viewport-height: content.preferred-height;
 
-                        // TODO: use dialog for creating account
-                        // TODO: context menu with rename that opens a popup
                         content := VerticalLayout {
+                            padding-left: 16px;
                             for account in accounts: HorizontalLayout {
-                                spacing: 12px;
+                                padding-top: 4px;
+                                padding-bottom: 4px;
+                                padding-left: 8px;
+                                padding-right: 8px;
                                 alignment: space-between;
                                 Text {
                                     text: account.name;
@@ -144,6 +127,11 @@ component Sidebar {
                         }
                     }
                 }
+            }
+
+            VerticalLayout {
+                spacing: 12px;
+                padding-left: 4px;
 
                 create-account-btn := PrimaryButton {
                     theme: neutral;
