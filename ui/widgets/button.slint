@@ -50,6 +50,10 @@ export component Button inherits Rectangle {
         vertical-stretch: 0;
         cross-axis-alignment: center;
 
+        spacing: 8px;
+
+        @children
+
         Text {
             text: text;
             color: text-color;
@@ -114,5 +118,6 @@ export component PrimaryButton {
         text-color: text-color(theme);
 
         border-radius: 4px;
+        @children
     }
 }

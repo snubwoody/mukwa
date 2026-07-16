@@ -32,6 +32,7 @@ import { ComboBoxItem } from "widgets/combobox.slint";
 export { Date, CalendarState } from "./widgets/calendar.slint";
 import { Table } from "tableview.slint";
 import { TransactionPage } from "transaction.slint";
+import { IconDisplay, IconSet, Icon } from "@lucide";
 
 enum Page {
     spending,
@@ -48,6 +49,8 @@ component SidebarButton inherits Button {
 
     background: selected ? Colors.neutral50 : transparent;
     border-radius: 4px;
+
+    @children
 }
 
 component Sidebar {
@@ -77,12 +80,25 @@ component Sidebar {
                     text: @tr("Spending");
                     selected: current-page == Page.spending;
                     clicked => select-page(Page.spending);
+                    IconDisplay {
+                        icon: IconSet.Banknote;
+                        size: 14px;
+                        stroke-width: 2;
+                        stroke: Colors.textBody;
+                    }
                 }
 
                 SidebarButton {
                     text: @tr("All accounts");
                     selected: current-page == Page.transactions;
                     clicked => select-page(Page.transactions);
+
+                    IconDisplay {
+                        icon: IconSet.PiggyBank;
+                        size: 14px;
+                        stroke-width: 1.5;
+                        stroke: Colors.textBody;
+                    }
                 }
             }
 
@@ -138,8 +154,6 @@ component Sidebar {
         }
 
         Rectangle {
-            // x: background.preferred-width;
-            y: 0;
             width: 1px;
             background: Colors.neutral100;
         }
