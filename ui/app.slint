@@ -24,7 +24,7 @@ import {
 import { Colors } from "./colors.slint";
 import { Account, Transaction, State, Category } from "./globals.slint";
 export { Account, Transaction, State, Category } from "./globals.slint";
-import { Button, TextField } from "./widgets.slint";
+import { Button, TextField } from "widgets.slint";
 import { TransactionPage } from "./transaction.slint";
 import { SpendingPage } from "spending-page.slint";
 import { PrimaryButton } from "widgets/button.slint";
@@ -145,10 +145,92 @@ component Sidebar {
                     }
                 }
 
-                PrimaryButton {
+                create-account-btn := PrimaryButton {
                     theme: neutral;
                     text: @tr("Create account");
-                    clicked => State.create_account("New account");
+                    clicked => popup.show();
+                }
+
+                popup := PopupWindow {
+                    width: create-account-btn.width;
+                    x: create-account-btn.x;
+                    y: create-account-btn.y + create-account-btn.height + 4px;
+                    height: layout.preferred-height;
+
+                    close-policy: close-on-click-outside;
+
+                    // FIXME: focus not working
+                    forward-focus: focus-scope;
+                    focus-scope := FocusScope{
+                        key-pressed(event) => {
+                            if(event.text == Key.Return){
+                                State.create_account(text-field.text);
+                                popup.close();
+                                return accept;
+                            }
+                            if(event.text == Key.Escape){
+                                popup.close();
+                                return accept;
+                            }
+                            return reject;
+                        }
+                    }
+
+                    // TODO: add box shadow xs with just a border color
+                    Rectangle {
+                        background: white;
+                        border-width: 1px;
+                        border-radius: 4px;
+                        border-color: Colors.neutral50;
+                    }
+
+                    layout := VerticalLayout {
+                        alignment: start;
+                        padding: 8px;
+                        spacing: 12px;
+
+                        Text {
+                            text: "Create new account";
+                            font-size: 13px;
+                            font-weight: 500;
+                            color: Colors.textHeading;
+                        }
+
+                        VerticalLayout {
+                            spacing: 4px;
+
+                            Text {
+                                text: "Account name";
+                                color: Colors.textBody;
+                            }
+
+                            text-field := TextField {
+                                placeholder-text: "My account";
+                            }
+                        }
+
+
+                        // TODO: create account header
+                        // TODO: submit on enter
+                        HorizontalLayout {
+                            spacing: 8px;
+                            cross-axis-alignment: start;
+
+                            PrimaryButton {
+                                theme: ghost;
+                                text: "Cancel";
+                                clicked => popup.close();
+                            }
+
+                            PrimaryButton {
+                                text: "Create";
+                                clicked => {
+                                    State.create_account(text-field.text);
+                                    popup.close();
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
