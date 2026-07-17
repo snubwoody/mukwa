@@ -45,6 +45,8 @@ component TransactionRow inherits TableRow {
     out property <string> date: transaction.date;
     callback select-row(int);
 
+    padding-left: 8px;
+    padding-right: 8px;
     forward-focus: focus-scope;
 
     // TODO: submit on enter
@@ -230,6 +232,8 @@ export component TransactionPage inherits VerticalLayout {
         property <int> length: 5;
 
         TableRow {
+            padding-left: 8px;
+            padding-right: 8px;
             for column in columns: TableCell {
                 width: parent.width / length;
                 Text {

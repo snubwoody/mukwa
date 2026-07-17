@@ -15,10 +15,12 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import { Colors } from "../colors.slint";
 
+// TODO: add border
 // TODO: handle cursor position and scrolling
 export component TextField inherits TextInput {
     color: Colors.textBody;
     in property <string> placeholder-text;
     accessible-placeholder-text: placeholder-text;
     text: placeholder-text;
+
 }

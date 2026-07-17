@@ -24,7 +24,7 @@ import {
 import { Colors } from "./colors.slint";
 import { Account, Transaction, State, Category } from "./globals.slint";
 export { Account, Transaction, State, Category } from "./globals.slint";
-import { Button, TextField } from "./widgets.slint";
+import { Button, TextField } from "widgets.slint";
 import { TransactionPage } from "./transaction.slint";
 import { SpendingPage } from "spending-page.slint";
 import { PrimaryButton } from "widgets/button.slint";
@@ -32,79 +32,201 @@ import { ComboBoxItem } from "widgets/combobox.slint";
 export { Date, CalendarState } from "./widgets/calendar.slint";
 import { Table } from "tableview.slint";
 import { TransactionPage } from "transaction.slint";
+import { IconDisplay, IconSet, Icon } from "@lucide";
 
 enum Page {
     spending,
     transactions
 }
 
-component Sidebar inherits VerticalLayout {
+component SidebarButton inherits Button {
+    in property <bool> selected;
+    alignment: start;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 16px;
+    padding-right: 16px;
+
+    background: selected ? Colors.neutral50 : transparent;
+    border-radius: 4px;
+
+    @children
+}
+
+component Sidebar {
     in-out property <[Account]> accounts;
     in property <Page> current-page;
-    width: 350px;
-    spacing: 8px;
-    padding: 8px;
-    alignment: start;
     callback select-page(Page);
+    width: 350px;
 
-    // TODO: add accessible-role: navigation
-    Button {
-        text: "Spending";
-        alignment: start;
-        text-color: current-page == Page.spending ? Colors.accent : Colors.textBody;
-        clicked => select-page(Page.spending);
-    }
+    accessible-role: navigation;
 
-    Button {
-        text: "All accounts";
-        alignment: start;
-        text-color: current-page == Page.transactions ? Colors.accent : Colors.textBody;
-        clicked => select-page(Page.transactions);
+    background := Rectangle {
+        background: Colors.neutral25;
     }
 
     HorizontalLayout {
-        alignment: space-between;
-        Text {
-            text: "Accounts";
-            color: black;
-            font-weight: 600;
-        }
+        VerticalLayout {
+            spacing: 16px;
+            padding-right: 8px;
+            padding-left: 8px;
+            padding-top: 12px;
+            padding-bottom: 12px;
+            alignment: start;
 
-        Text {
-            text: State.total_balance();
-            color: black;
-            font-weight: 600;
-        }
-    }
+            VerticalLayout {
+                spacing: 4px;
+                SidebarButton {
+                    text: @tr("Spending");
+                    selected: current-page == Page.spending;
+                    clicked => select-page(Page.spending);
+                    IconDisplay {
+                        icon: IconSet.Banknote;
+                        size: 14px;
+                        stroke-width: 2;
+                        stroke: Colors.textBody;
+                    }
+                }
 
-    VerticalLayout {
-        Flickable {
-            max-height: 250px;
-            viewport-height: content.preferred-height;
+                VerticalLayout {
+                    SidebarButton {
+                        text: @tr("All accounts");
+                        selected: current-page == Page.transactions;
+                        clicked => select-page(Page.transactions);
 
-            // TODO: use dialog for creating account
-            // TODO: context menu with rename that opens a popup
-            content := VerticalLayout {
-                for account in accounts: HorizontalLayout {
-                    alignment: space-between;
-                    Text {
-                        text: account.name;
-                        color: black;
+                        IconDisplay {
+                            icon: IconSet.PiggyBank;
+                            size: 14px;
+                            stroke-width: 1.5;
+                            stroke: Colors.textBody;
+                        }
                     }
 
-                    Text {
-                        text: State.account-balance(account.id);
-                        color: Colors.textBody;
+                    Flickable {
+                        max-height: 250px;
+                        viewport-height: content.preferred-height;
+
+                        content := VerticalLayout {
+                            padding-left: 16px;
+                            for account in accounts: HorizontalLayout {
+                                padding-top: 4px;
+                                padding-bottom: 4px;
+                                padding-left: 8px;
+                                padding-right: 8px;
+                                alignment: space-between;
+                                Text {
+                                    text: account.name;
+                                    color: black;
+                                }
+
+                                Text {
+                                    text: State.account-balance(account.id);
+                                    color: Colors.textBody;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            VerticalLayout {
+                spacing: 12px;
+                padding-left: 4px;
+
+                create-account-btn := PrimaryButton {
+                    theme: neutral;
+                    text: @tr("Create account");
+                    clicked => popup.show();
+                }
+
+                popup := PopupWindow {
+                    width: create-account-btn.width;
+                    x: create-account-btn.x;
+                    y: create-account-btn.y + create-account-btn.height + 4px;
+                    height: layout.preferred-height;
+
+                    close-policy: close-on-click-outside;
+
+                    // FIXME: focus not working
+                    forward-focus: focus-scope;
+                    focus-scope := FocusScope{
+                        key-pressed(event) => {
+                            if(event.text == Key.Return){
+                                State.create_account(text-field.text);
+                                popup.close();
+                                return accept;
+                            }
+                            if(event.text == Key.Escape){
+                                popup.close();
+                                return accept;
+                            }
+                            return reject;
+                        }
+                    }
+
+                    // TODO: add box shadow xs with just a border color
+                    Rectangle {
+                        background: white;
+                        border-width: 1px;
+                        border-radius: 4px;
+                        border-color: Colors.neutral50;
+                    }
+
+                    layout := VerticalLayout {
+                        alignment: start;
+                        padding: 8px;
+                        spacing: 12px;
+
+                        Text {
+                            text: "Create new account";
+                            font-size: 13px;
+                            font-weight: 500;
+                            color: Colors.textHeading;
+                        }
+
+                        VerticalLayout {
+                            spacing: 4px;
+
+                            Text {
+                                text: "Account name";
+                                color: Colors.textBody;
+                            }
+
+                            text-field := TextField {
+                                placeholder-text: "My account";
+                            }
+                        }
+
+
+                        // TODO: create account header
+                        // TODO: submit on enter
+                        HorizontalLayout {
+                            spacing: 8px;
+                            cross-axis-alignment: start;
+
+                            PrimaryButton {
+                                theme: ghost;
+                                text: "Cancel";
+                                clicked => popup.close();
+                            }
+
+                            PrimaryButton {
+                                text: "Create";
+                                clicked => {
+                                    State.create_account(text-field.text);
+                                    popup.close();
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
-    }
 
-    PrimaryButton {
-        theme: neutral;
-        text: @tr("Create account");
-        clicked => State.create_account("New account");
+        Rectangle {
+            width: 1px;
+            background: Colors.neutral100;
+        }
     }
 }
 

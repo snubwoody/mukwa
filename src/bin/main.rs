@@ -19,7 +19,7 @@
 
 use std::fs;
 
-use tracing::error;
+use tracing::{error, info};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -60,7 +60,11 @@ fn main() {
         .try_init()
         .expect("Failed to setup logging");
 
+    info!("Launching application");
+
     if let Err(err) = mukwa::run() {
         error!("{}", err.report());
     }
+
+    info!("Closing application");
 }

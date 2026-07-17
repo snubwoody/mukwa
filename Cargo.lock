@@ -3021,6 +3021,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "lucide-slint"
+version = "1.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e5dc7fccc35f801034b3eefda1a3f53be8078798795284eba8e7149bcff5bcd"
+
+[[package]]
 name = "lyon_algorithms"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3173,6 +3179,7 @@ dependencies = [
  "dirs",
  "divan",
  "jiff",
+ "lucide-slint",
  "rusqlite",
  "rust-embed",
  "slint",
