@@ -8,6 +8,10 @@ default-run = "mukwa"
 name = "service"
 harness = false
 
+[[bench]]
+name = "fmt"
+harness = false
+
 [[bin]]
 name = "mukwa"
 path = "src/bin/main.rs"
