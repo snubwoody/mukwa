@@ -150,7 +150,7 @@ component TransactionRow inherits TableRow {
     TableCell {
         width: parent.width / length;
         if !parent.is-editing: Text {
-            text: transaction.outflow;
+            text: State.format-money(transaction.outflow);
             color: Colors.textBody;
         }
 
@@ -169,7 +169,7 @@ component TransactionRow inherits TableRow {
     TableCell {
         width: parent.width / length;
         if !parent.is-editing: Text {
-            text: transaction.inflow;
+            text: State.format-money(transaction.inflow);
             color: Colors.textBody;
         }
 
@@ -207,7 +207,7 @@ export component TransactionPage inherits VerticalLayout {
         }
 
         Text {
-            text: State.total_balance();
+            text: State.format-money(State.total_balance());
             font-size: 1.25rem;
             color: Colors.textHeading;
         }

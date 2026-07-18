@@ -116,7 +116,7 @@ export component SpendingPage inherits VerticalLayout {
             }
 
             Text {
-                text: budget.amount;
+                text: State.format-money(budget.amount);
                 color: Colors.textBody;
             }
         }
