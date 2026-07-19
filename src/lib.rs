@@ -261,6 +261,15 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    global_state.on_update_category({
+        let mut state = state.clone();
+        move |id, title| {
+            if let Err(err) = state.update_category(&id, &title) {
+                warn!("Failed to update category: {err}");
+            }
+        }
+    });
+
     global_state.on_duplicate_transaction({
         let mut state = state.clone();
         move |id| {

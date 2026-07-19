@@ -188,6 +188,14 @@ impl AppState {
         Ok(())
     }
 
+    pub fn update_category(&mut self, id: &str, title: &str) -> crate::Result<()> {
+        let budget_id = Uuid::parse_str(id)?;
+        self.service.update_category(budget_id, title)?;
+        info!(id=?id,"Updated category");
+        self.reset_categories()?;
+        Ok(())
+    }
+
     pub fn update_transaction(
         &mut self,
         id: &str,
@@ -251,6 +259,17 @@ impl AppState {
             .map(|b| b.into())
             .collect();
         self.budgets.set_vec(budgets_list);
+        Ok(())
+    }
+
+    fn reset_categories(&mut self) -> crate::Result<()> {
+        let categories: Vec<ui::Category> = self
+            .service
+            .fetch_categories()?
+            .iter()
+            .map(|b| b.into())
+            .collect();
+        self.categories.set_vec(categories);
         Ok(())
     }
 

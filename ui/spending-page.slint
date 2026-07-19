@@ -31,9 +31,33 @@ component BudgetItem {
     property <Category> category: State.get-category(budget.category-id);
 
     HorizontalLayout {
-        Text {
-            text: category.title;
-            color: Colors.textBody;
+        Rectangle {
+            width: 100px;
+            property <bool> active: false;
+
+            TouchArea {
+                clicked => {
+                    if (!active) {
+                        active = true;
+                    }
+                }
+            }
+
+            if active: TextField {
+                width: 100%;
+                text: category.title;
+
+                accepted => {
+                    State.update-category(category.id, self.text);
+                    active = false;
+                }
+            }
+
+            if !active: Text {
+                width: 100%;
+                text: category.title;
+                color: Colors.textBody;
+            }
         }
 
         Rectangle {
@@ -59,6 +83,7 @@ component BudgetItem {
 
                 accepted => {
                     State.edit-budget(budget.id, self.text);
+                    active = false;
                 }
             }
 
