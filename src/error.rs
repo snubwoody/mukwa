@@ -138,5 +138,6 @@ from_error! {
     ParseFloatError,
     ParseIntError,
     rusqlite::Error,
-    std::str::Utf8Error
+    std::str::Utf8Error,
+    std::string::FromUtf16Error
 }

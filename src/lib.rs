@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod error;
+pub mod fmt;
 pub mod migrator;
 mod money;
 pub mod service;
@@ -256,6 +257,31 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
             None => SharedString::new(),
         }
     });
+
+    global_state.on_format_money({
+        move |value| {
+            // Empty strings represent null values
+            if value.is_empty() {
+                return value;
+            }
+            match Money::from_str(&value) {
+                Ok(value) => {
+                    let result = crate::fmt::format_money(value, "en-CA");
+                    match result {
+                        Ok(result) => result.to_shared_string(),
+                        Err(err) => {
+                            warn!("Error occurred while formatting Money: {err}");
+                            Money::ZERO.to_shared_string()
+                        }
+                    }
+                }
+                Err(err) => {
+                    warn!("Error parsing Money: {err}");
+                    Money::ZERO.to_shared_string()
+                }
+            }
+        }
+    })
 }
 
 pub fn run() -> Result<()> {

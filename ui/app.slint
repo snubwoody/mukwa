@@ -120,7 +120,7 @@ component Sidebar {
                                 }
 
                                 Text {
-                                    text: State.account-balance(account.id);
+                                    text: State.format-money(State.account-balance(account.id));
                                     color: Colors.textBody;
                                 }
                             }
@@ -149,14 +149,14 @@ component Sidebar {
 
                     // FIXME: focus not working
                     forward-focus: focus-scope;
-                    focus-scope := FocusScope{
+                    focus-scope := FocusScope {
                         key-pressed(event) => {
-                            if(event.text == Key.Return){
+                            if (event.text == Key.Return) {
                                 State.create_account(text-field.text);
                                 popup.close();
                                 return accept;
                             }
-                            if(event.text == Key.Escape){
+                            if (event.text == Key.Escape) {
                                 popup.close();
                                 return accept;
                             }
@@ -196,7 +196,6 @@ component Sidebar {
                                 placeholder-text: "My account";
                             }
                         }
-
 
                         // TODO: create account header
                         // TODO: submit on enter

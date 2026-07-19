@@ -18,6 +18,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::fs;
+#[cfg(debug_assertions)]
+use std::path::PathBuf;
 
 use tracing::{error, info};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
@@ -27,11 +29,11 @@ use tracing_subscriber::{EnvFilter, fmt};
 
 fn main() {
     #[cfg(debug_assertions)]
-    let log_dir = ".mukwa/logs";
+    let log_dir = PathBuf::from(".mukwa/logs");
     #[cfg(not(debug_assertions))]
     let log_dir = mukwa::log_dir();
 
-    fs::create_dir_all(log_dir).expect("Failed to create directory");
+    fs::create_dir_all(&log_dir).expect("Failed to create directory");
 
     let file_appender = RollingFileAppender::builder()
         .rotation(Rotation::DAILY)
