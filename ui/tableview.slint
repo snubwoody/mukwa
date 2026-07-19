@@ -33,10 +33,16 @@ export component TableRow {
     callback confirmed();
     callback cancelled();
     callback clicked();
+    callback right-clicked();
 
     touch-area := TouchArea {
         clicked => {
             clicked();
+        }
+        pointer-event(event) => {
+            if (event.button == PointerEventButton.right) {
+                right-clicked();
+            }
         }
     }
 
