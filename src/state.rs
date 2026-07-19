@@ -16,9 +16,9 @@
 
 use crate::service::{CreateBudgetOpts, Service, UpdateTransactionOpts};
 use crate::ui::ComboBoxItem;
-use crate::{Money, ui};
-use jiff::Zoned;
+use crate::{ui, Money};
 use jiff::civil::Date;
+use jiff::Zoned;
 use slint::{Model, SharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
@@ -179,6 +179,15 @@ impl AppState {
         self.service.total_spent(budget.category_id, date)
     }
 
+    pub fn update_budget(&mut self, id: &str, amount: &str) -> crate::Result<()> {
+        let budget_id = Uuid::parse_str(id)?;
+        let amount = Money::from_str(amount)?;
+        self.service.update_budget(budget_id, amount)?;
+        info!(id=?id,"Updated budget");
+        self.reset_budgets()?;
+        Ok(())
+    }
+
     pub fn update_transaction(
         &mut self,
         id: &str,
@@ -231,6 +240,17 @@ impl AppState {
             .map(|t| t.into())
             .collect();
         self.transactions.set_vec(transactions);
+        Ok(())
+    }
+
+    fn reset_budgets(&mut self) -> crate::Result<()> {
+        let budgets_list: Vec<ui::Budget> = self
+            .service
+            .fetch_budgets_by_month(Zoned::now().date())?
+            .iter()
+            .map(|b| b.into())
+            .collect();
+        self.budgets.set_vec(budgets_list);
         Ok(())
     }
 

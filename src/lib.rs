@@ -252,6 +252,15 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    global_state.on_edit_budget({
+        let mut state = state.clone();
+        move |id, amount| {
+            if let Err(err) = state.update_budget(&id, &amount) {
+                warn!("Failed to update budget: {err}");
+            }
+        }
+    });
+
     global_state.on_duplicate_transaction({
         let mut state = state.clone();
         move |id| {

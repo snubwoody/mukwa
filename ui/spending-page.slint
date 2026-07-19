@@ -40,11 +40,34 @@ component BudgetItem {
             horizontal-stretch: 1;
         }
 
-        Text {
+        Rectangle {
             width: 100px;
-            text: State.format-money(budget.amount);
-            color: Colors.textBody;
-            horizontal-alignment: end;
+            property <bool> active: false;
+
+            TouchArea {
+                clicked => {
+                    if (!active) {
+                        active = true;
+                    }
+                }
+            }
+
+            if active: TextField {
+                width: 100%;
+                text: budget.amount;
+                horizontal-alignment: end;
+
+                accepted => {
+                    State.edit-budget(budget.id, self.text);
+                }
+            }
+
+            if !active: Text {
+                width: 100%;
+                text: State.format-money(budget.amount);
+                color: Colors.textBody;
+                horizontal-alignment: end;
+            }
         }
 
         Text {

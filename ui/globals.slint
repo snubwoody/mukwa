@@ -69,6 +69,7 @@ export global State {
     callback create_transaction();
     callback duplicate_transaction(id: string);
     callback delete_transaction(id: string);
+    callback edit-budget(id: string, amount: string);
     pure callback get_account_name(id: string) -> string;
     pure callback total_balance() -> string;
     pure callback get_category_name(id: string) -> string;
