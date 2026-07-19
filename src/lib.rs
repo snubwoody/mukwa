@@ -270,6 +270,17 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    global_state.on_left_to_spend({
+        let state = state.clone();
+        move |id| match state.left_to_spend(&id) {
+            Ok(value) => value.to_shared_string(),
+            Err(err) => {
+                warn!("{err}");
+                Money::ZERO.to_shared_string()
+            }
+        }
+    });
+
     global_state.on_duplicate_transaction({
         let mut state = state.clone();
         move |id| {

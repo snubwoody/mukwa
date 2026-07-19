@@ -236,7 +236,7 @@ fn account_balance_with_no_transactions() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     let account = service.create_account("")?;
 
-    let category = service.create_category("")?;
+    service.create_category("")?;
     service.create_income(Money::new(700), account.id)?;
 
     let total = service.account_balance(Uuid::now_v7())?;

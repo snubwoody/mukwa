@@ -16,9 +16,9 @@
 
 use crate::service::{CreateBudgetOpts, Service, UpdateTransactionOpts};
 use crate::ui::ComboBoxItem;
-use crate::{ui, Money};
-use jiff::civil::Date;
+use crate::{Money, ui};
 use jiff::Zoned;
+use jiff::civil::Date;
 use slint::{Model, SharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
@@ -177,6 +177,14 @@ impl AppState {
         let budget = self.service.get_budget(id)?;
         let date = Date::new(budget.year as i16, budget.month as i8, 1)?;
         self.service.total_spent(budget.category_id, date)
+    }
+
+    pub fn left_to_spend(&self, id: &str) -> crate::Result<Money> {
+        let total = self.total_spent(id)?;
+        let id = Uuid::parse_str(id)?;
+        let budget = self.service.get_budget(id)?;
+        let available = budget.amount - total;
+        Ok(available.abs())
     }
 
     pub fn update_budget(&mut self, id: &str, amount: &str) -> crate::Result<()> {
