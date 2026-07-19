@@ -22,6 +22,7 @@ mod windows;
 // TODO: add docs here
 
 /// Formats a [`Money`] as a currency string.
+#[allow(unused_variables)]
 pub fn format_money(value: Money, locale: &str) -> crate::Result<String> {
     #[cfg(target_os = "windows")]
     return windows::format_money(value, locale);

@@ -21,7 +21,7 @@ use windows_sys::Win32::Globalization::{
     LOCALE_ILZERO, LOCALE_INEGCURR, LOCALE_SCURRENCY, LOCALE_SDECIMAL, LOCALE_STHOUSAND,
 };
 
-use crate::Money;
+use crate::{Error, Money};
 
 /// A UTF-16 null terminated string.
 pub struct WString {
@@ -82,26 +82,28 @@ impl TryFrom<WString> for String {
 fn get_locale_info(locale: &str, locale_info: u32) -> crate::Result<String> {
     let locale = WString::from(locale);
     let info = unsafe {
-        // FIXME: test buffer_length = 0 and invalid locale
         let buffer_length = GetLocaleInfoEx(locale.as_ptr(), locale_info, std::ptr::null_mut(), 0);
+        if buffer_length == 0 {
+            let err = std::io::Error::last_os_error();
+            return Err(Error::from(err));
+        }
         let mut buffer = WString::zeroed(buffer_length as usize);
         let buffer_ptr = buffer.as_mut_ptr();
-        GetLocaleInfoEx(locale.as_ptr(), locale_info, buffer_ptr, buffer_length);
+        if GetLocaleInfoEx(locale.as_ptr(), locale_info, buffer_ptr, buffer_length) == 0 {
+            let err = std::io::Error::last_os_error();
+            return Err(Error::from(err));
+        }
         String::try_from(buffer)?
     };
     Ok(info)
 }
 
-// TODO: add CurrencyFormatter struct?
-// TODO: bench this
 /// Formats a [`Money`] as a currency string.
 pub fn format_money(value: Money, locale: &str) -> crate::Result<String> {
-    // FIXME: test invalid locales
     let locale_str = locale;
     let locale = WString::from(locale);
     let value = WString::from(value.to_string().as_str());
 
-    // The number of digits after the decimal
     let num_digits = get_locale_info(locale_str, LOCALE_ICURRDIGITS)?.parse::<u32>()?;
     let leading_zero = get_locale_info(locale_str, LOCALE_ILZERO)?.parse::<u32>()?;
     // let grouping = get_locale_info(locale_str, LOCALE_SGROUPING)?;
@@ -128,7 +130,6 @@ pub fn format_money(value: Money, locale: &str) -> crate::Result<String> {
     let output = unsafe {
         let value_ptr = value.as_ptr();
         let locale_ptr = locale.as_ptr();
-        // FIXME: handle error and test for error and add safety note
         let buffer_length = GetCurrencyFormatEx(
             locale_ptr,
             0,
@@ -138,10 +139,15 @@ pub fn format_money(value: Money, locale: &str) -> crate::Result<String> {
             0,
         );
 
+        if buffer_length == 0 {
+            let err = std::io::Error::last_os_error();
+            return Err(Error::from(err));
+        }
+
         let mut formatted_str = WString::zeroed(buffer_length as usize);
         let formatted_str_ptr = formatted_str.as_mut_ptr();
 
-        GetCurrencyFormatEx(
+        let return_code = GetCurrencyFormatEx(
             locale_ptr,
             0,
             value_ptr,
@@ -149,6 +155,11 @@ pub fn format_money(value: Money, locale: &str) -> crate::Result<String> {
             formatted_str_ptr,
             buffer_length,
         );
+
+        if return_code == 0 {
+            let err = std::io::Error::last_os_error();
+            return Err(Error::from(err));
+        }
 
         formatted_str
     };
@@ -158,8 +169,6 @@ pub fn format_money(value: Money, locale: &str) -> crate::Result<String> {
 
 #[cfg(test)]
 mod test {
-    use windows_sys::Win32::Globalization::LOCALE_SGROUPING;
-
     use super::*;
 
     #[test]
@@ -170,7 +179,13 @@ mod test {
 
     #[test]
     fn get_locale_info() {
-        let result = super::get_locale_info("en-ZM", LOCALE_SGROUPING).unwrap();
-        dbg!(result);
+        let symbol = super::get_locale_info("en-US", LOCALE_SCURRENCY).unwrap();
+        assert_eq!(symbol, "$");
+    }
+
+    #[test]
+    fn get_locale_info_invalid_locale() {
+        let result = super::get_locale_info("does-not-exist", LOCALE_SCURRENCY);
+        assert!(result.is_err());
     }
 }

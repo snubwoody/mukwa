@@ -261,7 +261,7 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     global_state.on_format_money({
         move |value| {
             // Empty strings represent null values
-            if value == "" {
+            if value.is_empty() {
                 return value;
             }
             match Money::from_str(&value) {
