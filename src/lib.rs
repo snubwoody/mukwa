@@ -222,11 +222,22 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     });
 
     global_state.on_account_balance({
-        let mut state = state.clone();
+        let state = state.clone();
         move |id| match state.account_balance(&id) {
             Ok(balance) => balance.to_shared_string(),
             Err(err) => {
                 warn!("Failed to calculate account balance: {err}");
+                Money::ZERO.to_shared_string()
+            }
+        }
+    });
+
+    global_state.on_total_spent({
+        let state = state.clone();
+        move |id| match state.total_spent(&id) {
+            Ok(total) => total.to_shared_string(),
+            Err(err) => {
+                warn!("Failed to calculate total spent: {err}");
                 Money::ZERO.to_shared_string()
             }
         }
@@ -237,6 +248,35 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         move |id| {
             if let Err(err) = state.delete_transaction(&id) {
                 warn!("Failed to delete transaction: {err}");
+            }
+        }
+    });
+
+    global_state.on_edit_budget({
+        let mut state = state.clone();
+        move |id, amount| {
+            if let Err(err) = state.update_budget(&id, &amount) {
+                warn!("Failed to update budget: {err}");
+            }
+        }
+    });
+
+    global_state.on_update_category({
+        let mut state = state.clone();
+        move |id, title| {
+            if let Err(err) = state.update_category(&id, &title) {
+                warn!("Failed to update category: {err}");
+            }
+        }
+    });
+
+    global_state.on_left_to_spend({
+        let state = state.clone();
+        move |id| match state.left_to_spend(&id) {
+            Ok(value) => value.to_shared_string(),
+            Err(err) => {
+                warn!("{err}");
+                Money::ZERO.to_shared_string()
             }
         }
     });

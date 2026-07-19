@@ -14,7 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use mukwa::service::{Service, TransactionType};
+use jiff::civil::date;
+use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, TransactionType};
 use mukwa::state::AppState;
 use mukwa::{Money, create_test_db};
 use slint::Model;
@@ -129,5 +130,51 @@ fn state_loads_categories_from_service() -> mukwa::Result<()> {
 
     let state = AppState::new(service)?;
     assert_eq!(state.categories().iter().len(), 2);
+    Ok(())
+}
+
+#[test]
+fn calculate_total_spent() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    service.create_account("")?;
+    let category = service.create_category(Default::default())?;
+    let opts = CreateTransactionOpts {
+        amount: Money::new(500),
+        category_id: Some(category.id),
+        ..Default::default()
+    };
+    service.create_transaction(opts)?;
+    let budget = service.create_budget(CreateBudgetOpts {
+        category_id: category.id,
+        ..Default::default()
+    })?;
+    let state = AppState::new(service)?;
+    let total = state.total_spent(budget.id.to_string().as_str())?;
+    assert_eq!(total, Money::new(500));
+    Ok(())
+}
+
+#[test]
+fn calculate_total_spent_only_includes_current_month() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    service.create_account("")?;
+    let category = service.create_category(Default::default())?;
+    let opts = CreateTransactionOpts {
+        amount: Money::new(500),
+        category_id: Some(category.id),
+        ..Default::default()
+    };
+    service.create_transaction(opts)?;
+    service.create_transaction(CreateTransactionOpts {
+        date: date(1990, 1, 1),
+        ..opts
+    })?;
+    let budget = service.create_budget(CreateBudgetOpts {
+        category_id: category.id,
+        ..Default::default()
+    })?;
+    let state = AppState::new(service)?;
+    let total = state.total_spent(budget.id.to_string().as_str())?;
+    assert_eq!(total, Money::new(500));
     Ok(())
 }

@@ -18,23 +18,111 @@ import {
     LineEdit,
 } from "std-widgets.slint";
 import { Colors } from "./colors.slint";
-import { Account, Transaction, State, Category } from "./globals.slint";
-import { Button, TextField, PrimaryButton } from "./widgets.slint";
+import { Account, Transaction, State, Category, Budget } from "globals.slint";
+import { Button, TextField, PrimaryButton } from "widgets.slint";
 
 
 // TODO: add category groups
 // TODO: add month switcher
 // TODO: try Drag inside ListView
 
+component BudgetItem {
+    in property <Budget> budget;
+    property <Category> category: State.get-category(budget.category-id);
+
+    HorizontalLayout {
+        Rectangle {
+            width: 100px;
+            property <bool> active: false;
+
+            TouchArea {
+                clicked => {
+                    if (!active) {
+                        active = true;
+                    }
+                }
+            }
+
+            if active: TextField {
+                width: 100%;
+                text: category.title;
+
+                accepted => {
+                    State.update-category(category.id, self.text);
+                    active = false;
+                }
+            }
+
+            if !active: Text {
+                width: 100%;
+                text: category.title;
+                color: Colors.textBody;
+            }
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+        }
+
+        Rectangle {
+            width: 100px;
+            property <bool> active: false;
+
+            TouchArea {
+                clicked => {
+                    if (!active) {
+                        active = true;
+                    }
+                }
+            }
+
+            if active: TextField {
+                width: 100%;
+                text: budget.amount;
+                horizontal-alignment: end;
+
+                accepted => {
+                    State.edit-budget(budget.id, self.text);
+                    active = false;
+                }
+            }
+
+            if !active: Text {
+                width: 100%;
+                text: State.format-money(budget.amount);
+                color: Colors.textBody;
+                horizontal-alignment: end;
+            }
+        }
+
+        Text {
+            width: 100px;
+            text: State.format-money(State.total-spent(budget.id));
+            color: Colors.textBody;
+            horizontal-alignment: end;
+        }
+
+        Text {
+            width: 100px;
+            text: State.format-money(State.left-to-spend(budget.id));
+            color: Colors.textBody;
+            horizontal-alignment: end;
+        }
+    }
+}
+
 export component SpendingPage inherits VerticalLayout {
     alignment: start;
     spacing: 12px;
+    padding: 16px;
 
-    // TODO: add icon button
-    button := PrimaryButton {
-        text: "New category";
-        clicked => {
-            popup.show();
+    HorizontalLayout {
+        alignment: end;
+        button := PrimaryButton {
+            text: "New category";
+            clicked => {
+                popup.show();
+            }
         }
     }
 
@@ -73,12 +161,12 @@ export component SpendingPage inherits VerticalLayout {
 
                 PrimaryButton {
                     theme: ghost;
-                    text: "Cancel";
+                    text: @tr("Cancel");
                     clicked => popup.close();
                 }
 
                 PrimaryButton {
-                    text: "Confirm";
+                    text: @tr("Confirm");
                     clicked => {
                         State.create-category(text-field.text);
                         popup.close();
@@ -95,30 +183,43 @@ export component SpendingPage inherits VerticalLayout {
         spacing: 8px;
 
         HorizontalLayout {
-            alignment: space-between;
+            // alignment: space-between;
+            padding-bottom: 8px;
+            padding-top: 8px;
+
             Text {
-                text: "Category";
+                text: @tr("Category");
+                color: Colors.textBody;
+            }
+
+            Rectangle {
+                horizontal-stretch: 1;
+            }
+
+            Text {
+                width: 100px;
+                text: @tr("Assigned");
+                horizontal-alignment: end;
                 color: Colors.textBody;
             }
 
             Text {
-                text: "Amount";
+                width: 100px;
+                text: @tr("Spent");
+                horizontal-alignment: end;
+                color: Colors.textBody;
+            }
+
+            Text {
+                width: 100px;
+                text: @tr("Available");
+                horizontal-alignment: end;
                 color: Colors.textBody;
             }
         }
 
-        for budget in State.budgets: HorizontalLayout {
-            property <Category> category: State.get-category(budget.category-id);
-            alignment: space-between;
-            Text {
-                text: category.title;
-                color: Colors.textBody;
-            }
-
-            Text {
-                text: State.format-money(budget.amount);
-                color: Colors.textBody;
-            }
+        for budget in State.budgets: BudgetItem {
+            budget: budget;
         }
     }
 }

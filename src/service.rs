@@ -485,7 +485,7 @@ impl Service {
         Ok(transactions)
     }
 
-    /// Returns the total amount spent in the category in a specific month.
+    /// Calculates the total amount spent in the category in a specific month.
     pub fn total_spent(&self, category_id: Uuid, month: Date) -> crate::Result<Money> {
         let connection = self.connection();
         let sql = "SELECT * FROM transactions WHERE category_id = ?1";
@@ -602,11 +602,30 @@ impl Service {
         Ok(category)
     }
 
+    pub fn update_budget(&self, id: Uuid, amount: Money) -> crate::Result<Budget> {
+        let connection = self.connection.lock().unwrap();
+        let sql = "UPDATE budgets SET amount = ?1 WHERE id = ?2 RETURNING *";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt
+            .query_and_then(params![amount.inner(), id.to_string().as_str()], |row| {
+                Budget::try_from(row)
+            })?;
+        let budget = rows.next().unwrap()?;
+        Ok(budget)
+    }
+
     pub fn get_transaction(&self, id: Uuid) -> crate::Result<Transaction> {
         let connection = self.connection();
         let mut stmt = connection.prepare_cached("SELECT * FROM transactions WHERE id = ?")?;
         let mut rows = stmt.query_and_then([id.to_string()], |row| Transaction::try_from(row))?;
         rows.next().ok_or(Error::new("Transaction not found"))?
+    }
+
+    pub fn get_budget(&self, id: Uuid) -> crate::Result<Budget> {
+        let connection = self.connection();
+        let mut stmt = connection.prepare_cached("SELECT * FROM budgets WHERE id = ?")?;
+        let mut rows = stmt.query_and_then([id.to_string()], |row| Budget::try_from(row))?;
+        rows.next().ok_or(Error::new("Budget not found"))?
     }
 
     pub fn update_transaction(&self, opts: UpdateTransactionOpts) -> crate::Result<Transaction> {

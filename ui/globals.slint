@@ -69,6 +69,8 @@ export global State {
     callback create_transaction();
     callback duplicate_transaction(id: string);
     callback delete_transaction(id: string);
+    callback edit-budget(id: string, amount: string);
+    pure callback left-to-spend(id: string) -> string;
     pure callback get_account_name(id: string) -> string;
     pure callback total_balance() -> string;
     pure callback get_category_name(id: string) -> string;
@@ -78,6 +80,7 @@ export global State {
     pure callback update-transaction(id: string, account-id: string, category-id: string, outflow: string, inflow: string, date: string);
     pure callback update-category(id: string, title: string);
     pure callback create-category(title: string);
+    pure callback total-spent(budget-id: string) -> string;
     in-out property <[Transaction]> transactions;
     in-out property <[Category]> categories;
     in-out property <[Budget]> budgets;

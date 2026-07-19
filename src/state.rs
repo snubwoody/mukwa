@@ -167,9 +167,41 @@ impl AppState {
         Ok(())
     }
 
-    pub fn account_balance(&mut self, id: &str) -> crate::Result<Money> {
+    pub fn account_balance(&self, id: &str) -> crate::Result<Money> {
         let id = Uuid::parse_str(id)?;
         self.service.account_balance(id)
+    }
+
+    pub fn total_spent(&self, id: &str) -> crate::Result<Money> {
+        let id = Uuid::parse_str(id)?;
+        let budget = self.service.get_budget(id)?;
+        let date = Date::new(budget.year as i16, budget.month as i8, 1)?;
+        self.service.total_spent(budget.category_id, date)
+    }
+
+    pub fn left_to_spend(&self, id: &str) -> crate::Result<Money> {
+        let total = self.total_spent(id)?;
+        let id = Uuid::parse_str(id)?;
+        let budget = self.service.get_budget(id)?;
+        let available = budget.amount - total;
+        Ok(available.abs())
+    }
+
+    pub fn update_budget(&mut self, id: &str, amount: &str) -> crate::Result<()> {
+        let budget_id = Uuid::parse_str(id)?;
+        let amount = Money::from_str(amount)?;
+        self.service.update_budget(budget_id, amount)?;
+        info!(id=?id,"Updated budget");
+        self.reset_budgets()?;
+        Ok(())
+    }
+
+    pub fn update_category(&mut self, id: &str, title: &str) -> crate::Result<()> {
+        let budget_id = Uuid::parse_str(id)?;
+        self.service.update_category(budget_id, title)?;
+        info!(id=?id,"Updated category");
+        self.reset_categories()?;
+        Ok(())
     }
 
     pub fn update_transaction(
@@ -224,6 +256,28 @@ impl AppState {
             .map(|t| t.into())
             .collect();
         self.transactions.set_vec(transactions);
+        Ok(())
+    }
+
+    fn reset_budgets(&mut self) -> crate::Result<()> {
+        let budgets_list: Vec<ui::Budget> = self
+            .service
+            .fetch_budgets_by_month(Zoned::now().date())?
+            .iter()
+            .map(|b| b.into())
+            .collect();
+        self.budgets.set_vec(budgets_list);
+        Ok(())
+    }
+
+    fn reset_categories(&mut self) -> crate::Result<()> {
+        let categories: Vec<ui::Category> = self
+            .service
+            .fetch_categories()?
+            .iter()
+            .map(|b| b.into())
+            .collect();
+        self.categories.set_vec(categories);
         Ok(())
     }
 
