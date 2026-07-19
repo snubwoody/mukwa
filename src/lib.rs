@@ -222,11 +222,22 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     });
 
     global_state.on_account_balance({
-        let mut state = state.clone();
+        let state = state.clone();
         move |id| match state.account_balance(&id) {
             Ok(balance) => balance.to_shared_string(),
             Err(err) => {
                 warn!("Failed to calculate account balance: {err}");
+                Money::ZERO.to_shared_string()
+            }
+        }
+    });
+
+    global_state.on_total_spent({
+        let state = state.clone();
+        move |id| match state.total_spent(&id) {
+            Ok(total) => total.to_shared_string(),
+            Err(err) => {
+                warn!("Failed to calculate total spent: {err}");
                 Money::ZERO.to_shared_string()
             }
         }

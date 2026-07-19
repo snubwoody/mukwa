@@ -167,9 +167,16 @@ impl AppState {
         Ok(())
     }
 
-    pub fn account_balance(&mut self, id: &str) -> crate::Result<Money> {
+    pub fn account_balance(&self, id: &str) -> crate::Result<Money> {
         let id = Uuid::parse_str(id)?;
         self.service.account_balance(id)
+    }
+
+    pub fn total_spent(&self, id: &str) -> crate::Result<Money> {
+        let id = Uuid::parse_str(id)?;
+        let budget = self.service.get_budget(id)?;
+        let date = Date::new(budget.year as i16, budget.month as i8, 1)?;
+        self.service.total_spent(budget.category_id, date)
     }
 
     pub fn update_transaction(
