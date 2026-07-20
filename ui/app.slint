@@ -178,7 +178,7 @@ component Sidebar {
                         spacing: 12px;
 
                         Text {
-                            text: "Create new account";
+                            text: @tr("Create new account");
                             font-size: 13px;
                             font-weight: 500;
                             color: Colors.textHeading;
@@ -188,12 +188,12 @@ component Sidebar {
                             spacing: 4px;
 
                             Text {
-                                text: "Account name";
+                                text: @tr("Account name");
                                 color: Colors.textBody;
                             }
 
                             text-field := TextField {
-                                placeholder-text: "My account";
+                                placeholder-text: @tr("My account");
                             }
                         }
 
@@ -205,12 +205,12 @@ component Sidebar {
 
                             PrimaryButton {
                                 theme: ghost;
-                                text: "Cancel";
+                                text: @tr("Cancel");
                                 clicked => popup.close();
                             }
 
                             PrimaryButton {
-                                text: "Create";
+                                text: @tr("Create");
                                 clicked => {
                                     State.create_account(text-field.text);
                                     popup.close();

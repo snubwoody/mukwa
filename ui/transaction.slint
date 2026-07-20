@@ -137,6 +137,7 @@ component TransactionRow inherits TableRow {
         }
 
         if parent.is-editing: ComboBox {
+            width: 100%;
             options: State.account-options;
             changed(value) => {
                 account-id = value;
@@ -152,6 +153,7 @@ component TransactionRow inherits TableRow {
         }
 
         if parent.is-editing: ComboBox {
+            width: 100%;
             options: State.category-options;
             changed(value) => {
                 category-id = value;
@@ -167,6 +169,7 @@ component TransactionRow inherits TableRow {
         }
 
         if parent.is-editing: TextField {
+            width: 100%;
             text: outflow;
             input-type: decimal;
             edited => {
@@ -186,6 +189,7 @@ component TransactionRow inherits TableRow {
         }
 
         if parent.is-editing: TextField {
+            width: 100%;
             text: inflow;
             input-type: decimal;
             edited => {
