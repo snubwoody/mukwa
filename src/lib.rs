@@ -38,6 +38,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 use tracing::{info, warn};
 
+/// Slint auto generated code.
 pub mod ui {
     slint::include_modules!();
 }
@@ -378,7 +379,7 @@ pub fn data_dir() -> PathBuf {
 /// | ------- | ------------------------------------ |
 /// | Linux   | `$XDG_STATE_HOME`/Mukwa/logs         |
 /// | macOS   | `$HOME`/Library/Logs/Mukwa           |
-/// | Windows | `{FOLDERID_LocalAppData}`/Mukwa/logs |
+/// | Windows | `{LocalAppData}`/Mukwa/logs |
 ///
 /// ## Panics
 /// Panics if the system directories cannot be found.
