@@ -46,11 +46,11 @@ export component ComboBox {
     accessible-role: combobox;
     accessible-enabled: enabled;
     accessible-expandable: true;
+    // FIXME: allow empty default value
     // TODO: might be better to use the text?
     accessible-value: current-value;
     forward-focus: focus-scope;
 
-    // TODO: arrow keys should scroll
     focus-scope := FocusScope {
         enabled: root.enabled;
         key-pressed(event) => {
@@ -77,8 +77,10 @@ export component ComboBox {
         border-radius: 4px;
         vertical-stretch: 1;
         clip: true;
-        height: text.preferred-height + 8px;
+    }
 
+    HorizontalLayout {
+        padding: 4px;
         text := Text {
             text: options[current-index].text;
             color: Colors.textBody;
@@ -90,9 +92,6 @@ export component ComboBox {
             vertical-stretch: 1;
         }
     }
-
-    // TODO: clicking space should open
-
 
     popup := PopupWindow {
         width: max(root.width,250px);
