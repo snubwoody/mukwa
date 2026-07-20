@@ -45,6 +45,10 @@ component TransactionRow inherits TableRow {
     out property <string> date: transaction.date;
     callback select-row(int);
 
+    right-clicked => {
+        context-menu.show();
+    }
+
     padding-left: 8px;
     padding-right: 8px;
     forward-focus: focus-scope;
@@ -64,17 +68,25 @@ component TransactionRow inherits TableRow {
         }
     }
 
-    // FIXME: context menu not working
-    ContextMenuArea {
-        Menu {
-            MenuItem {
-                title: @tr("Duplicate");
-                activated => State.duplicate_transaction(transaction.id);
-            }
+    context-menu := PopupWindow {
+        close-policy: close-on-click-outside;
 
-            MenuItem {
-                title: @tr("Delete");
-                activated => State.delete_transaction(transaction.id);
+        Rectangle {
+            background: white;
+            border-radius: 4px;
+            VerticalLayout {
+                cross-axis-alignment: start;
+                padding: 4px;
+                spacing: 4px;
+                Button {
+                    text: @tr("Duplicate");
+                    clicked => State.duplicate_transaction(transaction.id);
+                }
+
+                Button {
+                    text: @tr("Delete");
+                    clicked => State.delete_transaction(transaction.id);
+                }
             }
         }
     }

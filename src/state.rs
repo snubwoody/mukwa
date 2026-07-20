@@ -15,7 +15,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::service::{CreateBudgetOpts, Service, UpdateTransactionOpts};
-use crate::ui::ComboBoxItem;
 use crate::{Money, ui};
 use jiff::Zoned;
 use jiff::civil::Date;
@@ -98,11 +97,11 @@ impl AppState {
         self.budgets.clone()
     }
 
-    pub fn account_options(&self) -> Rc<VecModel<ComboBoxItem>> {
+    pub fn account_options(&self) -> Rc<VecModel<ui::ComboBoxItem>> {
         self.account_options.clone()
     }
 
-    pub fn category_options(&self) -> Rc<VecModel<ComboBoxItem>> {
+    pub fn category_options(&self) -> Rc<VecModel<ui::ComboBoxItem>> {
         self.category_options.clone()
     }
 
@@ -142,7 +141,7 @@ impl AppState {
     pub fn create_transaction(&mut self) -> crate::Result<()> {
         let transaction = self.service.create_transaction(Default::default())?;
         info!(id=?transaction.id,"Created new transaction");
-        self.transactions.push(transaction.into());
+        self.transactions.insert(0, transaction.into());
         Ok(())
     }
 
