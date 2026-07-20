@@ -17,10 +17,31 @@ import { Colors } from "../colors.slint";
 
 // TODO: add border
 // TODO: handle cursor position and scrolling
-export component TextField inherits TextInput {
-    color: Colors.textBody;
+export component TextField {
     in property <string> placeholder-text;
-    accessible-placeholder-text: placeholder-text;
-    text: placeholder-text;
+    in-out property <string> text <=> text-input.text;
+    in-out property <InputType> input-type <=> text-input.input-type;
+    in-out property <TextHorizontalAlignment> horizontal-alignment <=> text-input.horizontal-alignment;
+    callback edited();
+    callback accepted();
 
+    Rectangle {
+        background: white;
+        border-color: text-input.has-focus ? Colors.accent : Colors.neutral50;
+        border-width: 1px;
+        border-radius: 4px;
+        clip: true;
+    }
+
+    HorizontalLayout {
+        padding-top: 4px;
+        padding-bottom: 4px;
+        padding-left: 8px;
+        padding-right: 8px;
+        text-input := TextInput {
+    //        accessible-placeholder-text: placeholder-text;
+            color: Colors.textBody;
+            text: placeholder-text;
+        }
+    }
 }
