@@ -472,6 +472,43 @@ fn fetch_categories() -> mukwa::Result<()> {
 }
 
 #[test]
+fn fetch_or_init_budgets() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let c1 = service.create_category("")?;
+    service.create_category("")?;
+    service.create_category("")?;
+
+    service.create_budget(CreateBudgetOpts {
+        category_id: c1.id,
+        ..Default::default()
+    })?;
+
+    let budgets = service.fetch_or_init_budgets(Zoned::now().date())?;
+
+    assert_eq!(budgets.len(), 3);
+    Ok(())
+}
+
+#[test]
+fn fetch_or_init_budgets_in_different_month() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let c1 = service.create_category("")?;
+
+    service.create_budget(CreateBudgetOpts {
+        category_id: c1.id,
+        month: Some(Zoned::now().date()),
+        ..Default::default()
+    })?;
+
+    let budgets = service.fetch_or_init_budgets(date(2000, 1, 1))?;
+
+    assert_eq!(budgets.len(), 1);
+    assert_eq!(budgets[0].month, 1);
+    assert_eq!(budgets[0].year, 2000);
+    Ok(())
+}
+
+#[test]
 fn fetch_empty_accounts() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);

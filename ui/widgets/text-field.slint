@@ -22,8 +22,8 @@ export component TextField {
     in-out property <string> text <=> text-input.text;
     in-out property <InputType> input-type <=> text-input.input-type;
     in-out property <TextHorizontalAlignment> horizontal-alignment <=> text-input.horizontal-alignment;
-    callback edited();
-    callback accepted();
+    callback edited <=> text-input.accepted;
+    callback accepted <=> text-input.accepted;
 
     Rectangle {
         background: white;

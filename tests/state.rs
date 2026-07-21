@@ -15,9 +15,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use jiff::civil::date;
+use jiff::Zoned;
 use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, TransactionType};
 use mukwa::state::AppState;
-use mukwa::{Money, create_test_db};
+use mukwa::{create_test_db, Money};
 use slint::Model;
 
 #[test]
@@ -31,6 +32,38 @@ fn create_transaction_creates_expense() -> mukwa::Result<()> {
     let transaction = state.transactions().remove(0);
     assert_eq!(transaction.inflow.as_str(), "");
     assert_eq!(transaction.outflow.as_str(), Money::ZERO.to_string());
+    Ok(())
+}
+
+#[test]
+fn create_category_creates_a_budget() -> mukwa::Result<()> {
+    let connection = create_test_db();
+    let service = Service::new(connection);
+    let mut state = AppState::new(service.clone())?;
+
+    state.create_category("Groceries")?;
+
+    let categories = service.fetch_categories()?;
+    let budgets = service.fetch_budgets_by_month(Zoned::now().date())?;
+    assert_eq!(budgets.len(), 1);
+    assert_eq!(budgets[0].category_id, categories[0].id);
+    Ok(())
+}
+
+#[test]
+fn create_category_creates_a_budget_in_current_month() -> mukwa::Result<()> {
+    let connection = create_test_db();
+    let service = Service::new(connection);
+    let mut state = AppState::new(service.clone())?;
+
+    state.set_current_budget_month(date(2020, 1, 1))?;
+    state.create_category("Groceries")?;
+    let categories = service.fetch_categories()?;
+    let budgets = service.fetch_budgets_by_month(date(2020, 1, 1))?;
+    assert_eq!(budgets.len(), 1);
+    assert_eq!(budgets[0].year, 2020);
+    assert_eq!(budgets[0].month, 1);
+    assert_eq!(budgets[0].category_id, categories[0].id);
     Ok(())
 }
 

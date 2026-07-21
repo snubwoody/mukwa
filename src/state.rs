@@ -15,9 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::service::{CreateBudgetOpts, Service, UpdateTransactionOpts};
-use crate::{Money, ui};
-use jiff::Zoned;
+use crate::{ui, Money};
 use jiff::civil::Date;
+use jiff::Zoned;
 use slint::{Model, SharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
@@ -30,6 +30,7 @@ pub struct AppState {
     service: Service,
     accounts: Rc<VecModel<ui::Account>>,
     categories: Rc<VecModel<ui::Category>>,
+    current_budget_month: Date,
     /// The budgets of the active month.
     budgets: Rc<VecModel<ui::Budget>>,
     // We can't map arrays in slint so we have to maintain duplicate arrays for comboboxes
@@ -74,6 +75,7 @@ impl AppState {
             service,
             accounts: accounts_model,
             categories: category_model,
+            current_budget_month: Zoned::now().date(),
             account_options: account_options_model,
             transactions: transactions_model,
             category_options: category_options_model,
@@ -114,16 +116,18 @@ impl AppState {
         Ok(())
     }
 
+    pub fn set_current_budget_month(&mut self, date: Date) -> crate::Result<()> {
+        self.current_budget_month = date;
+        self.reset_budgets(date)?;
+        Ok(())
+    }
+
     /// Creates a new category.
     pub fn create_category(&mut self, title: &str) -> crate::Result<()> {
         let category = self.service.create_category(title)?;
         info!(id=?category.id,"Created new category");
 
-        let opts = CreateBudgetOpts {
-            category_id: category.id,
-            ..Default::default()
-        };
-        self.create_budget(opts)?;
+        self.reset_budgets(self.current_budget_month)?;
         self.category_options.push(category.clone().into());
         self.categories.push(category.into());
         Ok(())
@@ -178,6 +182,16 @@ impl AppState {
         self.service.total_spent(budget.category_id, date)
     }
 
+    pub fn fetch_or_init_budgets(&self, date: Date) -> crate::Result<Vec<ui::Budget>> {
+        let budgets: Vec<ui::Budget> = self
+            .service
+            .fetch_or_init_budgets(date)?
+            .iter()
+            .map(|b| b.into())
+            .collect();
+        Ok(budgets)
+    }
+
     pub fn left_to_spend(&self, id: &str) -> crate::Result<Money> {
         let total = self.total_spent(id)?;
         let id = Uuid::parse_str(id)?;
@@ -191,7 +205,7 @@ impl AppState {
         let amount = Money::from_str(amount)?;
         self.service.update_budget(budget_id, amount)?;
         info!(id=?id,"Updated budget");
-        self.reset_budgets()?;
+        self.reset_budgets(self.current_budget_month)?;
         Ok(())
     }
 
@@ -200,6 +214,7 @@ impl AppState {
         self.service.update_category(budget_id, title)?;
         info!(id=?id,"Updated category");
         self.reset_categories()?;
+        self.reset_budgets(self.current_budget_month)?;
         Ok(())
     }
 
@@ -258,10 +273,10 @@ impl AppState {
         Ok(())
     }
 
-    fn reset_budgets(&mut self) -> crate::Result<()> {
+    fn reset_budgets(&mut self, month: Date) -> crate::Result<()> {
         let budgets_list: Vec<ui::Budget> = self
             .service
-            .fetch_budgets_by_month(Zoned::now().date())?
+            .fetch_or_init_budgets(month)?
             .iter()
             .map(|b| b.into())
             .collect();

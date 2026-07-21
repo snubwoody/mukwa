@@ -71,12 +71,11 @@ export global State {
     callback duplicate_transaction(id: string);
     callback delete_transaction(id: string);
     callback edit-budget(id: string, amount: string);
+    callback set-current-budget-month(Date);
     pure callback left-to-spend(id: string) -> string;
     pure callback get_account_name(id: string) -> string;
     pure callback total_balance() -> string;
-    pure callback get_category_name(id: string) -> string;
     pure callback get-category(id: string) -> Category;
-    pure callback get-budgets(Date) -> [Budget];
     pure callback account-balance(id: string) -> string;
     pure callback format-money(value: string) -> string;
     pure callback update-transaction(id: string, account-id: string, category-id: string, outflow: string, inflow: string, date: string);

@@ -471,6 +471,28 @@ impl Service {
         Ok(budgets)
     }
 
+    pub fn fetch_or_init_budgets(&self, date: Date) -> crate::Result<Vec<Budget>> {
+        let categories = self.fetch_categories()?;
+        let budgets = self.fetch_budgets_by_month(date)?;
+
+        for category in categories {
+            if budgets
+                .iter()
+                .find(|budget| budget.category_id == category.id)
+                .is_some()
+            {
+                continue;
+            }
+            self.create_budget(CreateBudgetOpts {
+                category_id: category.id,
+                month: Some(date),
+                ..Default::default()
+            })?;
+        }
+
+        self.fetch_budgets_by_month(date)
+    }
+
     /// Fetches all transactions from the database.
     pub fn fetch_transactions(&self) -> crate::Result<Vec<Transaction>> {
         let mut transactions = vec![];

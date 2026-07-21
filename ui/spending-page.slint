@@ -125,6 +125,7 @@ export component SpendingPage inherits VerticalLayout {
             accessible-label: @tr("Previous month");
             clicked => {
                 current-date = CalendarState.decrement-month(current-date);
+                State.set-current-budget-month(current-date);
             }
         }
 
@@ -140,6 +141,7 @@ export component SpendingPage inherits VerticalLayout {
             accessible-label: @tr("Next month");
             clicked => {
                 current-date = CalendarState.increment-month(current-date);
+                State.set-current-budget-month(current-date);
             }
         }
     }
@@ -238,7 +240,7 @@ export component SpendingPage inherits VerticalLayout {
             }
         }
 
-        for budget in State.get-budgets(current-date): BudgetItem {
+        for budget in State.budgets: BudgetItem {
             budget: budget;
         }
     }

@@ -55,8 +55,14 @@ fn main() {
         .with_writer(file_writer)
         .with_ansi(false);
 
+    let level = if cfg!(debug_assertions) {
+        "info,mukwa=trace"
+    } else {
+        "info,mukwa=debug"
+    };
+
     tracing_subscriber::registry()
-        .with(EnvFilter::new("info,mukwa=debug"))
+        .with(EnvFilter::new(level))
         .with(std_io_layer)
         .with(file_layer)
         .try_init()
