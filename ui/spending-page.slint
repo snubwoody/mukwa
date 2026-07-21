@@ -238,7 +238,7 @@ export component SpendingPage inherits VerticalLayout {
             }
         }
 
-        for budget in State.budgets: BudgetItem {
+        for budget in State.get-budgets(current-date): BudgetItem {
             budget: budget;
         }
     }

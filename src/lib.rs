@@ -31,7 +31,7 @@ use crate::state::AppState;
 use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
 use rusqlite::Connection;
-use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
+use slint::{ComponentHandle, FilterModel, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -159,6 +159,18 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     global_state.set_account_options(account_options_rc);
     global_state.set_category_options(ModelRc::new(state.category_options()));
+
+    global_state.on_get_budgets({
+        let state = state.clone();
+        move |date| {
+            let date = Date::new(date.year as i16, date.month as i8, date.day as i8)
+                .unwrap_or(Zoned::now().date());
+            let model = FilterModel::new(state.budgets(), move |budget| {
+                budget.year == date.year() as i32 && budget.month == date.month() as i32
+            });
+            ModelRc::from(Rc::new(model))
+        }
+    });
 
     global_state.on_create_account({
         let mut state = state.clone();

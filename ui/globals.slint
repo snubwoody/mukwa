@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { ComboBoxItem } from "widgets/combobox.slint";
+import { Date } from "widgets/calendar.slint";
 
 export struct Account {
     id: string,
@@ -75,6 +76,7 @@ export global State {
     pure callback total_balance() -> string;
     pure callback get_category_name(id: string) -> string;
     pure callback get-category(id: string) -> Category;
+    pure callback get-budgets(Date) -> [Budget];
     pure callback account-balance(id: string) -> string;
     pure callback format-money(value: string) -> string;
     pure callback update-transaction(id: string, account-id: string, category-id: string, outflow: string, inflow: string, date: string);
