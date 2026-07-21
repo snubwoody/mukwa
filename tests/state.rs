@@ -14,11 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use jiff::civil::date;
 use jiff::Zoned;
+use jiff::civil::date;
 use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, TransactionType};
 use mukwa::state::AppState;
-use mukwa::{create_test_db, Money};
+use mukwa::{Money, create_test_db};
 use slint::Model;
 
 #[test]
@@ -209,5 +209,27 @@ fn calculate_total_spent_only_includes_current_month() -> mukwa::Result<()> {
     let state = AppState::new(service)?;
     let total = state.total_spent(budget.id.to_string().as_str())?;
     assert_eq!(total, Money::new(500));
+    Ok(())
+}
+
+#[test]
+fn left_to_spend_caps_at_zero() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    service.create_account("")?;
+    let category = service.create_category(Default::default())?;
+    let budget = service.create_budget(CreateBudgetOpts {
+        category_id: category.id,
+        amount: Some(Money::new(200)),
+        month: Some(Zoned::now().date()),
+    })?;
+    service.create_transaction(CreateTransactionOpts {
+        amount: Money::new(500),
+        date: Zoned::now().date(),
+        category_id: Some(category.id),
+        ..Default::default()
+    })?;
+    let state = AppState::new(service)?;
+    let total = state.left_to_spend(budget.id.to_string().as_str())?;
+    assert_eq!(total, Money::ZERO);
     Ok(())
 }

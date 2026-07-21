@@ -15,10 +15,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::service::{CreateBudgetOpts, Service, UpdateTransactionOpts};
-use crate::{ui, Money};
-use jiff::civil::Date;
+use crate::{Money, ui};
 use jiff::Zoned;
-use slint::{Model, SharedString, VecModel};
+use jiff::civil::Date;
+use slint::{Model, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
 use tracing::info;
@@ -197,15 +197,26 @@ impl AppState {
         let id = Uuid::parse_str(id)?;
         let budget = self.service.get_budget(id)?;
         let available = budget.amount - total;
-        Ok(available.abs())
+        Ok(available.max(Money::ZERO))
     }
 
     pub fn update_budget(&mut self, id: &str, amount: &str) -> crate::Result<()> {
         let budget_id = Uuid::parse_str(id)?;
         let amount = Money::from_str(amount)?;
-        self.service.update_budget(budget_id, amount)?;
+        let new_budget = self.service.update_budget(budget_id, amount)?;
         info!(id=?id,"Updated budget");
-        self.reset_budgets(self.current_budget_month)?;
+        let budgets: Vec<ui::Budget> = self
+            .budgets
+            .iter()
+            .map(|budget| {
+                if budget.id == new_budget.id.to_shared_string() {
+                    new_budget.into()
+                } else {
+                    budget
+                }
+            })
+            .collect();
+        self.budgets.set_vec(budgets);
         Ok(())
     }
 
