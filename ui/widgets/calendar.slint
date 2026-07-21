@@ -34,10 +34,8 @@ export global CalendarState {
     pure callback today() -> Date;
 }
 
-// TODO: add month names for intl
 export component Calendar {
     in-out property <Date> date: CalendarState.today();
-    // TODO: maybe only update when it goes past 28?
     property <[[int]]> weeks-in-month: CalendarState.days-in-month(date);
     property <[string]> day-titles: [
         @tr("Su"),
@@ -136,7 +134,7 @@ export component Calendar {
             cross-axis-alignment: center;
 
             Button {
-                text: "Prev";
+                text: @tr("Prev");
                 clicked => {
                     decrement-month();
                 }
@@ -148,7 +146,7 @@ export component Calendar {
             }
 
             Button {
-                text: "Next";
+                text: @tr("Next");
                 clicked => increment-month();
             }
         }

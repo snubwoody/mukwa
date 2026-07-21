@@ -18,7 +18,7 @@ import {
     LineEdit,
 } from "std-widgets.slint";
 import { Colors } from "colors.slint";
-import { Date } from "widgets/calendar.slint";
+import { Date, CalendarState } from "widgets/calendar.slint";
 import { Account, Transaction, State, Category, Budget } from "globals.slint";
 import { Button, TextField, PrimaryButton, IconButton } from "widgets.slint";
 import { IconDisplay, IconSet, Icon } from "@lucide";
@@ -109,7 +109,7 @@ component BudgetItem {
 }
 
 export component SpendingPage inherits VerticalLayout {
-    in-out property <Date> date;
+    in-out property <Date> current-date: CalendarState.today();
     alignment: start;
     spacing: 12px;
     padding: 16px;
@@ -122,17 +122,25 @@ export component SpendingPage inherits VerticalLayout {
         IconButton {
             icon: IconSet.ChevronLeft;
             theme: ghost;
+            accessible-label: @tr("Previous month");
+            clicked => {
+                current-date = CalendarState.decrement-month(current-date);
+            }
         }
 
         Text {
             font-size: 20px;
             color: Colors.textHeading;
-            text: "Jan 2026";
+            text: current-date.year + "-" + current-date.month;
         }
 
         IconButton {
             icon: IconSet.ChevronRight;
             theme: ghost;
+            accessible-label: @tr("Next month");
+            clicked => {
+                current-date = CalendarState.increment-month(current-date);
+            }
         }
     }
 
