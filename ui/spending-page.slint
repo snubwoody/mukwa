@@ -132,7 +132,7 @@ export component SpendingPage inherits VerticalLayout {
         Text {
             font-size: 20px;
             color: Colors.textHeading;
-            text: current-date.year + "-" + current-date.month;
+            text: State.format-dateym(current-date);
         }
 
         IconButton {

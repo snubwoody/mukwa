@@ -77,6 +77,8 @@ export global State {
     pure callback total_balance() -> string;
     pure callback get-category(id: string) -> Category;
     pure callback account-balance(id: string) -> string;
+    // Returns the year and month as a formatted string
+    pure callback format-dateym(Date) -> string;
     pure callback format-money(value: string) -> string;
     pure callback update-transaction(id: string, account-id: string, category-id: string, outflow: string, inflow: string, date: string);
     pure callback update-category(id: string, title: string);

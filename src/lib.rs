@@ -268,6 +268,16 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    global_state.on_format_dateym({
+        |date| match Date::new(date.year as i16, date.month as i8, date.day as i8) {
+            Ok(date) => date.strftime("%b %Y").to_shared_string(),
+            Err(err) => {
+                warn!("Invalid date: {err}");
+                SharedString::new()
+            }
+        }
+    });
+
     global_state.on_update_category({
         let mut state = state.clone();
         move |id, title| {
