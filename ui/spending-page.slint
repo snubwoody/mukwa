@@ -17,14 +17,11 @@ import {
     VerticalBox,
     LineEdit,
 } from "std-widgets.slint";
-import { Colors } from "./colors.slint";
+import { Colors } from "colors.slint";
+import { Date } from "widgets/calendar.slint";
 import { Account, Transaction, State, Category, Budget } from "globals.slint";
-import { Button, TextField, PrimaryButton } from "widgets.slint";
-
-
-// TODO: add category groups
-// TODO: add month switcher
-// TODO: try Drag inside ListView
+import { Button, TextField, PrimaryButton, IconButton } from "widgets.slint";
+import { IconDisplay, IconSet, Icon } from "@lucide";
 
 component BudgetItem {
     in property <Budget> budget;
@@ -112,23 +109,43 @@ component BudgetItem {
 }
 
 export component SpendingPage inherits VerticalLayout {
+    in-out property <Date> date;
     alignment: start;
     spacing: 12px;
     padding: 16px;
 
     HorizontalLayout {
+        spacing: 4px;
+        cross-axis-alignment: center;
+        alignment: start;
+
+        IconButton {
+            icon: IconSet.ChevronLeft;
+            theme: ghost;
+        }
+
+        Text {
+            font-size: 20px;
+            color: Colors.textHeading;
+            text: "Jan 2026";
+        }
+
+        IconButton {
+            icon: IconSet.ChevronRight;
+            theme: ghost;
+        }
+    }
+
+    HorizontalLayout {
         alignment: end;
         button := PrimaryButton {
-            text: "New category";
+            text: @tr("New category");
             clicked => {
                 popup.show();
             }
         }
     }
 
-    // TODO: use list view
-    // TODO: add focus-scope
-    // TODO: maybe just make component
     popup := PopupWindow {
         width: 250px;
         x: button.x;
@@ -137,7 +154,6 @@ export component SpendingPage inherits VerticalLayout {
 
         close-policy: close-on-click-outside;
 
-        // TODO: add box shadow xs with just a border color
         Rectangle {
             background: white;
             border-width: 1px;
@@ -151,10 +167,9 @@ export component SpendingPage inherits VerticalLayout {
             spacing: 12px;
 
             text-field := TextField {
-                placeholder-text: "New category";
+                placeholder-text: @tr("New category");
             }
 
-            // TODO: submit on enter
             HorizontalLayout {
                 spacing: 8px;
                 cross-axis-alignment: start;
@@ -176,14 +191,11 @@ export component SpendingPage inherits VerticalLayout {
         }
     }
 
-    // TODO: use scroll view
-    // TODO: add Notion-like icon on the left side
     VerticalLayout {
         alignment: start;
         spacing: 8px;
 
         HorizontalLayout {
-            // alignment: space-between;
             padding-bottom: 8px;
             padding-top: 8px;
 

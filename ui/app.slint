@@ -116,7 +116,7 @@ component Sidebar {
                                 alignment: space-between;
                                 Text {
                                     text: account.name;
-                                    color: black;
+                                    color: Colors.textBody;
                                 }
 
                                 Text {
@@ -147,7 +147,6 @@ component Sidebar {
 
                     close-policy: close-on-click-outside;
 
-                    // FIXME: focus not working
                     forward-focus: focus-scope;
                     focus-scope := FocusScope {
                         key-pressed(event) => {
@@ -164,7 +163,6 @@ component Sidebar {
                         }
                     }
 
-                    // TODO: add box shadow xs with just a border color
                     Rectangle {
                         background: white;
                         border-width: 1px;
@@ -197,8 +195,6 @@ component Sidebar {
                             }
                         }
 
-                        // TODO: create account header
-                        // TODO: submit on enter
                         HorizontalLayout {
                             spacing: 8px;
                             cross-axis-alignment: start;
