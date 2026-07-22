@@ -3184,6 +3184,7 @@ dependencies = [
  "rust-embed",
  "slint",
  "slint-build",
+ "sys-locale",
  "tempfile",
  "tracing",
  "tracing-appender",

@@ -17,7 +17,7 @@
 use std::string::FromUtf16Error;
 
 use windows_sys::Win32::Globalization::{
-    CURRENCYFMTW, GetCurrencyFormatEx, GetLocaleInfoEx, LOCALE_ICURRDIGITS, LOCALE_ICURRENCY,
+    GetCurrencyFormatEx, GetLocaleInfoEx, CURRENCYFMTW, LOCALE_ICURRDIGITS, LOCALE_ICURRENCY,
     LOCALE_ILZERO, LOCALE_INEGCURR, LOCALE_SCURRENCY, LOCALE_SDECIMAL, LOCALE_STHOUSAND,
 };
 
@@ -99,7 +99,7 @@ fn get_locale_info(locale: &str, locale_info: u32) -> crate::Result<String> {
 }
 
 /// Formats a [`Money`] as a currency string.
-pub fn format_money(value: Money, locale: &str) -> crate::Result<String> {
+pub fn format_money(value: Money, locale: &str, symbol: &str) -> crate::Result<String> {
     let locale_str = locale;
     let locale = WString::from(locale);
     let value = WString::from(value.to_string().as_str());
@@ -112,8 +112,9 @@ pub fn format_money(value: Money, locale: &str) -> crate::Result<String> {
     let mut decimal_seperator: WString = get_locale_info(locale_str, LOCALE_SDECIMAL)?.into();
     let mut thousand_seperator: WString = get_locale_info(locale_str, LOCALE_STHOUSAND)?.into();
     // TODO: if I cache this, make sure the pointer is not dangling
-    let mut currency_symbol: WString = get_locale_info(locale_str, LOCALE_SCURRENCY)?.into();
-    // TODO: cache this
+    // let mut currency_symbol: WString = get_locale_info(locale_str, LOCALE_SCURRENCY)?.into();
+    let mut currency_symbol = WString::from(symbol);
+    // TODO: cache this use static OnceCell
     let currency_format = CURRENCYFMTW {
         NumDigits: num_digits,
         NegativeOrder: negative_order,
@@ -145,14 +146,13 @@ pub fn format_money(value: Money, locale: &str) -> crate::Result<String> {
         }
 
         let mut formatted_str = WString::zeroed(buffer_length as usize);
-        let formatted_str_ptr = formatted_str.as_mut_ptr();
 
         let return_code = GetCurrencyFormatEx(
             locale_ptr,
             0,
             value_ptr,
             currency_format_ptr,
-            formatted_str_ptr,
+            formatted_str.as_mut_ptr(),
             buffer_length,
         );
 
@@ -173,7 +173,7 @@ mod test {
 
     #[test]
     fn fmt() {
-        let output = format_money(Money::new(500), "en-US").unwrap();
+        let output = format_money(Money::new(500), "en-US", "$").unwrap();
         assert_eq!(output, "$500.00");
     }
 

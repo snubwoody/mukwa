@@ -20,12 +20,81 @@ use crate::Money;
 #[cfg(target_os = "windows")]
 mod windows;
 
+#[derive(Clone, PartialEq, Debug)]
+pub struct CurrencyFormatter {
+    locale: String,
+    /// The currency symbol
+    symbol: String,
+}
+
+impl CurrencyFormatter {
+    /// Creates a new currency formatter.
+    pub fn new() -> crate::Result<Self> {
+        let locale = sys_locale::get_locale().unwrap_or(String::from("en-US"));
+
+        let formatter = CurrencyFormatter {
+            locale,
+            symbol: String::from("$"),
+        };
+
+        Ok(formatter)
+    }
+
+    /// Set the currency symbol
+    pub fn set_symbol(&mut self, symbol: &str) {
+        self.symbol = symbol.to_owned();
+    }
+
+    /// Set the locale
+    pub fn set_locale(&mut self, locale: &str) {
+        self.locale = locale.to_owned();
+    }
+
+    /// Returns the currency symbol.
+    pub fn symbol(&self) -> &str {
+        self.symbol.as_str()
+    }
+
+    pub fn format_currency(&self, value: Money) -> crate::Result<String> {
+        #[cfg(target_os = "windows")]
+        return windows::format_money(value, &self.locale, &self.symbol);
+
+        #[cfg(not(target_os = "windows"))]
+        todo!("Unsupported OS")
+    }
+}
+
 /// Formats [`Money`] as a currency string.
 #[allow(unused_variables)]
-pub fn format_money(value: Money, locale: &str) -> crate::Result<String> {
+pub fn format_money(value: Money, locale: &str, symbol: &str) -> crate::Result<String> {
     #[cfg(target_os = "windows")]
-    return windows::format_money(value, locale);
+    return windows::format_money(value, locale, symbol);
 
     #[cfg(not(target_os = "windows"))]
     todo!("Unsupported OS")
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn format_currency_uses_locale() -> crate::Result<()> {
+        let mut formatter = CurrencyFormatter::new()?;
+        formatter.set_locale("ja-JP");
+        formatter.set_symbol("$");
+        let value = formatter.format_currency(Money::new(500))?;
+        assert_eq!(value, "$500");
+        Ok(())
+    }
+
+    #[test]
+    fn format_currency_uses_symbol() -> crate::Result<()> {
+        let mut formatter = CurrencyFormatter::new()?;
+        formatter.set_locale("en-US");
+        formatter.set_symbol("K");
+        let value = formatter.format_currency(Money::new(500))?;
+        assert_eq!(value, "K500.00");
+        Ok(())
+    }
 }

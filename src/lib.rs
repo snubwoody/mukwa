@@ -329,7 +329,7 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
             }
             match Money::from_str(&value) {
                 Ok(value) => {
-                    let result = crate::fmt::format_money(value, "en-CA");
+                    let result = crate::fmt::format_money(value, "en-CA", "$");
                     match result {
                         Ok(result) => result.to_shared_string(),
                         Err(err) => {
