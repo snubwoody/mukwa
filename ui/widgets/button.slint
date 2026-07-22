@@ -16,6 +16,7 @@
 
 import { Colors } from "../colors.slint";
 import { FocusBorder } from "./focus-border.slint";
+import { IconDisplay, IconSet, Icon } from "@lucide";
 
 export component Button inherits Rectangle {
     in property <string> text;
@@ -83,13 +84,93 @@ export component Button inherits Rectangle {
     }
 }
 
+export enum IconButtonTheme {
+    accent,
+    neutral,
+    ghost
+}
+
+export component IconButton {
+    in property <IconButtonTheme> theme: accent;
+    in property <bool> enabled <=> touch-area.enabled;
+    out property <bool> has-focus: focus-scope.has-focus;
+    in property <Icon> icon;
+
+    padding: 4px;
+
+    callback clicked <=> touch-area.clicked;
+
+    accessible-enabled: true;
+    accessible-role: button;
+
+    accessible-action-default() => {
+        clicked()
+    }
+
+    function background-color(button-theme: IconButtonTheme) -> color {
+        if (button-theme == IconButtonTheme.accent) {
+            return Colors.accent;
+        }
+        if (button-theme == IconButtonTheme.neutral) {
+            return Colors.neutral50;
+        }
+        return transparent;
+    }
+
+    function icon-color(button-theme: IconButtonTheme) -> color {
+        if (button-theme == IconButtonTheme.accent) {
+            return white;
+        }
+        return Colors.textBody;
+    }
+
+    forward-focus: focus-scope;
+
+    background := Rectangle {
+        background: background-color(theme);
+        border-radius: 4px;
+    }
+
+    HorizontalLayout {
+        padding: root.padding;
+
+        IconDisplay {
+            icon: root.icon;
+            size: 14px;
+            stroke-width: 2;
+            stroke: icon-color(theme);
+        }
+    }
+
+    touch-area := TouchArea {
+        width: parent.width;
+        height: parent.height;
+    }
+
+    focus-scope := FocusScope {
+        x: 0;
+        width: 0; // Do not react on clicks
+
+        key-pressed(event) => {
+            if (event.text == Key.Space || event.text == Key.Return) {
+                clicked();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    if root.has-focus: FocusBorder {
+        border-radius: background.border-radius;
+    }
+}
+
 export enum PrimaryButtonTheme {
     accent,
     neutral,
     ghost
 }
 
-// TODO: test focus scope
 export component PrimaryButton {
     in property <PrimaryButtonTheme> theme: accent;
     in property <string> text;

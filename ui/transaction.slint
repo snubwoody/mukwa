@@ -53,7 +53,6 @@ component TransactionRow inherits TableRow {
     padding-right: 8px;
     forward-focus: focus-scope;
 
-    // TODO: submit on enter
     focus-scope := FocusScope {
         key-pressed(event) => {
             if (event.text == Key.Space) {

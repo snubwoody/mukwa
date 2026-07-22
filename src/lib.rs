@@ -194,9 +194,15 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
-    global_state.on_get_category_name(|_| {
-        // Will support categories in the future
-        SharedString::new()
+    global_state.on_set_current_budget_month({
+        let mut state = state.clone();
+        move |date| {
+            let date = Date::new(date.year as i16, date.month as i8, date.day as i8)
+                .unwrap_or(Zoned::now().date());
+            if let Err(err) = state.set_current_budget_month(date) {
+                warn!("{err}")
+            }
+        }
     });
 
     global_state.on_update_transaction({
@@ -258,6 +264,16 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         move |id, amount| {
             if let Err(err) = state.update_budget(&id, &amount) {
                 warn!("Failed to update budget: {err}");
+            }
+        }
+    });
+
+    global_state.on_format_dateym({
+        |date| match Date::new(date.year as i16, date.month as i8, date.day as i8) {
+            Ok(date) => date.strftime("%b %Y").to_shared_string(),
+            Err(err) => {
+                warn!("Invalid date: {err}");
+                SharedString::new()
             }
         }
     });
