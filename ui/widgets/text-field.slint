@@ -15,14 +15,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import { Colors } from "../colors.slint";
 
-// TODO: add border
 // TODO: handle cursor position and scrolling
 export component TextField {
     in property <string> placeholder-text;
     in-out property <string> text <=> text-input.text;
     in-out property <InputType> input-type <=> text-input.input-type;
     in-out property <TextHorizontalAlignment> horizontal-alignment <=> text-input.horizontal-alignment;
-    callback edited <=> text-input.accepted;
+    callback edited <=> text-input.edited;
     callback accepted <=> text-input.accepted;
 
     Rectangle {

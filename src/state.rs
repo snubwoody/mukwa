@@ -229,6 +229,7 @@ impl AppState {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn update_transaction(
         &mut self,
         id: &str,
@@ -237,6 +238,7 @@ impl AppState {
         outflow: &str,
         inflow: &str,
         date: &str,
+        note: &str,
     ) -> crate::Result<()> {
         let account_id = Uuid::parse_str(account_id).ok();
         let category_id = Uuid::parse_str(category_id).ok();
@@ -258,6 +260,12 @@ impl AppState {
             receiver_id = account_id;
         }
 
+        let note = if note.is_empty() {
+            None
+        } else {
+            Some(note.to_string())
+        };
+
         let opts = UpdateTransactionOpts {
             id: Uuid::parse_str(id)?,
             date,
@@ -265,6 +273,7 @@ impl AppState {
             amount,
             category_id,
             receiver_id,
+            note,
         };
 
         self.service.update_transaction(opts)?;

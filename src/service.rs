@@ -214,6 +214,7 @@ pub struct Transaction {
     pub receiver_id: Option<Uuid>,
     pub category_id: Option<Uuid>,
     pub date: Date,
+    pub note: Option<String>,
     pub amount: Money,
 }
 
@@ -253,6 +254,7 @@ impl<'a> TryFrom<&Row<'a>> for Transaction {
         let sender_id: Option<String> = value.get("sender_id")?;
         let receiver_id: Option<String> = value.get("receiver_id")?;
         let category_id: Option<String> = value.get("category_id")?;
+        let note: Option<String> = value.get("note")?;
         let transaction_date: String = value.get("transaction_date")?;
         let amount: i64 = value.get("amount")?;
 
@@ -275,6 +277,7 @@ impl<'a> TryFrom<&Row<'a>> for Transaction {
             id: Uuid::parse_str(&id)?,
             amount: Money::from_scaled(amount),
             date: Date::strptime("%Y-%m-%d", transaction_date)?,
+            note,
             sender_id,
             receiver_id,
             category_id,
@@ -312,7 +315,6 @@ impl From<Transaction> for ui::Transaction {
             SharedString::new()
         };
 
-        // FIXME
         let outflow = if transaction_type == TransactionType::Transfer
             || transaction_type == TransactionType::Expense
         {
@@ -321,13 +323,15 @@ impl From<Transaction> for ui::Transaction {
             SharedString::new()
         };
 
+        let note = value.note.unwrap_or_default().to_shared_string();
+
         Self {
             id: value.id.to_shared_string(),
-            // FIXME
             account_id: value.sender_id.unwrap().to_shared_string(),
             category_id: category_id.to_shared_string(),
             date: value.date.to_shared_string(),
             outflow,
+            note,
             inflow,
             transaction_type: transaction_type.into(),
         }
@@ -348,7 +352,6 @@ impl From<&Transaction> for ui::Transaction {
             SharedString::new()
         };
 
-        // FIXME
         let outflow = if transaction_type == TransactionType::Transfer
             || transaction_type == TransactionType::Expense
         {
@@ -356,6 +359,8 @@ impl From<&Transaction> for ui::Transaction {
         } else {
             SharedString::new()
         };
+
+        let note = value.note.clone().unwrap_or_default().to_shared_string();
 
         Self {
             id: value.id.to_string().into(),
@@ -366,6 +371,7 @@ impl From<&Transaction> for ui::Transaction {
                 .to_string()
                 .into(),
             category_id: category_id.into(),
+            note,
             date: value.date.to_string().into(),
             outflow,
             inflow,
@@ -374,7 +380,7 @@ impl From<&Transaction> for ui::Transaction {
     }
 }
 
-#[derive(Clone, PartialEq, PartialOrd, Default, Debug, Copy)]
+#[derive(Clone, PartialEq, PartialOrd, Default, Debug)]
 pub struct UpdateTransactionOpts {
     /// The transaction id.
     pub id: Uuid,
@@ -383,14 +389,16 @@ pub struct UpdateTransactionOpts {
     pub category_id: Option<Uuid>,
     pub amount: Option<Money>,
     pub date: Option<Date>,
+    pub note: Option<String>,
 }
 
-#[derive(Clone, PartialEq, PartialOrd, Ord, Eq, Debug, Copy)]
+#[derive(Clone, PartialEq, PartialOrd, Ord, Eq, Debug)]
 pub struct CreateTransactionOpts {
     /// The sending account
     pub account_id: Option<Uuid>,
     pub category_id: Option<Uuid>,
     pub date: Date,
+    pub note: Option<String>,
     pub amount: Money,
 }
 
@@ -399,13 +407,13 @@ impl Default for CreateTransactionOpts {
         CreateTransactionOpts {
             account_id: None,
             category_id: None,
+            note: None,
             date: Zoned::now().date(),
             amount: Money::ZERO,
         }
     }
 }
 
-// TODO: add year and month ints and make them unique
 #[derive(Clone)]
 pub struct Service {
     connection: Rc<Mutex<Connection>>,
@@ -666,6 +674,13 @@ impl Service {
             tx.execute(
                 "UPDATE transactions SET category_id = ?1 WHERE id = ?2",
                 [category_id.to_string(), opts.id.to_string()],
+            )?;
+        }
+
+        if let Some(note) = opts.note {
+            tx.execute(
+                "UPDATE transactions SET note = ?1 WHERE id = ?2",
+                [note.to_string(), opts.id.to_string()],
             )?;
         }
 

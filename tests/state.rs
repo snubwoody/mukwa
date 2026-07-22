@@ -104,6 +104,7 @@ fn update_expense() -> mukwa::Result<()> {
         "200",
         "",
         "",
+        "",
     )?;
     let transaction = state.transactions().remove(0);
     assert_eq!(transaction.outflow.as_str(), Money::new(200).to_string());
@@ -125,6 +126,7 @@ fn convert_expense_to_income() -> mukwa::Result<()> {
         "",
         "",
         "500",
+        "",
         "",
     )?;
     let transaction = state.transactions().remove(0);
@@ -197,7 +199,7 @@ fn calculate_total_spent_only_includes_current_month() -> mukwa::Result<()> {
         category_id: Some(category.id),
         ..Default::default()
     };
-    service.create_transaction(opts)?;
+    service.create_transaction(opts.clone())?;
     service.create_transaction(CreateTransactionOpts {
         date: date(1990, 1, 1),
         ..opts
