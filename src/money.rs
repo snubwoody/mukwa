@@ -135,7 +135,7 @@ impl FromStr for Money {
             return Ok(Self::new(value));
         }
 
-        // This is lossy but the risk is acceptable for now
+        // This is lossy but the loss of precision is acceptable for now
         let value: f64 = s.parse()?;
         Ok(Self::from_f64(value))
     }

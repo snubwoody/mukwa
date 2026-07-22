@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{create_test_db, ui, Error, Money};
-use jiff::civil::Date;
+use crate::{Error, Money, create_test_db, ui};
 use jiff::Zoned;
-use rusqlite::{params, Connection, Row};
+use jiff::civil::Date;
+use rusqlite::{Connection, Row, params};
 use slint::{SharedString, ToSharedString};
 use std::path::Path;
 use std::rc::Rc;
@@ -414,7 +414,6 @@ impl Default for CreateTransactionOpts {
     }
 }
 
-// TODO: add year and month ints and make them unique
 #[derive(Clone)]
 pub struct Service {
     connection: Rc<Mutex<Connection>>,

@@ -14,11 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use jiff::civil::date;
 use jiff::Zoned;
+use jiff::civil::date;
 use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, TransactionType};
 use mukwa::state::AppState;
-use mukwa::{create_test_db, Money};
+use mukwa::{Money, create_test_db};
 use slint::Model;
 
 #[test]

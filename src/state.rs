@@ -15,9 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::service::{CreateBudgetOpts, Service, UpdateTransactionOpts};
-use crate::{ui, Money};
-use jiff::civil::Date;
+use crate::{Money, ui};
 use jiff::Zoned;
+use jiff::civil::Date;
 use slint::{Model, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
@@ -259,7 +259,7 @@ impl AppState {
             receiver_id = account_id;
         }
 
-        let note = if note == "" {
+        let note = if note.is_empty() {
             None
         } else {
             Some(note.to_string())

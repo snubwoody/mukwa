@@ -190,6 +190,34 @@ fn total_spent() -> mukwa::Result<()> {
 }
 
 #[test]
+fn total_spent_filters_by_date() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    service.create_account("")?;
+
+    let date = date(2020, 12, 14);
+    let category = service.create_category("")?;
+    let opts = CreateTransactionOpts {
+        date,
+        category_id: Some(category.id),
+        ..Default::default()
+    };
+    service.create_transaction(CreateTransactionOpts {
+        amount: Money::new(500),
+        date: jiff::civil::date(2020, 11, 1),
+        ..opts.clone()
+    })?;
+
+    service.create_transaction(CreateTransactionOpts {
+        amount: Money::new(150),
+        ..opts
+    })?;
+
+    let total = service.total_spent(category.id, date)?;
+    assert_eq!(total, Money::new(150));
+    Ok(())
+}
+
+#[test]
 fn account_balance() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     let account = service.create_account("")?;
@@ -547,5 +575,36 @@ fn fetch_empty_accounts() -> mukwa::Result<()> {
     let service = Service::new(connection);
     let accounts = service.fetch_accounts()?;
     assert!(accounts.is_empty());
+    Ok(())
+}
+
+#[test]
+fn cant_create_duplicate_budgets() -> mukwa::Result<()> {
+    let connection = create_test_db();
+    let service = Service::new(connection);
+    let category = service.create_category("")?;
+    let opts = CreateBudgetOpts {
+        category_id: category.id,
+        month: Some(date(2020, 1, 1)),
+        amount: Some(Money::ZERO),
+    };
+    service.create_budget(opts)?;
+    let result = service.create_budget(opts);
+    assert!(result.is_err());
+    Ok(())
+}
+
+#[test]
+fn min_budget_amount_is_zero() -> mukwa::Result<()> {
+    let connection = create_test_db();
+    let service = Service::new(connection);
+    let category = service.create_category("")?;
+    let opts = CreateBudgetOpts {
+        category_id: category.id,
+        month: Some(date(2020, 1, 1)),
+        amount: Some(Money::new(-200)),
+    };
+    let result = service.create_budget(opts);
+    assert!(result.is_err());
     Ok(())
 }
