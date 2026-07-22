@@ -669,6 +669,18 @@ impl Service {
         Ok(transaction)
     }
 
+    pub fn set_transaction_date(&self, id: Uuid, date: Date) -> crate::Result<Transaction> {
+        let connection = self.connection();
+        let sql = "UPDATE transactions SET transaction_date = ?1 WHERE id = ?2 RETURNING *";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt
+            .query_and_then(params![date.to_string(), id.to_string().as_str()], |row| {
+                Transaction::try_from(row)
+            })?;
+        let transaction = rows.next().unwrap()?;
+        Ok(transaction)
+    }
+
     pub fn update_transaction(&self, opts: UpdateTransactionOpts) -> crate::Result<Transaction> {
         let transaction = self.get_transaction(opts.id)?;
         let mut connection = self.connection();

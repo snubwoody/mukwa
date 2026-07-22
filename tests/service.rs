@@ -415,6 +415,32 @@ fn update_transaction_date() -> mukwa::Result<()> {
 }
 
 #[test]
+fn set_transaction_date() -> mukwa::Result<()> {
+    let connection = create_test_db();
+
+    let service = Service::new(connection);
+    let account = service.create_account("")?;
+
+    let create_opts = CreateTransactionOpts {
+        account_id: Some(account.id),
+        ..Default::default()
+    };
+
+    let transaction = service.create_transaction(create_opts)?;
+    let date = date(200, 12, 22);
+    let transaction = service.set_transaction_date(transaction.id, date)?;
+    assert_eq!(transaction.date, date);
+    service
+        .connection()
+        .query_one("SELECT * FROM transactions", [], |row| {
+            let transaction_date: String = row.get("transaction_date")?;
+            assert_eq!(transaction_date, date.to_string());
+            Ok(())
+        })?;
+    Ok(())
+}
+
+#[test]
 fn update_transaction_note() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
