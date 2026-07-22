@@ -15,9 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::service::{CreateBudgetOpts, Service, UpdateTransactionOpts};
-use crate::{Money, ui};
-use jiff::Zoned;
+use crate::{ui, Money};
 use jiff::civil::Date;
+use jiff::Zoned;
 use slint::{Model, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
@@ -226,6 +226,46 @@ impl AppState {
         info!(id=?id,"Updated category");
         self.reset_categories()?;
         self.reset_budgets(self.current_budget_month)?;
+        Ok(())
+    }
+
+    pub fn set_transaction_date(&mut self, id: &str, date: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let date = Date::strptime("%Y-%m-%d", date)?;
+        let new_transaction = self.service.set_transaction_date(id, date)?;
+        info!(id=?id,"Updated transaction date");
+        let transactions: Vec<ui::Transaction> = self
+            .transactions
+            .iter()
+            .map(|transaction| {
+                if transaction.id == new_transaction.id.to_shared_string() {
+                    new_transaction.clone().into()
+                } else {
+                    transaction
+                }
+            })
+            .collect();
+        self.transactions.set_vec(transactions);
+        Ok(())
+    }
+
+    pub fn set_transaction_category(&mut self, id: &str, category_id: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let category_id = Uuid::parse_str(category_id)?;
+        let new_transaction = self.service.set_transaction_category(id, category_id)?;
+        info!(id=?id,"Updated transaction category");
+        let transactions: Vec<ui::Transaction> = self
+            .transactions
+            .iter()
+            .map(|transaction| {
+                if transaction.id == new_transaction.id.to_shared_string() {
+                    new_transaction.clone().into()
+                } else {
+                    transaction
+                }
+            })
+            .collect();
+        self.transactions.set_vec(transactions);
         Ok(())
     }
 

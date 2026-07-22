@@ -224,6 +224,15 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    global_state.on_set_transaction_category({
+        let mut state = state.clone();
+        move |id, category_id| {
+            if let Err(err) = state.set_transaction_category(&id, &category_id) {
+                warn!("{err}");
+            }
+        }
+    });
+
     global_state.on_total_balance({
         let state = state.clone();
         move || {

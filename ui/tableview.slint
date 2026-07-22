@@ -21,6 +21,25 @@ import { PrimaryButton } from "widgets.slint";
 
 export component TableCell inherits Rectangle {
     clip: true;
+    in-out property <bool> is-editing;
+    callback confirmed();
+    callback cancelled();
+    callback clicked();
+    callback right-clicked();
+
+    // TODO: add focus-scope
+    // TODO: pass focus onto child
+    touch-area := TouchArea {
+        clicked => {
+            is-editing = true;
+            clicked();
+        }
+        pointer-event(event) => {
+            if (event.button == PointerEventButton.right) {
+                //right-clicked();
+            }
+        }
+    }
 
     HorizontalLayout {
         alignment: start;

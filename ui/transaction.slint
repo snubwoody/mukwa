@@ -147,16 +147,17 @@ component TransactionRow inherits TableRow {
 
     TableCell {
         width: parent.width / length;
-        if !parent.is-editing: Text {
+        if !self.is-editing: Text {
             text: State.get-category(transaction.category-id).title;
             color: Colors.textBody;
         }
 
-        if parent.is-editing: ComboBox {
+        if self.is-editing: ComboBox {
             width: 100%;
             options: State.category-options;
             changed(value) => {
-                category-id = value;
+                State.set-transaction-category(transaction.id,value);
+                parent.is-editing = false;
             }
         }
     }
@@ -284,7 +285,7 @@ export component TransactionPage inherits VerticalLayout {
                 select-row(value);
             }
             clicked => {
-                select-row(index);
+                //select-row(index);
             }
             cancelled => {
                 select-row(-1);
