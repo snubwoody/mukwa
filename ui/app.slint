@@ -244,7 +244,7 @@ export component MainWindow inherits Window {
         if active-page == Page.spending: SpendingPage { }
 
         if active-page == Page.transactions: TransactionPage {
-            columns: [@tr("Date"), @tr("Account"), @tr("Category"), @tr("Outflow"), @tr("Inflow")];
+            columns: [@tr("Date"), @tr("Account"), @tr("Category"), @tr("Note"), @tr("Outflow"), @tr("Inflow")];
             transactions: State.transactions;
         }
     }

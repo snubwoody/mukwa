@@ -323,12 +323,15 @@ impl From<Transaction> for ui::Transaction {
             SharedString::new()
         };
 
+        let note = value.note.unwrap_or_default().to_shared_string();
+
         Self {
             id: value.id.to_shared_string(),
             account_id: value.sender_id.unwrap().to_shared_string(),
             category_id: category_id.to_shared_string(),
             date: value.date.to_shared_string(),
             outflow,
+            note,
             inflow,
             transaction_type: transaction_type.into(),
         }
@@ -357,6 +360,8 @@ impl From<&Transaction> for ui::Transaction {
             SharedString::new()
         };
 
+        let note = value.note.clone().unwrap_or_default().to_shared_string();
+
         Self {
             id: value.id.to_string().into(),
             account_id: value
@@ -366,6 +371,7 @@ impl From<&Transaction> for ui::Transaction {
                 .to_string()
                 .into(),
             category_id: category_id.into(),
+            note,
             date: value.date.to_string().into(),
             outflow,
             inflow,

@@ -41,6 +41,7 @@ component TransactionRow inherits TableRow {
     out property <string> category-id: transaction.category-id;
     out property <string> account-id: transaction.account-id;
     out property <string> outflow: transaction.outflow;
+    out property <string> note: transaction.note;
     out property <string> inflow: transaction.inflow;
     out property <string> date: transaction.date;
     callback select-row(int);
@@ -163,6 +164,22 @@ component TransactionRow inherits TableRow {
     TableCell {
         width: parent.width / length;
         if !parent.is-editing: Text {
+            text: transaction.note;
+            color: Colors.textBody;
+        }
+
+        if parent.is-editing: TextField {
+            width: 100%;
+            text: note;
+            edited => {
+                note = self.text;
+            }
+        }
+    }
+
+    TableCell {
+        width: parent.width / length;
+        if !parent.is-editing: Text {
             text: State.format-money(transaction.outflow);
             color: Colors.textBody;
         }
@@ -175,7 +192,7 @@ component TransactionRow inherits TableRow {
                 outflow = self.text;
                 inflow = "";
                 // FIXME
-                //inflow-input.text = "";
+                // inflow-input.text = "";
             }
         }
     }
@@ -241,10 +258,9 @@ export component TransactionPage inherits VerticalLayout {
         }
     }
 
-    // TODO: reset values after editing
     Table {
         width: 100%;
-        property <int> length: 5;
+        property <int> length: 6;
 
         TableRow {
             padding-left: 8px;
@@ -274,7 +290,7 @@ export component TransactionPage inherits VerticalLayout {
                 select-row(-1);
             }
             confirmed => {
-                State.update-transaction(transaction.id, self.account-id,self.category-id, self.outflow,self.inflow,self.date,"");
+                State.update-transaction(transaction.id, self.account-id,self.category-id, self.outflow,self.inflow,self.date,self.note);
                 select-row(-1);
             }
         }
