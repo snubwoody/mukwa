@@ -17,7 +17,7 @@
 use std::string::FromUtf16Error;
 
 use windows_sys::Win32::Globalization::{
-    CURRENCYFMTW, GetCurrencyFormatEx, GetLocaleInfoEx, LOCALE_ICURRDIGITS, LOCALE_ICURRENCY,
+    GetCurrencyFormatEx, GetLocaleInfoEx, CURRENCYFMTW, LOCALE_ICURRDIGITS, LOCALE_ICURRENCY,
     LOCALE_ILZERO, LOCALE_INEGCURR, LOCALE_SCURRENCY, LOCALE_SDECIMAL, LOCALE_STHOUSAND,
 };
 
@@ -179,8 +179,22 @@ mod test {
 
     #[test]
     fn get_locale_info() {
-        let symbol = super::get_locale_info("en-US", LOCALE_SCURRENCY).unwrap();
-        assert_eq!(symbol, "$");
+        assert_eq!(
+            super::get_locale_info("en-US", LOCALE_SCURRENCY).unwrap(),
+            "$"
+        );
+        assert_eq!(
+            super::get_locale_info("en-ZM", LOCALE_SCURRENCY).unwrap(),
+            "K"
+        );
+        assert_eq!(
+            super::get_locale_info("en-CA", LOCALE_SCURRENCY).unwrap(),
+            "$"
+        );
+        assert_eq!(
+            super::get_locale_info("en-ZA", LOCALE_SCURRENCY).unwrap(),
+            "R"
+        );
     }
 
     #[test]

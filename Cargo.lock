@@ -3176,6 +3176,7 @@ name = "mukwa"
 version = "0.1.0-alpha.2"
 dependencies = [
  "clap",
+ "core-foundation-sys",
  "dirs",
  "divan",
  "jiff",
