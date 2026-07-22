@@ -15,9 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::service::{CreateBudgetOpts, Service, UpdateTransactionOpts};
-use crate::{Money, ui};
-use jiff::Zoned;
+use crate::{ui, Money};
 use jiff::civil::Date;
+use jiff::Zoned;
 use slint::{Model, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
@@ -237,6 +237,7 @@ impl AppState {
         outflow: &str,
         inflow: &str,
         date: &str,
+        note: &str,
     ) -> crate::Result<()> {
         let account_id = Uuid::parse_str(account_id).ok();
         let category_id = Uuid::parse_str(category_id).ok();
@@ -258,6 +259,12 @@ impl AppState {
             receiver_id = account_id;
         }
 
+        let note = if note == "" {
+            None
+        } else {
+            Some(note.to_string())
+        };
+
         let opts = UpdateTransactionOpts {
             id: Uuid::parse_str(id)?,
             date,
@@ -265,6 +272,7 @@ impl AppState {
             amount,
             category_id,
             receiver_id,
+            note,
         };
 
         self.service.update_transaction(opts)?;

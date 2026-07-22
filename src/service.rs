@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Error, Money, create_test_db, ui};
-use jiff::Zoned;
+use crate::{create_test_db, ui, Error, Money};
 use jiff::civil::Date;
-use rusqlite::{Connection, Row, params};
+use jiff::Zoned;
+use rusqlite::{params, Connection, Row};
 use slint::{SharedString, ToSharedString};
 use std::path::Path;
 use std::rc::Rc;
@@ -214,6 +214,7 @@ pub struct Transaction {
     pub receiver_id: Option<Uuid>,
     pub category_id: Option<Uuid>,
     pub date: Date,
+    pub note: Option<String>,
     pub amount: Money,
 }
 
@@ -253,6 +254,7 @@ impl<'a> TryFrom<&Row<'a>> for Transaction {
         let sender_id: Option<String> = value.get("sender_id")?;
         let receiver_id: Option<String> = value.get("receiver_id")?;
         let category_id: Option<String> = value.get("category_id")?;
+        let note: Option<String> = value.get("note")?;
         let transaction_date: String = value.get("transaction_date")?;
         let amount: i64 = value.get("amount")?;
 
@@ -275,6 +277,7 @@ impl<'a> TryFrom<&Row<'a>> for Transaction {
             id: Uuid::parse_str(&id)?,
             amount: Money::from_scaled(amount),
             date: Date::strptime("%Y-%m-%d", transaction_date)?,
+            note,
             sender_id,
             receiver_id,
             category_id,
@@ -312,7 +315,6 @@ impl From<Transaction> for ui::Transaction {
             SharedString::new()
         };
 
-        // FIXME
         let outflow = if transaction_type == TransactionType::Transfer
             || transaction_type == TransactionType::Expense
         {
@@ -323,7 +325,6 @@ impl From<Transaction> for ui::Transaction {
 
         Self {
             id: value.id.to_shared_string(),
-            // FIXME
             account_id: value.sender_id.unwrap().to_shared_string(),
             category_id: category_id.to_shared_string(),
             date: value.date.to_shared_string(),
@@ -348,7 +349,6 @@ impl From<&Transaction> for ui::Transaction {
             SharedString::new()
         };
 
-        // FIXME
         let outflow = if transaction_type == TransactionType::Transfer
             || transaction_type == TransactionType::Expense
         {
@@ -374,7 +374,7 @@ impl From<&Transaction> for ui::Transaction {
     }
 }
 
-#[derive(Clone, PartialEq, PartialOrd, Default, Debug, Copy)]
+#[derive(Clone, PartialEq, PartialOrd, Default, Debug)]
 pub struct UpdateTransactionOpts {
     /// The transaction id.
     pub id: Uuid,
@@ -383,14 +383,16 @@ pub struct UpdateTransactionOpts {
     pub category_id: Option<Uuid>,
     pub amount: Option<Money>,
     pub date: Option<Date>,
+    pub note: Option<String>,
 }
 
-#[derive(Clone, PartialEq, PartialOrd, Ord, Eq, Debug, Copy)]
+#[derive(Clone, PartialEq, PartialOrd, Ord, Eq, Debug)]
 pub struct CreateTransactionOpts {
     /// The sending account
     pub account_id: Option<Uuid>,
     pub category_id: Option<Uuid>,
     pub date: Date,
+    pub note: Option<String>,
     pub amount: Money,
 }
 
@@ -399,6 +401,7 @@ impl Default for CreateTransactionOpts {
         CreateTransactionOpts {
             account_id: None,
             category_id: None,
+            note: None,
             date: Zoned::now().date(),
             amount: Money::ZERO,
         }
@@ -666,6 +669,13 @@ impl Service {
             tx.execute(
                 "UPDATE transactions SET category_id = ?1 WHERE id = ?2",
                 [category_id.to_string(), opts.id.to_string()],
+            )?;
+        }
+
+        if let Some(note) = opts.note {
+            tx.execute(
+                "UPDATE transactions SET note = ?1 WHERE id = ?2",
+                [note.to_string(), opts.id.to_string()],
             )?;
         }
 

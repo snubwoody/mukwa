@@ -207,10 +207,16 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     global_state.on_update_transaction({
         let mut state = state.clone();
-        move |id, account_id, category_id, outflow, inflow, date| {
-            if let Err(err) =
-                state.update_transaction(&id, &account_id, &category_id, &outflow, &inflow, &date)
-            {
+        move |id, account_id, category_id, outflow, inflow, date, note| {
+            if let Err(err) = state.update_transaction(
+                &id,
+                &account_id,
+                &category_id,
+                &outflow,
+                &inflow,
+                &date,
+                &note,
+            ) {
                 warn!("Failed to update transaction: {err}");
             }
         }

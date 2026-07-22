@@ -274,7 +274,7 @@ export component TransactionPage inherits VerticalLayout {
                 select-row(-1);
             }
             confirmed => {
-                State.update-transaction(transaction.id, self.account-id,self.category-id, self.outflow,self.inflow,self.date);
+                State.update-transaction(transaction.id, self.account-id,self.category-id, self.outflow,self.inflow,self.date,"");
                 select-row(-1);
             }
         }

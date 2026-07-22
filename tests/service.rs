@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use jiff::Zoned;
 use jiff::civil::date;
+use jiff::Zoned;
 use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, UpdateTransactionOpts};
-use mukwa::{Money, create_test_db};
+use mukwa::{create_test_db, Money};
 use uuid::Uuid;
 
 #[test]
@@ -142,8 +142,10 @@ fn create_transaction() -> mukwa::Result<()> {
         ..Default::default()
     };
     let transaction = service.create_transaction(opts)?;
+
     assert_eq!(transaction.sender_id.unwrap(), account.id);
     assert_eq!(transaction.category_id, None);
+    assert_eq!(transaction.note, None);
     assert_eq!(transaction.amount, Money::new(200));
     assert_eq!(transaction.date, date(2020, 10, 20));
 
@@ -174,7 +176,7 @@ fn total_spent() -> mukwa::Result<()> {
     };
     service.create_transaction(CreateTransactionOpts {
         amount: Money::new(500),
-        ..opts
+        ..opts.clone()
     })?;
 
     service.create_transaction(CreateTransactionOpts {
@@ -378,6 +380,37 @@ fn update_transaction_date() -> mukwa::Result<()> {
         .query_one("SELECT * FROM transactions", [], |row| {
             let date: String = row.get("transaction_date")?;
             assert_eq!(date, "1990-01-01");
+            Ok(())
+        })?;
+
+    Ok(())
+}
+
+#[test]
+fn update_transaction_note() -> mukwa::Result<()> {
+    let connection = create_test_db();
+    let service = Service::new(connection);
+    let account = service.create_account("")?;
+
+    let create_opts = CreateTransactionOpts {
+        account_id: Some(account.id),
+        ..Default::default()
+    };
+
+    let transaction = service.create_transaction(create_opts)?;
+    let update_opts = UpdateTransactionOpts {
+        id: transaction.id,
+        note: Some(String::from("Shoprite")),
+        ..Default::default()
+    };
+
+    let transaction = service.update_transaction(update_opts)?;
+    assert_eq!(transaction.note.unwrap(), "Shoprite");
+    service
+        .connection()
+        .query_one("SELECT * FROM transactions", [], |row| {
+            let note: String = row.get("note")?;
+            assert_eq!(note, "Shoprite");
             Ok(())
         })?;
 
