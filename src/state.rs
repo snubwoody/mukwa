@@ -229,6 +229,7 @@ impl AppState {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn update_transaction(
         &mut self,
         id: &str,
