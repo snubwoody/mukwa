@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Error, Money, create_test_db, ui};
-use jiff::Zoned;
+use crate::{create_test_db, ui, Error, Money};
 use jiff::civil::Date;
-use rusqlite::{Connection, Row, params};
+use jiff::Zoned;
+use rusqlite::{params, Connection, Row};
 use slint::{SharedString, ToSharedString};
 use std::path::Path;
 use std::rc::Rc;
@@ -656,6 +656,17 @@ impl Service {
         let mut stmt = connection.prepare_cached("SELECT * FROM budgets WHERE id = ?")?;
         let mut rows = stmt.query_and_then([id.to_string()], |row| Budget::try_from(row))?;
         rows.next().ok_or(Error::new("Budget not found"))?
+    }
+
+    pub fn set_transaction_note(&self, id: Uuid, note: &str) -> crate::Result<Transaction> {
+        let connection = self.connection();
+        let sql = "UPDATE transactions SET note = ?1 WHERE id = ?2 RETURNING *";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt.query_and_then(params![note, id.to_string().as_str()], |row| {
+            Transaction::try_from(row)
+        })?;
+        let transaction = rows.next().unwrap()?;
+        Ok(transaction)
     }
 
     pub fn update_transaction(&self, opts: UpdateTransactionOpts) -> crate::Result<Transaction> {

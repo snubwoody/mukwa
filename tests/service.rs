@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use jiff::Zoned;
 use jiff::civil::date;
+use jiff::Zoned;
 use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, UpdateTransactionOpts};
-use mukwa::{Money, create_test_db};
+use mukwa::{create_test_db, Money};
 use uuid::Uuid;
 
 #[test]
@@ -433,6 +433,31 @@ fn update_transaction_note() -> mukwa::Result<()> {
     };
 
     let transaction = service.update_transaction(update_opts)?;
+    assert_eq!(transaction.note.unwrap(), "Shoprite");
+    service
+        .connection()
+        .query_one("SELECT * FROM transactions", [], |row| {
+            let note: String = row.get("note")?;
+            assert_eq!(note, "Shoprite");
+            Ok(())
+        })?;
+
+    Ok(())
+}
+
+#[test]
+fn set_transaction_note() -> mukwa::Result<()> {
+    let connection = create_test_db();
+    let service = Service::new(connection);
+    let account = service.create_account("")?;
+
+    let create_opts = CreateTransactionOpts {
+        account_id: Some(account.id),
+        ..Default::default()
+    };
+
+    let transaction = service.create_transaction(create_opts)?;
+    let transaction = service.set_transaction_note(transaction.id, "Shoprite")?;
     assert_eq!(transaction.note.unwrap(), "Shoprite");
     service
         .connection()
