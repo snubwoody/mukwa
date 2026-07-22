@@ -681,6 +681,26 @@ impl Service {
         Ok(transaction)
     }
 
+    pub fn set_transaction_category(
+        &self,
+        id: Uuid,
+        category_id: Uuid,
+    ) -> crate::Result<Transaction> {
+        let transaction = self.get_transaction(id)?;
+        if transaction.transaction_type() != TransactionType::Expense {
+            let error = Error::new("Invalid transaction type (only expenses can have a category)");
+            return Err(error);
+        }
+        let connection = self.connection();
+        let sql = "UPDATE transactions SET category_id = ?1 WHERE id = ?2 RETURNING *";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt.query_and_then([category_id.to_string(), id.to_string()], |row| {
+            Transaction::try_from(row)
+        })?;
+        let transaction = rows.next().unwrap()?;
+        Ok(transaction)
+    }
+
     pub fn update_transaction(&self, opts: UpdateTransactionOpts) -> crate::Result<Transaction> {
         let transaction = self.get_transaction(opts.id)?;
         let mut connection = self.connection();

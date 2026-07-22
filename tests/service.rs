@@ -441,6 +441,53 @@ fn set_transaction_date() -> mukwa::Result<()> {
 }
 
 #[test]
+fn set_transaction_category() -> mukwa::Result<()> {
+    let connection = create_test_db();
+
+    let service = Service::new(connection);
+    let account = service.create_account("")?;
+
+    let create_opts = CreateTransactionOpts {
+        account_id: Some(account.id),
+        ..Default::default()
+    };
+
+    let category = service.create_category("")?;
+    let transaction = service.create_transaction(create_opts)?;
+    let transaction = service.set_transaction_category(transaction.id, category.id)?;
+    assert_eq!(transaction.category_id.unwrap(), category.id);
+    service
+        .connection()
+        .query_one("SELECT * FROM transactions", [], |row| {
+            let category_id: String = row.get("category_id")?;
+            assert_eq!(category_id, category_id.to_string());
+            Ok(())
+        })?;
+    Ok(())
+}
+
+#[test]
+fn can_only_set_category_for_expenses() -> mukwa::Result<()> {
+    let connection = create_test_db();
+
+    let service = Service::new(connection);
+    let account = service.create_account("")?;
+
+    let category = service.create_category("")?;
+    let transaction = service.create_income(Money::new(300), account.id)?;
+    let result = service.set_transaction_category(transaction.id, category.id);
+    assert!(result.is_err());
+    service
+        .connection()
+        .query_one("SELECT * FROM transactions", [], |row| {
+            let category_id: Option<String> = row.get("category_id")?;
+            assert!(category_id.is_none());
+            Ok(())
+        })?;
+    Ok(())
+}
+
+#[test]
 fn update_transaction_note() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
