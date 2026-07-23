@@ -18,7 +18,7 @@ use jiff::civil::Date;
 use std::string::FromUtf16Error;
 use windows_sys::Win32::Foundation::SYSTEMTIME;
 use windows_sys::Win32::Globalization::{
-    GetCurrencyFormatEx, GetDateFormatEx, GetLocaleInfoEx, CURRENCYFMTW, LOCALE_ICURRDIGITS,
+    CURRENCYFMTW, GetCurrencyFormatEx, GetDateFormatEx, GetLocaleInfoEx, LOCALE_ICURRDIGITS,
     LOCALE_ICURRENCY, LOCALE_ILZERO, LOCALE_INEGCURR, LOCALE_SCURRENCY, LOCALE_SDECIMAL,
     LOCALE_STHOUSAND,
 };
