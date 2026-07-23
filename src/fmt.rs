@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //! Utilities for formatting money.
+
 use crate::Money;
 
 #[cfg(target_os = "windows")]
@@ -55,26 +56,34 @@ impl CurrencyFormatter {
         self.symbol.as_str()
     }
 
+    /// Formats [`Money`] as a currency string.
+    #[allow(unused)]
     pub fn format_currency(&self, value: Money) -> crate::Result<String> {
         #[cfg(target_os = "windows")]
-        return windows::format_money(value, &self.locale, &self.symbol);
+        {
+            use std::sync::OnceLock;
+            use windows::CurrencyFormatOptions;
+
+            static CURRENCY_FORMAT_OPTS: OnceLock<CurrencyFormatOptions> = OnceLock::new();
+            let currency_symbol = self.symbol.clone();
+            // FIXME: invalidate when editing
+            let opts = CURRENCY_FORMAT_OPTS.get_or_init(move || {
+                let mut opts = CurrencyFormatOptions::load_from_sys(&self.locale).unwrap();
+                opts.currency_symbol = currency_symbol;
+                opts
+            });
+            // let mut opts = CurrencyFormatOptions::load_from_sys(&self.locale)?;
+            // opts.currency_symbol = self.symbol.clone();
+            windows::format_money(value, &self.locale, opts)
+        }
 
         #[cfg(not(target_os = "windows"))]
         todo!("Unsupported OS")
     }
 }
 
-/// Formats [`Money`] as a currency string.
-#[allow(unused_variables)]
-pub fn format_money(value: Money, locale: &str, symbol: &str) -> crate::Result<String> {
-    #[cfg(target_os = "windows")]
-    return windows::format_money(value, locale, symbol);
-
-    #[cfg(not(target_os = "windows"))]
-    todo!("Unsupported OS")
-}
-
 #[cfg(test)]
+#[cfg(target_os = "windows")]
 mod test {
     use super::*;
 

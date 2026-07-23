@@ -25,6 +25,7 @@ pub use error::Error;
 pub use error::Result;
 pub use money::Money;
 
+use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
 use crate::service::Service;
 use crate::state::AppState;
@@ -36,6 +37,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::FromStr;
+use std::sync::OnceLock;
 use tracing::{info, warn};
 
 /// Slint auto generated code.
@@ -323,13 +325,17 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     global_state.on_format_money({
         move |value| {
+            static CURRENCY_FORMATTER: OnceLock<CurrencyFormatter> = OnceLock::new();
+
             // Empty strings represent null values
             if value.is_empty() {
                 return value;
             }
             match Money::from_str(&value) {
                 Ok(value) => {
-                    let result = crate::fmt::format_money(value, "en-CA", "$");
+                    let formatter =
+                        CURRENCY_FORMATTER.get_or_init(|| CurrencyFormatter::new().unwrap());
+                    let result = formatter.format_currency(value);
                     match result {
                         Ok(result) => result.to_shared_string(),
                         Err(err) => {

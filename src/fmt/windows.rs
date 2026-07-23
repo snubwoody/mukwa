@@ -17,7 +17,7 @@
 use std::string::FromUtf16Error;
 
 use windows_sys::Win32::Globalization::{
-    GetCurrencyFormatEx, GetLocaleInfoEx, CURRENCYFMTW, LOCALE_ICURRDIGITS, LOCALE_ICURRENCY,
+    CURRENCYFMTW, GetCurrencyFormatEx, GetLocaleInfoEx, LOCALE_ICURRDIGITS, LOCALE_ICURRENCY,
     LOCALE_ILZERO, LOCALE_INEGCURR, LOCALE_SCURRENCY, LOCALE_SDECIMAL, LOCALE_STHOUSAND,
 };
 
@@ -74,97 +74,141 @@ impl TryFrom<WString> for String {
     }
 }
 
+pub struct CurrencyFormatOptions {
+    pub num_digits: u32,
+    /// Specifier for leading zeros in decimal fields:
+    /// - `0` for no leading zeros
+    /// - `1` for leading zeros.
+    pub leading_zero: u32,
+    /// Position of the monetary symbol in the positive currency mode,
+    /// corresponds to [LOCALE_ICURRENCY].
+    ///
+    /// [LOCALE_ICURRENCY]: https://learn.microsoft.com/en-us/windows/win32/intl/locale-icurrency
+    pub positive_order: u32,
+    /// Negative currency mode, corresponds to [LOCALE_INEGCURR].
+    ///
+    /// [LOCALE_INEGCURR]:https://learn.microsoft.com/en-us/windows/win32/intl/locale-ineg-constants
+    pub negative_order: u32,
+    pub decimal_separator: String,
+    pub thousand_separator: String,
+    pub currency_symbol: String,
+    pub grouping: u32,
+}
+
+impl CurrencyFormatOptions {
+    pub fn load_from_sys(locale: &str) -> crate::Result<Self> {
+        let num_digits = get_locale_info(locale, LOCALE_ICURRDIGITS)?.parse::<u32>()?;
+        let leading_zero = get_locale_info(locale, LOCALE_ILZERO)?.parse::<u32>()?;
+        // FIXME: seems like the wrong type
+        // let grouping = get_locale_info(locale, LOCALE_SGROUPING)?;
+        let negative_order = get_locale_info(locale, LOCALE_INEGCURR)?.parse::<u32>()?;
+        let positive_order = get_locale_info(locale, LOCALE_ICURRENCY)?.parse::<u32>()?;
+        let decimal_separator = get_locale_info(locale, LOCALE_SDECIMAL)?;
+        let thousand_separator = get_locale_info(locale, LOCALE_STHOUSAND)?;
+        let currency_symbol = get_locale_info(locale, LOCALE_SCURRENCY)?;
+
+        let opt = CurrencyFormatOptions {
+            negative_order,
+            num_digits,
+            leading_zero,
+            positive_order,
+            decimal_separator,
+            thousand_separator,
+            currency_symbol,
+            grouping: 3, // FIXME
+        };
+        Ok(opt)
+    }
+}
+
 /// Retrieves information about a locale.
 ///
-/// See the [information] about locale constants.
+/// See the [Microsoft docs] for information about locale constants.
 ///
-/// [information]: https://learn.microsoft.com/en-us/windows/win32/intl/locale-information-constants
+/// [Microsoft docs]: https://learn.microsoft.com/en-us/windows/win32/intl/locale-information-constants
 fn get_locale_info(locale: &str, locale_info: u32) -> crate::Result<String> {
     let locale = WString::from(locale);
-    let info = unsafe {
-        let buffer_length = GetLocaleInfoEx(locale.as_ptr(), locale_info, std::ptr::null_mut(), 0);
-        if buffer_length == 0 {
-            let err = std::io::Error::last_os_error();
-            return Err(Error::from(err));
-        }
-        let mut buffer = WString::zeroed(buffer_length as usize);
-        let buffer_ptr = buffer.as_mut_ptr();
-        if GetLocaleInfoEx(locale.as_ptr(), locale_info, buffer_ptr, buffer_length) == 0 {
-            let err = std::io::Error::last_os_error();
-            return Err(Error::from(err));
-        }
-        String::try_from(buffer)?
-    };
-    Ok(info)
+    let buffer_length =
+        unsafe { GetLocaleInfoEx(locale.as_ptr(), locale_info, std::ptr::null_mut(), 0) };
+
+    if buffer_length == 0 {
+        let err = std::io::Error::last_os_error();
+        return Err(Error::from(err));
+    }
+
+    let mut buffer = WString::zeroed(buffer_length as usize);
+    let buffer_ptr = buffer.as_mut_ptr();
+
+    let return_code =
+        unsafe { GetLocaleInfoEx(locale.as_ptr(), locale_info, buffer_ptr, buffer_length) };
+
+    if return_code == 0 {
+        let err = std::io::Error::last_os_error();
+        return Err(Error::from(err));
+    }
+
+    Ok(String::try_from(buffer)?)
 }
 
 /// Formats a [`Money`] as a currency string.
-pub fn format_money(value: Money, locale: &str, symbol: &str) -> crate::Result<String> {
-    let locale_str = locale;
+pub fn format_money(
+    value: Money,
+    locale: &str,
+    opt: &CurrencyFormatOptions,
+) -> crate::Result<String> {
     let locale = WString::from(locale);
     let value = WString::from(value.to_string().as_str());
 
-    let num_digits = get_locale_info(locale_str, LOCALE_ICURRDIGITS)?.parse::<u32>()?;
-    let leading_zero = get_locale_info(locale_str, LOCALE_ILZERO)?.parse::<u32>()?;
-    // let grouping = get_locale_info(locale_str, LOCALE_SGROUPING)?;
-    let negative_order = get_locale_info(locale_str, LOCALE_INEGCURR)?.parse::<u32>()?;
-    let positive_order = get_locale_info(locale_str, LOCALE_ICURRENCY)?.parse::<u32>()?;
-    let mut decimal_seperator: WString = get_locale_info(locale_str, LOCALE_SDECIMAL)?.into();
-    let mut thousand_seperator: WString = get_locale_info(locale_str, LOCALE_STHOUSAND)?.into();
-    // TODO: if I cache this, make sure the pointer is not dangling
-    // let mut currency_symbol: WString = get_locale_info(locale_str, LOCALE_SCURRENCY)?.into();
-    let mut currency_symbol = WString::from(symbol);
-    // TODO: cache this use static OnceCell
+    let mut currency_symbol = WString::from(opt.currency_symbol.as_str());
+    let mut thousand_separator = WString::from(opt.thousand_separator.as_str());
+    let mut decimal_separator = WString::from(opt.decimal_separator.as_str());
+
     let currency_format = CURRENCYFMTW {
-        NumDigits: num_digits,
-        NegativeOrder: negative_order,
-        lpThousandSep: thousand_seperator.as_mut_ptr(),
+        NumDigits: opt.num_digits,
+        NegativeOrder: opt.negative_order,
+        lpThousandSep: thousand_separator.as_mut_ptr(),
         lpCurrencySymbol: currency_symbol.as_mut_ptr(),
-        LeadingZero: leading_zero,
-        PositiveOrder: positive_order,
-        Grouping: 3, // FIXME: check this
-        lpDecimalSep: decimal_seperator.as_mut_ptr(),
+        LeadingZero: opt.leading_zero,
+        PositiveOrder: opt.positive_order,
+        Grouping: opt.grouping,
+        lpDecimalSep: decimal_separator.as_mut_ptr(),
     };
 
-    let currency_format_ptr = std::ptr::from_ref(&currency_format);
-
-    let output = unsafe {
-        let value_ptr = value.as_ptr();
-        let locale_ptr = locale.as_ptr();
-        let buffer_length = GetCurrencyFormatEx(
-            locale_ptr,
+    let buffer_length = unsafe {
+        GetCurrencyFormatEx(
+            locale.as_ptr(),
             0,
-            value_ptr,
-            currency_format_ptr,
+            value.as_ptr(),
+            std::ptr::from_ref(&currency_format),
             std::ptr::null_mut(),
             0,
-        );
-
-        if buffer_length == 0 {
-            let err = std::io::Error::last_os_error();
-            return Err(Error::from(err));
-        }
-
-        let mut formatted_str = WString::zeroed(buffer_length as usize);
-
-        let return_code = GetCurrencyFormatEx(
-            locale_ptr,
-            0,
-            value_ptr,
-            currency_format_ptr,
-            formatted_str.as_mut_ptr(),
-            buffer_length,
-        );
-
-        if return_code == 0 {
-            let err = std::io::Error::last_os_error();
-            return Err(Error::from(err));
-        }
-
-        formatted_str
+        )
     };
 
-    Ok(String::try_from(output)?)
+    if buffer_length == 0 {
+        let err = std::io::Error::last_os_error();
+        return Err(Error::from(err));
+    }
+
+    let mut buffer = WString::zeroed(buffer_length as usize);
+
+    let return_code = unsafe {
+        GetCurrencyFormatEx(
+            locale.as_ptr(),
+            0,
+            value.as_ptr(),
+            std::ptr::from_ref(&currency_format),
+            buffer.as_mut_ptr(),
+            buffer_length,
+        )
+    };
+
+    if return_code == 0 {
+        let err = std::io::Error::last_os_error();
+        return Err(Error::from(err));
+    }
+
+    Ok(String::try_from(buffer)?)
 }
 
 #[cfg(test)]
@@ -173,7 +217,8 @@ mod test {
 
     #[test]
     fn fmt() {
-        let output = format_money(Money::new(500), "en-US", "$").unwrap();
+        let opts = CurrencyFormatOptions::load_from_sys("en-US").unwrap();
+        let output = format_money(Money::new(500), "en-US", &opts).unwrap();
         assert_eq!(output, "$500.00");
     }
 

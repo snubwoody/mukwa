@@ -16,6 +16,7 @@
 
 use divan::Bencher;
 use mukwa::Money;
+use mukwa::fmt::CurrencyFormatter;
 
 fn main() {
     divan::main();
@@ -23,7 +24,14 @@ fn main() {
 
 #[divan::bench(consts = [1,50,100,1000,50_000])]
 fn format_money<const N: i64>(bencher: Bencher) {
-    bencher.with_inputs(|| Money::new(N)).bench_refs(|amount| {
-        mukwa::fmt::format_money(amount.clone(), "en-US").unwrap();
-    });
+    bencher
+        .with_inputs(|| {
+            let formatter = CurrencyFormatter::new().unwrap();
+            formatter
+        })
+        .bench_refs(|formatter| {
+            formatter
+                .format_currency(divan::black_box(Money::new(N)))
+                .unwrap();
+        });
 }
