@@ -94,7 +94,7 @@ component TransactionRow inherits TableRow {
     date-cell := TableCell {
         width: parent.width / length;
         if !parent.is-editing: Text {
-            text: transaction.date;
+            text: State.format-date(transaction.date);
             color: Colors.textBody;
         }
 

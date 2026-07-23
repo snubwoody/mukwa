@@ -14,11 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use jiff::civil::Date;
 use std::string::FromUtf16Error;
-
+use windows_sys::Win32::Foundation::SYSTEMTIME;
 use windows_sys::Win32::Globalization::{
-    CURRENCYFMTW, GetCurrencyFormatEx, GetLocaleInfoEx, LOCALE_ICURRDIGITS, LOCALE_ICURRENCY,
-    LOCALE_ILZERO, LOCALE_INEGCURR, LOCALE_SCURRENCY, LOCALE_SDECIMAL, LOCALE_STHOUSAND,
+    CURRENCYFMTW, GetCurrencyFormatEx, GetDateFormatEx, GetLocaleInfoEx, LOCALE_ICURRDIGITS,
+    LOCALE_ICURRENCY, LOCALE_ILZERO, LOCALE_INEGCURR, LOCALE_SCURRENCY, LOCALE_SDECIMAL,
+    LOCALE_STHOUSAND,
 };
 
 use crate::{Error, Money};
@@ -150,7 +152,7 @@ fn get_locale_info(locale: &str, locale_info: u32) -> crate::Result<String> {
     Ok(String::try_from(buffer)?)
 }
 
-/// Formats a [`Money`] as a currency string.
+/// Formats [`Money`] as a currency string.
 pub fn format_money(
     value: Money,
     locale: &str,
@@ -192,6 +194,7 @@ pub fn format_money(
 
     let mut buffer = WString::zeroed(buffer_length as usize);
 
+    // TODO: pass null pointer to use system settings
     let return_code = unsafe {
         GetCurrencyFormatEx(
             locale.as_ptr(),
@@ -211,21 +214,101 @@ pub fn format_money(
     Ok(String::try_from(buffer)?)
 }
 
+/// Formats a date string using the Win32 [GetDateFormatEx] API. The earliest supported date
+/// is January 1, 1601.
+///
+/// [GetDateFormatEx]: https://learn.microsoft.com/en-us/windows/win32/api/datetimeapi/nf-datetimeapi-getdateformatex
+#[allow(unused)]
+pub fn format_date(date: Date, locale: &str) -> crate::Result<String> {
+    let date_time = SYSTEMTIME {
+        wYear: date.year() as u16,
+        wMonth: date.month() as u16,
+        wDayOfWeek: date.weekday().to_sunday_zero_offset() as u16,
+        wDay: date.day() as u16,
+        // Windows ignores these values
+        wHour: 0,
+        wMinute: 0,
+        wSecond: 0,
+        wMilliseconds: 0,
+    };
+
+    let buffer_length = unsafe {
+        GetDateFormatEx(
+            std::ptr::null(),
+            0,
+            std::ptr::from_ref(&date_time),
+            std::ptr::null(),
+            std::ptr::null_mut(),
+            0,
+            std::ptr::null(),
+        )
+    };
+
+    if buffer_length == 0 {
+        let err = std::io::Error::last_os_error();
+        return Err(Error::from(err));
+    }
+
+    let mut buffer = WString::zeroed(buffer_length as usize);
+
+    let success = unsafe {
+        GetDateFormatEx(
+            std::ptr::null(),
+            0,
+            std::ptr::from_ref(&date_time),
+            std::ptr::null(),
+            buffer.as_mut_ptr(),
+            buffer_length,
+            std::ptr::null(),
+        )
+    } != 0;
+
+    if !success {
+        let err = std::io::Error::last_os_error();
+        return Err(Error::from(err));
+    }
+    Ok(String::try_from(buffer)?)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use jiff::civil::date;
 
     #[test]
-    fn fmt() {
+    fn format_date_before_1601_returns_error() {
+        let result = super::format_date(date(1600, 12, 31), "en-US");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn win32_format_money() {
         let opts = CurrencyFormatOptions::load_from_sys("en-US").unwrap();
         let output = format_money(Money::new(500), "en-US", &opts).unwrap();
         assert_eq!(output, "$500.00");
     }
 
     #[test]
+    fn format_money_invalid_locale_returns_error() {
+        let opts = CurrencyFormatOptions::load_from_sys("en-US").unwrap();
+        let result = format_money(Money::new(500), "does-not-exist", &opts);
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn get_locale_info() {
-        let symbol = super::get_locale_info("en-US", LOCALE_SCURRENCY).unwrap();
-        assert_eq!(symbol, "$");
+        assert_eq!(
+            super::get_locale_info("en-US", LOCALE_SCURRENCY).unwrap(),
+            "$"
+        );
+        assert_eq!(
+            super::get_locale_info("bem-ZM", LOCALE_SCURRENCY).unwrap(),
+            "K"
+        );
+        assert_eq!(
+            super::get_locale_info("zu-ZA", LOCALE_SCURRENCY).unwrap(),
+            "R"
+        );
     }
 
     #[test]
