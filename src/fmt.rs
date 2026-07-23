@@ -17,6 +17,7 @@
 //! Utilities for formatting money.
 
 use crate::Money;
+use jiff::civil::Date;
 
 #[cfg(target_os = "windows")]
 mod windows;
@@ -72,14 +73,21 @@ impl CurrencyFormatter {
                 opts.currency_symbol = currency_symbol;
                 opts
             });
-            // let mut opts = CurrencyFormatOptions::load_from_sys(&self.locale)?;
-            // opts.currency_symbol = self.symbol.clone();
             windows::format_money(value, &self.locale, opts)
         }
 
         #[cfg(not(target_os = "windows"))]
         todo!("Unsupported OS")
     }
+}
+
+#[allow(unused)]
+pub fn format_date(date: Date, locale: &str) -> crate::Result<String> {
+    #[cfg(target_os = "windows")]
+    return windows::format_date(date, locale);
+
+    #[cfg(not(target_os = "windows"))]
+    todo!("Unsupported OS")
 }
 
 #[cfg(test)]
