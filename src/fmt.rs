@@ -77,7 +77,7 @@ impl CurrencyFormatter {
         }
 
         #[cfg(not(target_os = "windows"))]
-        todo!("Unsupported OS")
+        Ok(value.to_string())
     }
 }
 
@@ -87,7 +87,7 @@ pub fn format_date(date: Date, locale: &str) -> crate::Result<String> {
     return windows::format_date(date, locale);
 
     #[cfg(not(target_os = "windows"))]
-    todo!("Unsupported OS")
+    Ok(date.strftime("%d/%m/%Y").to_string())
 }
 
 #[cfg(test)]
