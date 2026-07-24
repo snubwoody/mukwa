@@ -372,6 +372,26 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     })
 }
 
+fn setup_api(window: &ui::MainWindow) {
+    let api = window.global::<ui::Api>();
+
+    api.on_window_size({
+        let window = window.as_weak();
+        move || {
+            let size = window.unwrap().window().size();
+            (size.width as i32, size.height as i32)
+        }
+    });
+
+    api.on_window_position({
+        let window = window.as_weak();
+        move || {
+            let pos = window.unwrap().window().position();
+            (pos.x, pos.y)
+        }
+    });
+}
+
 pub fn run() -> Result<()> {
     let data_dir = if cfg!(debug_assertions) {
         PathBuf::from(".mukwa")
@@ -396,6 +416,7 @@ pub fn run() -> Result<()> {
 
     setup_global_state(state, &main_window);
     setup_calendar_state(&main_window);
+    setup_api(&main_window);
 
     main_window.run().unwrap();
     Ok(())

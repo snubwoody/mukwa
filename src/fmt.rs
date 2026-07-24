@@ -68,6 +68,7 @@ impl CurrencyFormatter {
             static CURRENCY_FORMAT_OPTS: OnceLock<CurrencyFormatOptions> = OnceLock::new();
             let currency_symbol = self.symbol.clone();
             // FIXME: invalidate when editing
+            // TODO: maybe just a function with options?
             let opts = CURRENCY_FORMAT_OPTS.get_or_init(move || {
                 let mut opts = CurrencyFormatOptions::load_from_sys(&self.locale).unwrap();
                 opts.currency_symbol = currency_symbol;
@@ -77,7 +78,7 @@ impl CurrencyFormatter {
         }
 
         #[cfg(not(target_os = "windows"))]
-        Ok(value.to_string())
+        Ok(format!("{}{}", self.symbol, value.to_string()))
     }
 }
 

@@ -65,6 +65,11 @@ export struct UpdateTransactionOpts {
     date: string,
 }
 
+export global Api {
+    pure callback window-position() -> { x: int, y: int};
+    pure callback window-size() -> { width: int, height: int};
+}
+
 // FIXME: use title-case for all methods
 export global State {
     callback create_account(name: string);

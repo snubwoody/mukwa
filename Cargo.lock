@@ -2243,6 +2243,7 @@ dependencies = [
  "icu_normalizer",
  "image",
  "ksni",
+ "log",
  "lyon_algorithms",
  "lyon_extra",
  "lyon_geom",

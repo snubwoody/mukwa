@@ -21,7 +21,7 @@ name = "cli"
 path = "src/bin/cli.rs"
 
 [dependencies]
-slint = { version = "1.17.0", features = ["backend-winit", "renderer-skia"] }
+slint = { version = "1.17.0", features = ["backend-winit", "renderer-skia", "log"] }
 tracing = "0.1.44"
 tempfile = "3.27.0"
 jiff = "0.2.29"

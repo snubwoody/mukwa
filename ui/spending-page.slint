@@ -19,7 +19,14 @@ import {
 } from "std-widgets.slint";
 import { Colors } from "colors.slint";
 import { Date, CalendarState } from "widgets/calendar.slint";
-import { Account, Transaction, State, Category, Budget } from "globals.slint";
+import {
+    Account,
+    Transaction,
+    State,
+    Category,
+    Budget,
+    Api,
+} from "globals.slint";
 import { Button, TextField, PrimaryButton, IconButton } from "widgets.slint";
 import { IconDisplay, IconSet, Icon } from "@lucide";
 
@@ -161,6 +168,12 @@ export component SpendingPage inherits VerticalLayout {
         x: button.x;
         y: button.y + button.height + 4px;
         height: layout.preferred-height;
+
+        init => {
+            if (self.x > Api.window-position().x * 1px * 0.5) {
+                self.x = button.x + button.width - self.width
+            }
+        }
 
         close-policy: close-on-click-outside;
 
