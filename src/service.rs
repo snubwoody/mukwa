@@ -142,6 +142,13 @@ impl<'a> TryFrom<&Row<'a>> for Budget {
 pub struct Category {
     pub id: Uuid,
     pub title: String,
+    pub group_id: Option<Uuid>,
+}
+
+#[derive(PartialOrd, PartialEq, Debug, Default, Clone)]
+pub struct CategoryGroup {
+    pub id: Uuid,
+    pub title: String,
 }
 
 impl Category {
@@ -149,6 +156,7 @@ impl Category {
         Category {
             id: Uuid::now_v7(),
             title: title.to_string(),
+            group_id: None,
         }
     }
 }
@@ -239,8 +247,29 @@ impl<'a> TryFrom<&Row<'a>> for Category {
     fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
         let id: String = value.get("id")?;
         let title: String = value.get("title")?;
+        let group_id: Option<String> = value.get("group_id")?;
+
+        let group_id = match group_id {
+            Some(id) => Some(Uuid::parse_str(&id)?),
+            None => None,
+        };
 
         Ok(Category {
+            id: Uuid::parse_str(&id)?,
+            title: title.to_string(),
+            group_id,
+        })
+    }
+}
+
+impl<'a> TryFrom<&Row<'a>> for CategoryGroup {
+    type Error = Error;
+
+    fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
+        let id: String = value.get("id")?;
+        let title: String = value.get("title")?;
+
+        Ok(CategoryGroup {
             id: Uuid::parse_str(&id)?,
             title: title.to_string(),
         })
@@ -801,6 +830,20 @@ impl Service {
         Ok(categories)
     }
 
+    /// Fetches all category groups from the database.
+    pub fn fetch_category_groups(&self) -> crate::Result<Vec<CategoryGroup>> {
+        let mut category_groups = vec![];
+        let connection = self.connection();
+        let sql = "SELECT * FROM category_groups";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows = stmt.query_and_then([], |row| CategoryGroup::try_from(row))?;
+
+        for row in rows {
+            category_groups.push(row?);
+        }
+        Ok(category_groups)
+    }
+
     /// Creates a new [`Account`].
     pub fn create_account(&self, name: &str) -> crate::Result<Account> {
         let connection = self.connection.lock().unwrap();
@@ -823,6 +866,18 @@ impl Service {
         })?;
         let category = rows.next().unwrap()?;
         Ok(category)
+    }
+
+    /// Creates a new [`CategoryGroup`].
+    pub fn create_category_group(&self, title: &str) -> crate::Result<CategoryGroup> {
+        let connection = self.connection.lock().unwrap();
+        let sql = "INSERT INTO category_groups(id,title) VALUES(?1,?2) RETURNING *";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt.query_and_then([&Uuid::now_v7().to_string(), title], |row| {
+            CategoryGroup::try_from(row)
+        })?;
+        let group = rows.next().unwrap()?;
+        Ok(group)
     }
 
     /// Creates a new [`Budget`].
@@ -858,6 +913,17 @@ impl Service {
         })?;
         let category = rows.next().unwrap()?;
         Ok(category)
+    }
+
+    pub fn update_category_group(&self, id: Uuid, title: &str) -> crate::Result<CategoryGroup> {
+        let connection = self.connection.lock().unwrap();
+        let sql = "UPDATE category_groups SET title = ?1 WHERE id = ?2 RETURNING *";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt.query_and_then([title, id.to_string().as_str()], |row| {
+            CategoryGroup::try_from(row)
+        })?;
+        let group = rows.next().unwrap()?;
+        Ok(group)
     }
 
     pub fn update_budget(&self, id: Uuid, amount: Money) -> crate::Result<Budget> {

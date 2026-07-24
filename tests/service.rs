@@ -56,6 +56,43 @@ fn create_category() -> mukwa::Result<()> {
 }
 
 #[test]
+fn create_category_group() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let group = service.create_category_group("Wants")?;
+    assert_eq!(group.title, "Wants");
+
+    service
+        .connection()
+        .query_one("SELECT * FROM category_groups", [], |row| {
+            let deleted_at: Option<i64> = row.get("deleted_at")?;
+            let id: String = row.get("id")?;
+            let title: String = row.get("title")?;
+
+            assert!(deleted_at.is_none());
+            assert_eq!(title, "Wants");
+            assert_eq!(group.id.to_string(), id);
+            Ok(())
+        })?;
+    Ok(())
+}
+
+#[test]
+fn update_category_group() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let group = service.create_category_group("Wants")?;
+    service.update_category_group(group.id, "Needs")?;
+
+    service
+        .connection()
+        .query_one("SELECT * FROM category_groups", [], |row| {
+            let title: String = row.get("title")?;
+            assert_eq!(title, "Needs");
+            Ok(())
+        })?;
+    Ok(())
+}
+
+#[test]
 fn create_budget() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     let category = service.create_category("Groceries")?;
@@ -475,6 +512,21 @@ fn fetch_categories() -> mukwa::Result<()> {
     assert!(categories.contains(&c1));
     assert!(categories.contains(&c2));
     assert!(categories.contains(&c3));
+    Ok(())
+}
+
+#[test]
+fn fetch_category_groups() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let g1 = service.create_category_group("Needs")?;
+    let g2 = service.create_category_group("Wants")?;
+    let g3 = service.create_category_group("Investments & Savings")?;
+
+    let category_groups = service.fetch_category_groups()?;
+    assert_eq!(category_groups.len(), 3);
+    assert!(category_groups.contains(&g1));
+    assert!(category_groups.contains(&g2));
+    assert!(category_groups.contains(&g3));
     Ok(())
 }
 
