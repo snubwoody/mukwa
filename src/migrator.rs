@@ -15,11 +15,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::Error;
+use crate::error::ErrorExt;
 use jiff::Zoned;
 use rusqlite::Connection;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
+use std::time::Instant;
 use std::{
     fs::{self},
     iter::Peekable,
@@ -173,7 +175,7 @@ impl Migrator {
     }
 
     /// Run all the migrations.
-    pub fn migrate(&self, conn: &Connection) -> crate::Result<()> {
+    pub fn migrate(&self, conn: &mut Connection) -> crate::Result<()> {
         create_migrations_table(conn)?;
         let applied_migrations = self.applied_migrations(conn)?;
 
@@ -185,21 +187,29 @@ impl Migrator {
                 continue;
             }
 
-            conn.execute_batch(&migration.up)?;
+            let instant = Instant::now();
+            conn.pragma_update(None, "foreign_keys", "OFF")?;
 
-            conn.execute(
+            let tx = conn.transaction()?;
+            tx.execute_batch(&migration.up)
+                .context(format!("Failed to run migration {}", migration.version))?;
+            tx.execute(
                 "INSERT INTO schema_migrations(version) VALUES(?)",
                 [migration.version],
             )?;
+            tx.commit()?;
 
-            info!("Applied migration {}", migration.version)
+            conn.pragma_update(None, "foreign_keys", "ON")?;
+
+            let duration = instant.elapsed().as_millis();
+            info!("Applied migration {} in {duration}ms", migration.version);
         }
 
         Ok(())
     }
 
     /// Reverts the most recently applied migration.
-    pub fn rollback(&self, conn: &Connection) -> crate::Result<()> {
+    pub fn rollback(&self, conn: &mut Connection) -> crate::Result<()> {
         if !conn.table_exists(Some("main"), "schema_migrations")? {
             warn!("No migrations to roll back");
         }
@@ -212,14 +222,22 @@ impl Migrator {
         if let Some(migration) = migrations.last()
             && applied_migrations.contains(&migration.version)
         {
-            conn.execute_batch(&migration.down)?;
+            let instant = Instant::now();
+            conn.pragma_update(None, "foreign_keys", "OFF")?;
 
-            conn.execute(
+            let tx = conn.transaction()?;
+            tx.execute_batch(&migration.down)?;
+
+            tx.execute(
                 "DELETE FROM schema_migrations WHERE version = ?",
                 [migration.version],
             )?;
 
-            info!("Reverted migration {}", migration.version)
+            tx.commit()?;
+            conn.pragma_update(None, "foreign_keys", "ON")?;
+
+            let duration = instant.elapsed().as_millis();
+            info!("Reverted migration {} in {duration}ms", migration.version);
         } else {
             warn!("No migrations to roll back")
         }
@@ -346,11 +364,11 @@ mod tests {
 
     #[test]
     fn run_migration() -> crate::Result<()> {
-        let connection = Connection::open_in_memory().unwrap();
+        let mut connection = Connection::open_in_memory()?;
         let mut migrator = Migrator::new();
         let migration = Migration::up("CREATE TABLE users(id TEXT PRIMARY KEY)", 0);
         migrator.add_migration(migration);
-        migrator.migrate(&connection)?;
+        migrator.migrate(&mut connection)?;
 
         let row = connection.query_row(
             "INSERT INTO users(id) VALUES ('Player 1') RETURNING *",
@@ -364,7 +382,7 @@ mod tests {
 
     #[test]
     fn rollback_migration() -> crate::Result<()> {
-        let connection = Connection::open_in_memory()?;
+        let mut connection = Connection::open_in_memory()?;
         let mut migrator = Migrator::new();
         let migration = Migration::new(
             "CREATE TABLE users(id TEXT PRIMARY KEY)",
@@ -372,8 +390,8 @@ mod tests {
             0,
         );
         migrator.add_migration(migration);
-        migrator.migrate(&connection)?;
-        migrator.rollback(&connection)?;
+        migrator.migrate(&mut connection)?;
+        migrator.rollback(&mut connection)?;
 
         let table_exists = connection.table_exists(Some("main"), "users")?;
         assert!(!table_exists);
@@ -382,7 +400,7 @@ mod tests {
 
     #[test]
     fn skip_applied_migrations() {
-        let connection = Connection::open_in_memory().unwrap();
+        let mut connection = Connection::open_in_memory().unwrap();
         create_migrations_table(&connection).unwrap();
         connection
             .execute("INSERT INTO schema_migrations(version) VALUES (1010)", ())
@@ -392,7 +410,7 @@ mod tests {
         let m2 = Migration::up("CREATE TABLE organisations(id TEXT PRIMARY KEY)", 1010);
         migrator.add_migration(m1);
         migrator.add_migration(m2);
-        migrator.migrate(&connection).unwrap();
+        migrator.migrate(&mut connection).unwrap();
 
         connection
             .execute("INSERT INTO users(id) VALUES ('Player 1')", ())
@@ -403,11 +421,11 @@ mod tests {
 
     #[test]
     fn update_migrations_table_after_migrating() {
-        let connection = Connection::open_in_memory().unwrap();
+        let mut connection = Connection::open_in_memory().unwrap();
         let mut migrator = Migrator::new();
         let migration = Migration::up("CREATE TABLE users(id TEXT PRIMARY KEY)", 100);
         migrator.add_migration(migration);
-        migrator.migrate(&connection).unwrap();
+        migrator.migrate(&mut connection).unwrap();
 
         let version = connection
             .query_row("SELECT * FROM schema_migrations", (), |row| {

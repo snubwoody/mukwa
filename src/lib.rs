@@ -403,10 +403,10 @@ pub fn run() -> Result<()> {
 
     let database_path = data_dir.join("data.sqlite");
     info!("Opening sqlite database at {:?}", database_path);
-    let connection = Connection::open(&database_path)?;
+    let mut connection = Connection::open(&database_path)?;
     let mut migrator = Migrator::new();
     migrator.load_embedded()?;
-    migrator.migrate(&connection)?;
+    migrator.migrate(&mut connection)?;
 
     let service = Service::new(connection);
 
@@ -424,10 +424,10 @@ pub fn run() -> Result<()> {
 
 /// Opens an in memory sqlite database for testing.
 pub fn create_test_db() -> Connection {
-    let connection = Connection::open_in_memory().expect("Failed to open sqlite connection");
+    let mut connection = Connection::open_in_memory().expect("Failed to open sqlite connection");
     let mut migrator = Migrator::new();
     migrator.load_from_dir("./migrations").unwrap();
-    migrator.migrate(&connection).unwrap();
+    migrator.migrate(&mut connection).unwrap();
     connection
 }
 
