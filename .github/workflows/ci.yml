@@ -41,6 +41,17 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
+      - name: Install system dependencies
+        if: ${{runner.os == 'Linux'}}
+        run: |
+          sudo apt update
+          sudo apt install libx11-xcb-dev \
+          xinput \
+          libxcursor-dev \
+          libxkbcommon-x11-dev \
+          libfontconfig1-dev \
+          pkg-config \
+          libx11-dev
       - run: cargo clippy --all-features -- -Dwarnings
   test:
     strategy:

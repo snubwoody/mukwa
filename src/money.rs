@@ -74,7 +74,15 @@ impl Money {
     /// Creates a `Money` from an `i64`.
     ///
     /// There is possible loss of precision when parsing floats.
+    ///
+    /// ## Panics
+    ///
+    /// Panics on non-finite values (`NAN`,`INFINITY`,`NEG_INFINITY`).
     pub fn from_f64(value: f64) -> Self {
+        assert!(
+            value.is_finite(),
+            "Cannot parse Money from non-finite values"
+        );
         let scaled = (value * 10f64.powi(Self::SCALE as i32)).round() as i64;
         Self(scaled)
     }
@@ -202,10 +210,21 @@ mod test {
     }
 
     #[test]
-    fn non_finite() {
-        assert_eq!(Money::from_f64(f64::NAN), Money::ZERO,);
-        assert_eq!(Money::from_f64(f64::INFINITY), Money::MAX,);
-        assert_eq!(Money::from_f64(f64::NEG_INFINITY), Money::MIN,);
+    #[should_panic]
+    fn from_f64_nan_panics() {
+        Money::from_f64(f64::NAN);
+    }
+
+    #[test]
+    #[should_panic]
+    fn from_f64_infinity_panics() {
+        Money::from_f64(f64::INFINITY);
+    }
+
+    #[test]
+    #[should_panic]
+    fn from_f64_neg_infinity_panics() {
+        Money::from_f64(f64::NEG_INFINITY);
     }
 
     #[test]
