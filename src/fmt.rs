@@ -78,7 +78,7 @@ impl CurrencyFormatter {
         }
 
         #[cfg(not(target_os = "windows"))]
-        Ok(format!("{}{}", self.symbol, value.to_string()))
+        Ok(format!("{}{}", self.symbol, value))
     }
 }
 
