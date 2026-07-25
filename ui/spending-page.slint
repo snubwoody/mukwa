@@ -222,7 +222,6 @@ component CategoryGroupItem {
                 padding-top: 4px;
                 padding-bottom: 4px;
 
-                alignment: start;
                 spacing: 4px;
                 cross-axis-alignment: center;
 
@@ -238,6 +237,33 @@ component CategoryGroupItem {
                 clicked => {
                         State.create-category("Category group",category-group.id);
                     }
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                }
+
+                Text {
+                    width: 100px;
+                    text: "$0.00";
+                    // text: State.format-money(State.total-spent(budget.id));
+                    color: Colors.textBody;
+                    horizontal-alignment: end;
+                }
+
+                Text {
+                    width: 100px;
+                    text: State.format-money(State.total-spent-in-group(category-group.id, current-date));
+                    color: Colors.textBody;
+                    horizontal-alignment: end;
+                }
+
+                Text {
+                    width: 100px;
+                    text: "$0.00";
+                    // text: State.format-money(State.left-to-spend(budget.id));
+                    color: Colors.textBody;
+                    horizontal-alignment: end;
                 }
             }
         }

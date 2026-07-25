@@ -202,6 +202,12 @@ impl AppState {
         self.service.total_spent(budget.category_id, date)
     }
 
+    pub fn total_spent_in_group(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
+        let id = Uuid::parse_str(id)?;
+        let date = Date::new(date.year as i16, date.month as i8, date.day as i8)?;
+        self.service.total_spent_in_group(id, date)
+    }
+
     pub fn fetch_or_init_budgets(&self, date: Date) -> crate::Result<Vec<ui::Budget>> {
         let budgets: Vec<ui::Budget> = self
             .service

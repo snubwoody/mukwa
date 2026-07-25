@@ -353,6 +353,17 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    global_state.on_total_spent_in_group({
+        let state = state.clone();
+        move |id, date| match state.total_spent_in_group(&id, date) {
+            Ok(total) => total.to_shared_string(),
+            Err(err) => {
+                warn!("Failed to calculate total spent: {err}");
+                Money::ZERO.to_shared_string()
+            }
+        }
+    });
+
     global_state.on_delete_transaction({
         let mut state = state.clone();
         move |id| {

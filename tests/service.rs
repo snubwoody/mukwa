@@ -213,6 +213,37 @@ fn total_spent() -> mukwa::Result<()> {
 }
 
 #[test]
+fn total_spent_in_group() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    service.create_account("")?;
+
+    let date = date(2020, 12, 14);
+    let group = service.create_category_group("")?;
+    let group2 = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
+    let opts = CreateTransactionOpts {
+        date,
+        category_id: Some(category.id),
+        ..Default::default()
+    };
+    service.create_transaction(CreateTransactionOpts {
+        amount: Money::new(500),
+        ..opts.clone()
+    })?;
+
+    service.create_transaction(CreateTransactionOpts {
+        amount: Money::new(150),
+        ..opts
+    })?;
+
+    let total = service.total_spent_in_group(group.id, date)?;
+    assert_eq!(total, Money::new(650));
+    let total = service.total_spent_in_group(group2.id, date)?;
+    assert_eq!(total, Money::ZERO);
+    Ok(())
+}
+
+#[test]
 fn total_spent_filters_by_date() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("")?;

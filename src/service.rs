@@ -824,6 +824,31 @@ impl Service {
         Ok(total)
     }
 
+    /// Calculates the total amount spent in the category group.
+    pub fn total_spent_in_group(&self, group_id: Uuid, month: Date) -> crate::Result<Money> {
+        let connection = self.connection();
+
+        let sql = "SELECT \
+            t.id,t.amount,t.transaction_date,t.sender_id,t.receiver_id,t.category_id,t.note \
+            FROM transactions t JOIN categories c WHERE c.group_id = ?";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows = stmt.query_and_then([group_id.to_string()], |row| Transaction::try_from(row))?;
+
+        let mut total = Money::ZERO;
+        for row in rows {
+            let transaction = row?;
+            let is_same_month = transaction.date.month() == month.month()
+                && transaction.date.year() == month.year();
+
+            if !is_same_month {
+                continue;
+            }
+
+            total += transaction.amount;
+        }
+        Ok(total)
+    }
+
     /// Calculates the account balance.
     pub fn account_balance(&self, account_id: Uuid) -> crate::Result<Money> {
         let connection = self.connection();
