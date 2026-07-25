@@ -30,6 +30,7 @@ pub struct AppState {
     service: Service,
     accounts: Rc<VecModel<ui::Account>>,
     categories: Rc<VecModel<ui::Category>>,
+    category_groups: Rc<VecModel<ui::CategoryGroup>>,
     current_budget_month: Date,
     /// The budgets of the active month.
     budgets: Rc<VecModel<ui::Budget>>,
@@ -52,8 +53,12 @@ impl AppState {
         let categories = service.fetch_categories()?;
         let category_list: Vec<ui::Category> = categories.iter().map(|c| c.into()).collect();
         let category_options: Vec<ui::ComboBoxItem> = categories.iter().map(|c| c.into()).collect();
+        let category_groups = service.fetch_category_groups()?;
+        let category_group_list: Vec<ui::CategoryGroup> =
+            category_groups.iter().map(|c| c.into()).collect();
 
         let category_model = Rc::new(VecModel::from(category_list));
+        let category_group_model = Rc::new(VecModel::from(category_group_list));
         let category_options_model = Rc::new(VecModel::from(category_options));
 
         let budgets_list: Vec<ui::Budget> = service
@@ -74,6 +79,7 @@ impl AppState {
             service,
             accounts: accounts_model,
             categories: category_model,
+            category_groups: category_group_model,
             current_budget_month: Zoned::now().date(),
             account_options: account_options_model,
             transactions: transactions_model,
@@ -92,6 +98,10 @@ impl AppState {
 
     pub fn categories(&self) -> Rc<VecModel<ui::Category>> {
         self.categories.clone()
+    }
+
+    pub fn category_groups(&self) -> Rc<VecModel<ui::CategoryGroup>> {
+        self.category_groups.clone()
     }
 
     pub fn budgets(&self) -> Rc<VecModel<ui::Budget>> {
@@ -122,13 +132,24 @@ impl AppState {
     }
 
     /// Creates a new category.
-    pub fn create_category(&mut self, title: &str) -> crate::Result<()> {
-        let category = self.service.create_category(title)?;
+    pub fn create_category(&mut self, title: &str, group_id: &str) -> crate::Result<()> {
+        let group_id = Uuid::parse_str(group_id)?;
+        let category = self.service.create_category(title, group_id)?;
         info!(id=?category.id,"Created new category");
 
         self.reset_budgets(self.current_budget_month)?;
         self.category_options.push(category.clone().into());
         self.categories.push(category.into());
+        Ok(())
+    }
+
+    /// Creates a new category group.
+    pub fn create_category_group(&mut self, title: &str) -> crate::Result<()> {
+        let category_group = self.service.create_category_group(title)?;
+        info!(id=?category_group.id,"Created new category group");
+
+        self.reset_budgets(self.current_budget_month)?;
+        self.category_groups.push(category_group.into());
         Ok(())
     }
 

@@ -76,7 +76,6 @@ impl From<&Account> for ui::Account {
     }
 }
 
-// TODO: could maybe use default struct values
 #[derive(PartialOrd, PartialEq, Debug, Default, Clone, Copy)]
 pub struct CreateBudgetOpts {
     pub amount: Option<Money>,
@@ -163,6 +162,30 @@ impl Category {
 
 impl From<Category> for ui::Category {
     fn from(value: Category) -> Self {
+        let group_id = match value.group_id {
+            Some(id) => id.to_shared_string(),
+            None => SharedString::new(),
+        };
+
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
+            group_id,
+        }
+    }
+}
+
+impl From<CategoryGroup> for ui::CategoryGroup {
+    fn from(value: CategoryGroup) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
+        }
+    }
+}
+
+impl From<&CategoryGroup> for ui::CategoryGroup {
+    fn from(value: &CategoryGroup) -> Self {
         Self {
             id: value.id.to_shared_string(),
             title: value.title.to_shared_string(),
@@ -172,9 +195,15 @@ impl From<Category> for ui::Category {
 
 impl From<&Category> for ui::Category {
     fn from(value: &Category) -> Self {
+        let group_id = match value.group_id {
+            Some(id) => id.to_shared_string(),
+            None => SharedString::new(),
+        };
+
         Self {
             id: value.id.to_shared_string(),
             title: value.title.to_shared_string(),
+            group_id,
         }
     }
 }
@@ -857,13 +886,15 @@ impl Service {
     }
 
     /// Creates a new [`Category`].
-    pub fn create_category(&self, title: &str) -> crate::Result<Category> {
-        let connection = self.connection.lock().unwrap();
-        let sql = "INSERT INTO categories(id,title) VALUES(?1,?2) RETURNING *";
+    pub fn create_category(&self, title: &str, group_id: Uuid) -> crate::Result<Category> {
+        let connection = self.connection();
+        let sql = "INSERT INTO categories(id,title,group_id) VALUES(?1,?2,?3) RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
-        let mut rows = stmt.query_and_then([&Uuid::now_v7().to_string(), title], |row| {
-            Category::try_from(row)
-        })?;
+
+        let mut rows = stmt.query_and_then(
+            params![&Uuid::now_v7().to_string(), title, group_id.to_string()],
+            |row| Category::try_from(row),
+        )?;
         let category = rows.next().unwrap()?;
         Ok(category)
     }

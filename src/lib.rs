@@ -149,6 +149,7 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     let transactions_model_rc = ModelRc::new(state.transactions());
     let accounts_model_rc = ModelRc::new(state.accounts());
     let categories_model_rc = ModelRc::new(state.categories());
+    let category_groups_model_rc = ModelRc::new(state.category_groups());
     let budgets_model_rc = ModelRc::new(state.budgets());
     let account_options_rc = ModelRc::new(state.account_options());
 
@@ -157,6 +158,7 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     global_state.set_transactions(transactions_model_rc);
     global_state.set_accounts(accounts_model_rc);
     global_state.set_categories(categories_model_rc);
+    global_state.set_category_groups(category_groups_model_rc);
     global_state.set_budgets(budgets_model_rc);
 
     global_state.set_account_options(account_options_rc);
@@ -200,9 +202,18 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     global_state.on_create_category({
         let mut state = state.clone();
-        move |title| {
-            if let Err(err) = state.create_category(&title) {
+        move |title, group_id| {
+            if let Err(err) = state.create_category(&title, &group_id) {
                 warn!("Failed to create category: {err}")
+            }
+        }
+    });
+
+    global_state.on_create_category_group({
+        let mut state = state.clone();
+        move |title| {
+            if let Err(err) = state.create_category_group(&title) {
+                warn!("{err}")
             }
         }
     });

@@ -39,9 +39,10 @@ fn create_transaction_creates_expense() -> mukwa::Result<()> {
 fn create_category_creates_a_budget() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
+    let group = service.create_category_group("")?;
     let mut state = AppState::new(service.clone())?;
 
-    state.create_category("Groceries")?;
+    state.create_category("Groceries", &group.id.to_string())?;
 
     let categories = service.fetch_categories()?;
     let budgets = service.fetch_budgets_by_month(Zoned::now().date())?;
@@ -54,10 +55,11 @@ fn create_category_creates_a_budget() -> mukwa::Result<()> {
 fn create_category_creates_a_budget_in_current_month() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
+    let group = service.create_category_group("")?;
     let mut state = AppState::new(service.clone())?;
 
     state.set_current_budget_month(date(2020, 1, 1))?;
-    state.create_category("Groceries")?;
+    state.create_category("Groceries", &group.id.to_string())?;
     let categories = service.fetch_categories()?;
     let budgets = service.fetch_budgets_by_month(date(2020, 1, 1))?;
     assert_eq!(budgets.len(), 1);
@@ -75,6 +77,17 @@ fn create_account_adds_to_account_list() -> mukwa::Result<()> {
     state.create_account("")?;
 
     assert_eq!(state.accounts().iter().len(), 2);
+    Ok(())
+}
+
+#[test]
+fn create_category_group_adds_to_list() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let mut state = AppState::new(service)?;
+    state.create_category_group("")?;
+    state.create_category_group("")?;
+
+    assert_eq!(state.category_groups().iter().len(), 2);
     Ok(())
 }
 
@@ -110,8 +123,9 @@ fn state_loads_data_from_service() -> mukwa::Result<()> {
 #[test]
 fn state_loads_categories_from_service() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    service.create_category(Default::default())?;
-    service.create_category(Default::default())?;
+    let group = service.create_category_group("")?;
+    service.create_category(Default::default(), group.id)?;
+    service.create_category(Default::default(), group.id)?;
 
     let state = AppState::new(service)?;
     assert_eq!(state.categories().iter().len(), 2);
@@ -122,7 +136,8 @@ fn state_loads_categories_from_service() -> mukwa::Result<()> {
 fn calculate_total_spent() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("")?;
-    let category = service.create_category(Default::default())?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category("",group.id)?;
     service
         .create_expense()
         .amount(Money::new(500))
@@ -143,7 +158,8 @@ fn calculate_total_spent() -> mukwa::Result<()> {
 fn calculate_total_spent_only_includes_current_month() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("")?;
-    let category = service.create_category(Default::default())?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category(Default::default(),group.id)?;
     service
         .create_expense()
         .amount(Money::new(500))
@@ -169,7 +185,8 @@ fn calculate_total_spent_only_includes_current_month() -> mukwa::Result<()> {
 fn left_to_spend_caps_at_zero() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("")?;
-    let category = service.create_category(Default::default())?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category(Default::default(), group.id)?;
     let budget = service.create_budget(CreateBudgetOpts {
         category_id: category.id,
         amount: Some(Money::new(200)),

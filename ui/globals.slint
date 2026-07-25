@@ -25,6 +25,12 @@ export struct Account {
 export struct Category {
     id: string,
     title: string,
+    group-id: string,
+}
+
+export struct CategoryGroup {
+    id: string,
+    title: string,
 }
 
 export struct Budget {
@@ -66,7 +72,6 @@ export struct UpdateTransactionOpts {
     date: string,
 }
 
-
 export global Api {
     pure callback window-position() -> { x: int, y: int};
     pure callback window-size() -> { width: int, height: int};
@@ -88,6 +93,10 @@ export global State {
     callback set-transaction-category(id: string, category-id: string);
     callback set-transaction-outflow(id: string, amount: string);
     callback set-transaction-inflow(id: string, amount: string);
+    callback update-category(id: string, title: string);
+    callback update-category-group(id: string, title: string);
+    callback create-category(title: string, group-id: string);
+    callback create-category-group(title: string);
     pure callback left-to-spend(id: string) -> string;
     pure callback get_account_name(id: string) -> string;
     pure callback total_balance() -> string;
@@ -98,11 +107,10 @@ export global State {
     pure callback format-dateym(Date) -> string;
     pure callback format-date(string) -> string;
     pure callback format-money(value: string) -> string;
-    pure callback update-category(id: string, title: string);
-    pure callback create-category(title: string);
     pure callback total-spent(budget-id: string) -> string;
     in-out property <[Transaction]> transactions;
     in-out property <[Category]> categories;
+    in-out property <[CategoryGroup]> category-groups;
     in-out property <[Budget]> budgets;
     // Account options for combo boxes
     in-out property <[ComboBoxItem]> account-options;

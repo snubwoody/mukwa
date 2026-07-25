@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import {
     VerticalBox,
     LineEdit,
@@ -24,6 +25,7 @@ import {
     Transaction,
     State,
     Category,
+    CategoryGroup,
     Budget,
     Api,
 } from "globals.slint";
@@ -115,6 +117,29 @@ component BudgetItem {
     }
 }
 
+component CategoryGroupItem {
+    in property <CategoryGroup> category-group;
+    HorizontalLayout {
+        alignment: start;
+        spacing: 4px;
+        cross-axis-alignment: center;
+
+        Text {
+            text: category-group.title;
+            color: Colors.textBody;
+        }
+
+        IconButton {
+            icon: IconSet.Plus;
+            theme: ghost;
+            // TODO: add popup
+            clicked => {
+                State.create-category("Category group",category-group.id);
+            }
+        }
+    }
+}
+
 export component SpendingPage inherits VerticalLayout {
     in-out property <Date> current-date: CalendarState.today();
     alignment: start;
@@ -154,9 +179,9 @@ export component SpendingPage inherits VerticalLayout {
     }
 
     HorizontalLayout {
-        alignment: end;
+        alignment: start;
         button := PrimaryButton {
-            text: @tr("New category");
+            text: @tr("New category group");
             clicked => {
                 popup.show();
             }
@@ -190,7 +215,7 @@ export component SpendingPage inherits VerticalLayout {
             spacing: 12px;
 
             text-field := TextField {
-                placeholder-text: @tr("New category");
+                placeholder-text: @tr("New category group");
             }
 
             HorizontalLayout {
@@ -206,7 +231,7 @@ export component SpendingPage inherits VerticalLayout {
                 PrimaryButton {
                     text: @tr("Confirm");
                     clicked => {
-                        State.create-category(text-field.text);
+                        State.create-category-group(text-field.text);
                         popup.close();
                     }
                 }
@@ -251,6 +276,10 @@ export component SpendingPage inherits VerticalLayout {
                 horizontal-alignment: end;
                 color: Colors.textBody;
             }
+        }
+
+        for category-group in State.category-groups: CategoryGroupItem {
+            category-group: category-group;
         }
 
         for budget in State.budgets: BudgetItem {
