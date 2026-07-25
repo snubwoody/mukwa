@@ -98,16 +98,16 @@ pub struct CurrencyFormatOptions {
 }
 
 impl CurrencyFormatOptions {
-    pub fn load_from_sys(locale: &str) -> crate::Result<Self> {
-        let num_digits = get_locale_info(locale, LOCALE_ICURRDIGITS)?.parse::<u32>()?;
-        let leading_zero = get_locale_info(locale, LOCALE_ILZERO)?.parse::<u32>()?;
+    pub fn load_from_sys() -> crate::Result<Self> {
+        let num_digits = get_locale_info(LOCALE_ICURRDIGITS)?.parse::<u32>()?;
+        let leading_zero = get_locale_info(LOCALE_ILZERO)?.parse::<u32>()?;
         // FIXME: seems like the wrong type
-        // let grouping = get_locale_info(locale, LOCALE_SGROUPING)?;
-        let negative_order = get_locale_info(locale, LOCALE_INEGCURR)?.parse::<u32>()?;
-        let positive_order = get_locale_info(locale, LOCALE_ICURRENCY)?.parse::<u32>()?;
-        let decimal_separator = get_locale_info(locale, LOCALE_SDECIMAL)?;
-        let thousand_separator = get_locale_info(locale, LOCALE_STHOUSAND)?;
-        let currency_symbol = get_locale_info(locale, LOCALE_SCURRENCY)?;
+        // let grouping = get_locale_info(LOCALE_SGROUPING)?;
+        let negative_order = get_locale_info(LOCALE_INEGCURR)?.parse::<u32>()?;
+        let positive_order = get_locale_info(LOCALE_ICURRENCY)?.parse::<u32>()?;
+        let decimal_separator = get_locale_info(LOCALE_SDECIMAL)?;
+        let thousand_separator = get_locale_info(LOCALE_STHOUSAND)?;
+        let currency_symbol = get_locale_info(LOCALE_SCURRENCY)?;
 
         let opt = CurrencyFormatOptions {
             negative_order,
@@ -123,15 +123,14 @@ impl CurrencyFormatOptions {
     }
 }
 
-/// Retrieves information about a locale.
+/// Retrieves information about the user's locale.
 ///
 /// See the [Microsoft docs] for information about locale constants.
 ///
 /// [Microsoft docs]: https://learn.microsoft.com/en-us/windows/win32/intl/locale-information-constants
-fn get_locale_info(locale: &str, locale_info: u32) -> crate::Result<String> {
-    let locale = WString::from(locale);
+fn get_locale_info(locale_info: u32) -> crate::Result<String> {
     let buffer_length =
-        unsafe { GetLocaleInfoEx(locale.as_ptr(), locale_info, std::ptr::null_mut(), 0) };
+        unsafe { GetLocaleInfoEx(std::ptr::null(), locale_info, std::ptr::null_mut(), 0) };
 
     if buffer_length == 0 {
         let err = std::io::Error::last_os_error();
@@ -142,7 +141,7 @@ fn get_locale_info(locale: &str, locale_info: u32) -> crate::Result<String> {
     let buffer_ptr = buffer.as_mut_ptr();
 
     let return_code =
-        unsafe { GetLocaleInfoEx(locale.as_ptr(), locale_info, buffer_ptr, buffer_length) };
+        unsafe { GetLocaleInfoEx(std::ptr::null(), locale_info, buffer_ptr, buffer_length) };
 
     if return_code == 0 {
         let err = std::io::Error::last_os_error();
@@ -153,12 +152,7 @@ fn get_locale_info(locale: &str, locale_info: u32) -> crate::Result<String> {
 }
 
 /// Formats [`Money`] as a currency string.
-pub fn format_money(
-    value: Money,
-    locale: &str,
-    opt: &CurrencyFormatOptions,
-) -> crate::Result<String> {
-    let locale = WString::from(locale);
+pub fn format_money(value: Money, opt: &CurrencyFormatOptions) -> crate::Result<String> {
     let value = WString::from(value.to_string().as_str());
 
     let mut currency_symbol = WString::from(opt.currency_symbol.as_str());
@@ -178,7 +172,7 @@ pub fn format_money(
 
     let buffer_length = unsafe {
         GetCurrencyFormatEx(
-            locale.as_ptr(),
+            std::ptr::null(),
             0,
             value.as_ptr(),
             std::ptr::from_ref(&currency_format),
@@ -194,10 +188,9 @@ pub fn format_money(
 
     let mut buffer = WString::zeroed(buffer_length as usize);
 
-    // TODO: pass null pointer to use system settings
     let return_code = unsafe {
         GetCurrencyFormatEx(
-            locale.as_ptr(),
+            std::ptr::null(),
             0,
             value.as_ptr(),
             std::ptr::from_ref(&currency_format),
@@ -218,8 +211,7 @@ pub fn format_money(
 /// is January 1, 1601.
 ///
 /// [GetDateFormatEx]: https://learn.microsoft.com/en-us/windows/win32/api/datetimeapi/nf-datetimeapi-getdateformatex
-#[allow(unused)]
-pub fn format_date(date: Date, locale: &str) -> crate::Result<String> {
+pub fn format_date(date: Date) -> crate::Result<String> {
     let date_time = SYSTEMTIME {
         wYear: date.year() as u16,
         wMonth: date.month() as u16,
@@ -277,43 +269,7 @@ mod test {
 
     #[test]
     fn format_date_before_1601_returns_error() {
-        let result = super::format_date(date(1600, 12, 31), "en-US");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn win32_format_money() {
-        let opts = CurrencyFormatOptions::load_from_sys("en-US").unwrap();
-        let output = format_money(Money::new(500), "en-US", &opts).unwrap();
-        assert_eq!(output, "$500.00");
-    }
-
-    #[test]
-    fn format_money_invalid_locale_returns_error() {
-        let opts = CurrencyFormatOptions::load_from_sys("en-US").unwrap();
-        let result = format_money(Money::new(500), "does-not-exist", &opts);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn get_locale_info() {
-        assert_eq!(
-            super::get_locale_info("en-US", LOCALE_SCURRENCY).unwrap(),
-            "$"
-        );
-        assert_eq!(
-            super::get_locale_info("bem-ZM", LOCALE_SCURRENCY).unwrap(),
-            "K"
-        );
-        assert_eq!(
-            super::get_locale_info("zu-ZA", LOCALE_SCURRENCY).unwrap(),
-            "R"
-        );
-    }
-
-    #[test]
-    fn get_locale_info_invalid_locale() {
-        let result = super::get_locale_info("does-not-exist", LOCALE_SCURRENCY);
+        let result = format_date(date(1600, 12, 31));
         assert!(result.is_err());
     }
 }

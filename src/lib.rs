@@ -288,16 +288,13 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     global_state.on_format_date({
         |date| match Date::strptime("%Y-%m-%d", date) {
-            Ok(date) => {
-                let locale = sys_locale::get_locale().unwrap_or(String::from("en-US"));
-                match fmt::format_date(date, &locale) {
-                    Ok(value) => value.to_shared_string(),
-                    Err(err) => {
-                        warn!("{err}");
-                        SharedString::new()
-                    }
+            Ok(date) => match fmt::format_date(date) {
+                Ok(value) => value.to_shared_string(),
+                Err(err) => {
+                    warn!("{err}");
+                    SharedString::new()
                 }
-            }
+            },
             Err(err) => {
                 warn!("Invalid date: {err}");
                 SharedString::new()

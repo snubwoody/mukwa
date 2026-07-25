@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//! Utilities for formatting money.
+//! Utilities for formatting dates and money.
 
 use crate::Money;
 use jiff::civil::Date;
@@ -24,7 +24,6 @@ mod windows;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct CurrencyFormatter {
-    locale: String,
     /// The currency symbol
     symbol: String,
 }
@@ -32,10 +31,7 @@ pub struct CurrencyFormatter {
 impl CurrencyFormatter {
     /// Creates a new currency formatter.
     pub fn new() -> crate::Result<Self> {
-        let locale = sys_locale::get_locale().unwrap_or(String::from("en-US"));
-
         let formatter = CurrencyFormatter {
-            locale,
             symbol: String::from("$"),
         };
 
@@ -47,18 +43,12 @@ impl CurrencyFormatter {
         self.symbol = symbol.to_owned();
     }
 
-    /// Set the locale
-    pub fn set_locale(&mut self, locale: &str) {
-        self.locale = locale.to_owned();
-    }
-
     /// Returns the currency symbol.
     pub fn symbol(&self) -> &str {
         self.symbol.as_str()
     }
 
     /// Formats [`Money`] as a currency string.
-    #[allow(unused)]
     pub fn format_currency(&self, value: Money) -> crate::Result<String> {
         #[cfg(target_os = "windows")]
         {
@@ -70,11 +60,11 @@ impl CurrencyFormatter {
             // FIXME: invalidate when editing
             // TODO: maybe just a function with options?
             let opts = CURRENCY_FORMAT_OPTS.get_or_init(move || {
-                let mut opts = CurrencyFormatOptions::load_from_sys(&self.locale).unwrap();
+                let mut opts = CurrencyFormatOptions::load_from_sys().unwrap();
                 opts.currency_symbol = currency_symbol;
                 opts
             });
-            windows::format_money(value, &self.locale, opts)
+            windows::format_money(value, opts)
         }
 
         #[cfg(not(target_os = "windows"))]
@@ -82,37 +72,10 @@ impl CurrencyFormatter {
     }
 }
 
-#[allow(unused)]
-pub fn format_date(date: Date, locale: &str) -> crate::Result<String> {
+pub fn format_date(date: Date) -> crate::Result<String> {
     #[cfg(target_os = "windows")]
-    return windows::format_date(date, locale);
+    return windows::format_date(date);
 
     #[cfg(not(target_os = "windows"))]
     Ok(date.strftime("%d/%m/%Y").to_string())
-}
-
-#[cfg(test)]
-#[cfg(target_os = "windows")]
-mod test {
-    use super::*;
-
-    #[test]
-    fn format_currency_uses_locale() -> crate::Result<()> {
-        let mut formatter = CurrencyFormatter::new()?;
-        formatter.set_locale("ja-JP");
-        formatter.set_symbol("$");
-        let value = formatter.format_currency(Money::new(500))?;
-        assert_eq!(value, "$500");
-        Ok(())
-    }
-
-    #[test]
-    fn format_currency_uses_symbol() -> crate::Result<()> {
-        let mut formatter = CurrencyFormatter::new()?;
-        formatter.set_locale("en-US");
-        formatter.set_symbol("K");
-        let value = formatter.format_currency(Money::new(500))?;
-        assert_eq!(value, "K500.00");
-        Ok(())
-    }
 }
