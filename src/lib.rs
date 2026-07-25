@@ -24,6 +24,8 @@ pub mod state;
 pub use error::Error;
 pub use error::Result;
 pub use money::Money;
+use slint::FilterModel;
+use slint::ModelExt;
 
 use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
@@ -176,6 +178,32 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
                 .categories()
                 .iter()
                 .find(|c| c.id == id)
+                .unwrap_or_default()
+        }
+    });
+
+    global_state.on_categories_in_group({
+        let state = state.clone();
+        move |group_id| {
+            let filtered_categories = state
+                .categories()
+                .filter(move |category| category.group_id == group_id);
+            let model = ModelRc::new(filtered_categories);
+            model
+        }
+    });
+
+    global_state.on_get_budget({
+        let state = state.clone();
+        move |category_id, date| {
+            state
+                .budgets()
+                .iter()
+                .find(|budget| {
+                    budget.category_id == category_id
+                        && budget.month == date.month
+                        && budget.year == date.year
+                })
                 .unwrap_or_default()
         }
     });

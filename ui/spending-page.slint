@@ -17,6 +17,7 @@
 import {
     VerticalBox,
     LineEdit,
+    ScrollView,
 } from "std-widgets.slint";
 import { Colors } from "colors.slint";
 import { Date, CalendarState } from "widgets/calendar.slint";
@@ -117,25 +118,124 @@ component BudgetItem {
     }
 }
 
-component CategoryGroupItem {
-    in property <CategoryGroup> category-group;
-    HorizontalLayout {
-        alignment: start;
-        spacing: 4px;
-        cross-axis-alignment: center;
+component CategoryItem {
+    in property <Date> current-date;
+    in property <Category> category;
+    property <Budget> budget: State.get-budget(category.id, current-date);
 
-        Text {
-            text: category-group.title;
-            color: Colors.textBody;
+    HorizontalLayout {
+        Rectangle {
+            width: 100px;
+            property <bool> active: false;
+
+            TouchArea {
+                clicked => {
+                    if (!active) {
+                        active = true;
+                    }
+                }
+            }
+
+            if active: TextField {
+                width: 100%;
+                text: category.title;
+
+                accepted => {
+                    State.update-category(category.id, self.text);
+                    active = false;
+                }
+            }
+
+            if !active: Text {
+                width: 100%;
+                text: category.title;
+                color: Colors.textBody;
+            }
         }
 
-        IconButton {
-            icon: IconSet.Plus;
-            theme: ghost;
-            // TODO: add popup
-            clicked => {
-                State.create-category("Category group",category-group.id);
+        Rectangle {
+            horizontal-stretch: 1;
+        }
+
+        Rectangle {
+            width: 100px;
+            property <bool> active: false;
+
+            TouchArea {
+                clicked => {
+                    if (!active) {
+                        active = true;
+                    }
+                }
             }
+
+            if active: TextField {
+                width: 100%;
+                text: budget.amount;
+                horizontal-alignment: end;
+
+                accepted => {
+                    // TODO: maybe just manually reset
+                    State.edit-budget(budget.id, self.text);
+                    active = false;
+                }
+            }
+
+            if !active: Text {
+                width: 100%;
+                text: State.format-money(budget.amount);
+                color: Colors.textBody;
+                horizontal-alignment: end;
+            }
+        }
+
+        Text {
+            width: 100px;
+            text: State.format-money(State.total-spent(budget.id));
+            color: Colors.textBody;
+            horizontal-alignment: end;
+        }
+
+        Text {
+            width: 100px;
+            text: State.format-money(State.left-to-spend(budget.id));
+            color: Colors.textBody;
+            horizontal-alignment: end;
+        }
+    }
+}
+
+component CategoryGroupItem {
+    in property <Date> current-date;
+    in property <CategoryGroup> category-group;
+
+    VerticalLayout {
+        Rectangle {
+            background: Colors.neutral25;
+            HorizontalLayout {
+                alignment: start;
+                spacing: 4px;
+                cross-axis-alignment: center;
+
+                Text {
+                    text: category-group.title;
+                    color: Colors.textBody;
+                }
+
+                IconButton {
+                    icon: IconSet.Plus;
+                    theme: ghost;
+                // TODO: add popup
+                clicked => {
+                        State.create-category("Category group",category-group.id);
+                    }
+                }
+            }
+        }
+
+        for category in State.categories-in-group(category-group.id): CategoryItem {
+            current-date: current-date;
+            category: category;
         }
     }
 }
@@ -278,12 +378,10 @@ export component SpendingPage inherits VerticalLayout {
             }
         }
 
+        // TODO: add no group and don't have a plus button
         for category-group in State.category-groups: CategoryGroupItem {
             category-group: category-group;
-        }
-
-        for budget in State.budgets: BudgetItem {
-            budget: budget;
+            current-date: current-date;
         }
     }
 }

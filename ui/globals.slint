@@ -102,6 +102,8 @@ export global State {
     pure callback total_balance() -> string;
     pure callback get-category(id: string) -> Category;
     pure callback get-account(id: string) -> Account;
+    pure callback get-budget(category-id: string, month: Date) -> Budget;
+    pure callback categories-in-group(id: string) -> [Category];
     pure callback account-balance(id: string) -> string;
     // Returns the year and month as a formatted string
     pure callback format-dateym(Date) -> string;
