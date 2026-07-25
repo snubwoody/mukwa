@@ -131,16 +131,17 @@ component TransactionRow inherits TableRow {
 
     TableCell {
         width: parent.width / length;
-        if !parent.is-editing: Text {
+        if !self.is-editing: Text {
             text: State.get_account_name(transaction.account-id);
             color: Colors.textBody;
         }
 
-        if parent.is-editing: ComboBox {
+        if self.is-editing: ComboBox {
             width: 100%;
             options: State.account-options;
             changed(value) => {
-                account-id = value;
+                State.set-transaction-account(transaction.id,value);
+                parent.is-editing = false;
             }
         }
     }

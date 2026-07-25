@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{create_test_db, ui, Error, Money};
-use jiff::civil::Date;
+use crate::{Error, Money, create_test_db, ui};
 use jiff::Zoned;
-use rusqlite::{params, Connection, Row};
+use jiff::civil::Date;
+use rusqlite::{Connection, Row, params};
 use slint::{SharedString, ToSharedString};
 use std::path::Path;
 use std::rc::Rc;
@@ -695,6 +695,32 @@ impl Service {
         let sql = "UPDATE transactions SET category_id = ?1 WHERE id = ?2 RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
         let mut rows = stmt.query_and_then([category_id.to_string(), id.to_string()], |row| {
+            Transaction::try_from(row)
+        })?;
+        let transaction = rows.next().unwrap()?;
+        Ok(transaction)
+    }
+
+    pub fn set_transaction_account(
+        &self,
+        id: Uuid,
+        account_id: Uuid,
+    ) -> crate::Result<Transaction> {
+        let transaction = self.get_transaction(id)?;
+        let sql = match transaction.transaction_type() {
+            TransactionType::Income => {
+                "UPDATE transactions SET receiver_id = ?1, sender_id = null WHERE id = ?2 RETURNING *"
+            }
+            TransactionType::Expense => {
+                "UPDATE transactions SET sender_id = ?1, receiver_id = null WHERE id = ?2 RETURNING *"
+            }
+            TransactionType::Transfer => {
+                "UPDATE transactions SET sender_id = ?1 WHERE id = ?2 RETURNING *"
+            }
+        };
+        let connection = self.connection();
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt.query_and_then([account_id.to_string(), id.to_string()], |row| {
             Transaction::try_from(row)
         })?;
         let transaction = rows.next().unwrap()?;

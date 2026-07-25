@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use jiff::civil::date;
 use jiff::Zoned;
+use jiff::civil::date;
 use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, UpdateTransactionOpts};
-use mukwa::{create_test_db, Money};
+use mukwa::{Money, create_test_db};
 use uuid::Uuid;
 
 #[test]
@@ -435,6 +435,32 @@ fn set_transaction_date() -> mukwa::Result<()> {
         .query_one("SELECT * FROM transactions", [], |row| {
             let transaction_date: String = row.get("transaction_date")?;
             assert_eq!(transaction_date, date.to_string());
+            Ok(())
+        })?;
+    Ok(())
+}
+
+#[test]
+fn set_transaction_account() -> mukwa::Result<()> {
+    let connection = create_test_db();
+
+    let service = Service::new(connection);
+    let account = service.create_account("")?;
+    let account2 = service.create_account("")?;
+
+    let create_opts = CreateTransactionOpts {
+        account_id: Some(account.id),
+        ..Default::default()
+    };
+
+    let transaction = service.create_transaction(create_opts)?;
+    let transaction = service.set_transaction_account(transaction.id, account2.id)?;
+    assert_eq!(transaction.sender_id.unwrap(), account2.id);
+    service
+        .connection()
+        .query_one("SELECT * FROM transactions", [], |row| {
+            let sender_id: String = row.get("sender_id")?;
+            assert_eq!(sender_id, account2.id.to_string());
             Ok(())
         })?;
     Ok(())
