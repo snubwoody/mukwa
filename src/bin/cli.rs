@@ -18,7 +18,7 @@ use clap::{Parser, Subcommand};
 use mukwa::migrator::Migrator;
 use rusqlite::Connection;
 use std::path::PathBuf;
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Parser)]
 struct Cli {
@@ -49,11 +49,8 @@ enum MigrateCommand {
     /// Revert the most recently applied migration
     Rollback,
 }
-fn main() -> mukwa::Result<()> {
-    tracing_subscriber::fmt()
-        .with_target(false)
-        .without_time()
-        .init();
+
+fn run() -> mukwa::Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Command::Migrate {
@@ -66,19 +63,28 @@ fn main() -> mukwa::Result<()> {
                 info!("Created migration: {:?}", path)
             }
             MigrateCommand::Up => {
-                let connection = Connection::open(path)?;
+                let mut connection = Connection::open(path)?;
                 let mut migrator = Migrator::new();
                 migrator.load_from_dir(&migrations_dir)?;
-                migrator.migrate(&connection)?;
+                migrator.migrate(&mut connection)?;
             }
             MigrateCommand::Rollback => {
-                let connection = Connection::open(path)?;
+                let mut connection = Connection::open(path)?;
                 let mut migrator = Migrator::new();
                 migrator.load_from_dir(&migrations_dir)?;
-                migrator.rollback(&connection)?;
+                migrator.rollback(&mut connection)?;
             }
         },
     }
-
     Ok(())
+}
+fn main() {
+    tracing_subscriber::fmt()
+        .with_target(false)
+        .without_time()
+        .init();
+
+    if let Err(err) = run() {
+        warn!("{}", err.report());
+    }
 }
