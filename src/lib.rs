@@ -24,7 +24,6 @@ pub mod state;
 pub use error::Error;
 pub use error::Result;
 pub use money::Money;
-use slint::FilterModel;
 use slint::ModelExt;
 
 use crate::fmt::CurrencyFormatter;

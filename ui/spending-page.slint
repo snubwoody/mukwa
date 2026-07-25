@@ -124,6 +124,10 @@ component CategoryItem {
     property <Budget> budget: State.get-budget(category.id, current-date);
 
     HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        padding-top: 8px;
+        padding-bottom: 8px;
         Rectangle {
             width: 100px;
             property <bool> active: false;
@@ -213,6 +217,11 @@ component CategoryGroupItem {
         Rectangle {
             background: Colors.neutral25;
             HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                padding-top: 4px;
+                padding-bottom: 4px;
+
                 alignment: start;
                 spacing: 4px;
                 cross-axis-alignment: center;
@@ -244,12 +253,12 @@ export component SpendingPage inherits VerticalLayout {
     in-out property <Date> current-date: CalendarState.today();
     alignment: start;
     spacing: 12px;
-    padding: 16px;
 
     HorizontalLayout {
         spacing: 4px;
         cross-axis-alignment: center;
         alignment: start;
+        padding: 16px;
 
         IconButton {
             icon: IconSet.ChevronLeft;
@@ -280,6 +289,8 @@ export component SpendingPage inherits VerticalLayout {
 
     HorizontalLayout {
         alignment: start;
+        padding-left: 16px;
+        padding-right: 16px;
         button := PrimaryButton {
             text: @tr("New category group");
             clicked => {
@@ -341,9 +352,10 @@ export component SpendingPage inherits VerticalLayout {
 
     VerticalLayout {
         alignment: start;
-        spacing: 8px;
 
         HorizontalLayout {
+            padding-left: 16px;
+            padding-right: 16px;
             padding-bottom: 8px;
             padding-top: 8px;
 
