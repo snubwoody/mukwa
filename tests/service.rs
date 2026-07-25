@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use jiff::Zoned;
 use jiff::civil::date;
+use jiff::Zoned;
 use mukwa::service::{CreateBudgetOpts, Service, TransactionType};
-use mukwa::{Money, create_test_db};
+use mukwa::{create_test_db, Money};
 use uuid::Uuid;
 
 #[test]
@@ -193,7 +193,7 @@ fn total_spent() -> mukwa::Result<()> {
 
     let date = date(2020, 12, 14);
     let group = service.create_category_group("")?;
-    let category = service.create_category("",group.id)?;
+    let category = service.create_category("", group.id)?;
     service
         .create_expense()
         .amount(Money::new(500))
@@ -221,25 +221,43 @@ fn total_spent_in_group() -> mukwa::Result<()> {
     let group = service.create_category_group("")?;
     let group2 = service.create_category_group("")?;
     let category = service.create_category("", group.id)?;
-    let opts = CreateTransactionOpts {
-        date,
-        category_id: Some(category.id),
-        ..Default::default()
-    };
-    service.create_transaction(CreateTransactionOpts {
-        amount: Money::new(500),
-        ..opts.clone()
-    })?;
 
-    service.create_transaction(CreateTransactionOpts {
-        amount: Money::new(150),
-        ..opts
-    })?;
+    service
+        .create_expense()
+        .amount(Money::new(500))
+        .date(Zoned::now().date())
+        .submit()?;
+    service
+        .create_expense()
+        .amount(Money::new(150))
+        .date(Zoned::now().date())
+        .submit()?;
 
     let total = service.total_spent_in_group(group.id, date)?;
-    assert_eq!(total, Money::new(650));
+    assert_eq!(total, Money::new(150));
     let total = service.total_spent_in_group(group2.id, date)?;
     assert_eq!(total, Money::ZERO);
+    Ok(())
+}
+
+#[test]
+fn total_spent_in_group_only_counts_category_once() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    service.create_account("")?;
+
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
+    service.create_category("", group.id)?;
+    service.create_category("", group.id)?;
+    service
+        .create_expense()
+        .amount(Money::new(500))
+        .category(category.id)
+        .date(Zoned::now().date())
+        .submit()?;
+
+    let total = service.total_spent_in_group(group.id, Zoned::now().date())?;
+    assert_eq!(total, Money::new(500));
     Ok(())
 }
 
@@ -250,7 +268,7 @@ fn total_spent_filters_by_date() -> mukwa::Result<()> {
 
     let date = date(2020, 12, 14);
     let group = service.create_category_group("")?;
-    let category = service.create_category("",group.id)?;
+    let category = service.create_category("", group.id)?;
     service
         .create_expense()
         .amount(Money::new(500))
@@ -275,7 +293,7 @@ fn account_balance() -> mukwa::Result<()> {
     let account = service.create_account("")?;
 
     let group = service.create_category_group("")?;
-    let category = service.create_category("",group.id)?;
+    let category = service.create_category("", group.id)?;
     service
         .create_expense()
         .amount(Money::new(500))
@@ -299,7 +317,7 @@ fn account_balance_negative() -> mukwa::Result<()> {
     let account = service.create_account("")?;
 
     let group = service.create_category_group("")?;
-    let category = service.create_category("",group.id)?;
+    let category = service.create_category("", group.id)?;
     service
         .create_expense()
         .amount(Money::new(900))
@@ -323,7 +341,7 @@ fn account_balance_with_no_transactions() -> mukwa::Result<()> {
     let account = service.create_account("")?;
 
     let group = service.create_category_group("")?;
-    service.create_category("",group.id)?;
+    service.create_category("", group.id)?;
     service
         .create_income()
         .account(account.id)
@@ -448,7 +466,8 @@ fn set_transaction_category() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("")?;
 
-    let category = service.create_category("")?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
     let transaction = service.create_expense().submit()?;
     let transaction = service.set_transaction_category(transaction.id, category.id)?;
     assert_eq!(transaction.category_id.unwrap(), category.id);
@@ -469,7 +488,8 @@ fn can_only_set_category_for_expenses() -> mukwa::Result<()> {
     let service = Service::new(connection);
     let account = service.create_account("")?;
 
-    let category = service.create_category("")?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
     let transaction = service
         .create_income()
         .amount(Money::new(300))
@@ -706,7 +726,8 @@ fn set_payee_sets_category_to_null() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     let account = service.create_account("")?;
     let account2 = service.create_account("")?;
-    let category = service.create_category("")?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
 
     let expense = service
         .create_expense()

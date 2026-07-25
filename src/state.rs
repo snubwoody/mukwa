@@ -15,9 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::service::{CreateBudgetOpts, Service, Transaction};
-use crate::{Money, ui};
-use jiff::Zoned;
+use crate::{ui, Money};
 use jiff::civil::Date;
+use jiff::Zoned;
 use slint::{Model, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
@@ -205,7 +205,8 @@ impl AppState {
     pub fn total_spent_in_group(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
         let id = Uuid::parse_str(id)?;
         let date = Date::new(date.year as i16, date.month as i8, date.day as i8)?;
-        self.service.total_spent_in_group(id, date)
+        let total = self.service.total_spent_in_group(id, date)?;
+        Ok(total)
     }
 
     pub fn fetch_or_init_budgets(&self, date: Date) -> crate::Result<Vec<ui::Budget>> {

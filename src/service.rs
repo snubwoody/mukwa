@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Error, Money, create_test_db, ui};
-use jiff::Zoned;
+use crate::{create_test_db, ui, Error, Money};
 use jiff::civil::Date;
-use rusqlite::{Connection, Row, params};
+use jiff::Zoned;
+use rusqlite::{params, Connection, Row};
 use slint::{SharedString, ToSharedString};
 use std::marker::PhantomData;
 use std::path::Path;
@@ -830,13 +830,16 @@ impl Service {
 
         let sql = "SELECT \
             t.id,t.amount,t.transaction_date,t.sender_id,t.receiver_id,t.category_id,t.note \
-            FROM transactions t JOIN categories c WHERE c.group_id = ?";
+            FROM transactions t \
+            LEFT JOIN categories c ON t.category_id = c.id \
+            WHERE c.group_id = ?";
         let mut stmt = connection.prepare_cached(sql)?;
         let rows = stmt.query_and_then([group_id.to_string()], |row| Transaction::try_from(row))?;
 
         let mut total = Money::ZERO;
         for row in rows {
             let transaction = row?;
+
             let is_same_month = transaction.date.month() == month.month()
                 && transaction.date.year() == month.year();
 
@@ -1196,7 +1199,8 @@ mod test {
     fn create_expense() -> crate::Result<()> {
         let service = Service::open_in_memory()?;
         let account = service.create_account("My account")?;
-        let category = service.create_category("Movies")?;
+        let group = service.create_category_group("")?;
+        let category = service.create_category("Movies", group.id)?;
         let expense = service
             .create_expense()
             .amount(Money::from_f64(25.24))
