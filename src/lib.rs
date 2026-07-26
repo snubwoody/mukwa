@@ -413,7 +413,7 @@ fn setup_api(window: &ui::MainWindow) {
         let window = window.as_weak();
         move || {
             let size = window.unwrap().window().size();
-            (size.width as i32, size.height as i32)
+            (size.height as i32, size.width as i32)
         }
     });
 

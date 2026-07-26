@@ -27,6 +27,7 @@ import {
     Transaction,
     State,
     UpdateTransactionOpts,
+    Api,
 } from "globals.slint";
 import { Button, ComboBox, TextField, PrimaryButton } from "widgets.slint";
 import { FocusBorder } from "widgets/focus-border.slint";
@@ -71,6 +72,7 @@ component TransactionRow inherits TableRow {
     date-cell := TableCell {
         width: parent.width / length;
 
+
         clicked => {
             calendar-popup.show();
         }
@@ -81,15 +83,24 @@ component TransactionRow inherits TableRow {
         }
 
         calendar-popup := PopupWindow {
-            x: date-cell.x;
-            y: date-cell.y;
+            x: 0;
+            y: popup-position-y();
 
-            width: 250px;
-            height: 250px;
-
+            width: calendar.preferred-width;
+            height: calendar.preferred-height;
             close-policy: close-on-click-outside;
 
+            function popup-position-y() -> length {
+                if (date-cell.absolute-position.y > Api.window-size().height * 1px * 0.5) {
+                    return -100px;
+                }
+
+                return date-cell.height;
+            }
+
             calendar := Calendar {
+                x: parent.x;
+                y: parent.y;
                 changed(value) => {
                     State.set-transaction-date(transaction.id, value.year + "-" + value.month + "-" + value.day);
                     calendar-popup.close();
