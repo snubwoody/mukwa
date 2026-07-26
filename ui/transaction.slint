@@ -34,17 +34,9 @@ import { Calendar } from "widgets/calendar.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
 
 component TransactionRow inherits TableRow {
-    // FIXME: combobox state not changing after updating
     in property <Transaction> transaction;
     in property <int> length;
     in property <int> index;
-    out property <string> category-id: transaction.category-id;
-    out property <string> account-id: transaction.account-id;
-    out property <string> outflow: transaction.outflow;
-    out property <string> note: transaction.note;
-    out property <string> inflow: transaction.inflow;
-    out property <string> date: transaction.date;
-    callback select-row(int);
 
     right-clicked => {
         context-menu.show();
@@ -52,21 +44,6 @@ component TransactionRow inherits TableRow {
 
     padding-left: 8px;
     padding-right: 8px;
-    forward-focus: focus-scope;
-
-    focus-scope := FocusScope {
-        key-pressed(event) => {
-            if (event.text == Key.Space) {
-                select-row(index);
-                return accept;
-            }
-            if (event.text == Key.Escape) {
-                select-row(-1);
-                return accept;
-            }
-            return reject;
-        }
-    }
 
     context-menu := PopupWindow {
         close-policy: close-on-click-outside;
@@ -164,7 +141,7 @@ component TransactionRow inherits TableRow {
 
         if self.is-editing: TextField {
             width: 100%;
-            text: note;
+            text: transaction.note;
             accepted => {
                 State.set-transaction-note(transaction.id, self.text);
                 parent.is-editing = false;
@@ -266,24 +243,9 @@ export component TransactionPage inherits VerticalLayout {
         }
 
         for transaction[index] in transactions: TransactionRow {
-            is-editing: active-row == index;
             index: index;
             transaction: transaction;
             length: length;
-
-            select-row(value) => {
-                select-row(value);
-            }
-            clicked => {
-                //select-row(index);
-            }
-            cancelled => {
-                select-row(-1);
-            }
-            confirmed => {
-                State.update-transaction(transaction.id, self.account-id,self.category-id, self.outflow,self.inflow,self.date,self.note);
-                select-row(-1);
-            }
         }
     }
 }
