@@ -174,40 +174,36 @@ component TransactionRow inherits TableRow {
 
     TableCell {
         width: parent.width / length;
-        if !parent.is-editing: Text {
+        if !self.is-editing: Text {
             text: State.format-money(transaction.outflow);
             color: Colors.textBody;
         }
 
-        if parent.is-editing: TextField {
+        if self.is-editing: TextField {
             width: 100%;
-            text: outflow;
+            text: transaction.outflow;
             input-type: decimal;
-            edited => {
-                outflow = self.text;
-                inflow = "";
-                // FIXME
-                // inflow-input.text = "";
+            accepted => {
+                State.set-transaction-outflow(transaction.id, self.text);
+                parent.is-editing = false;
             }
         }
     }
 
     TableCell {
         width: parent.width / length;
-        if !parent.is-editing: Text {
+        if !self.is-editing: Text {
             text: State.format-money(transaction.inflow);
             color: Colors.textBody;
         }
 
-        if parent.is-editing: TextField {
+        if self.is-editing: TextField {
             width: 100%;
-            text: inflow;
+            text: transaction.inflow;
             input-type: decimal;
-            edited => {
-                inflow = self.text;
-                outflow = "";
-                // FIXME
-                //inflow-input.text = "";
+            accepted => {
+                State.set-transaction-inflow(transaction.id, self.text);
+                parent.is-editing = false;
             }
         }
     }

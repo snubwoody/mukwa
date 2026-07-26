@@ -242,6 +242,24 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    global_state.on_set_transaction_outflow({
+        let mut state = state.clone();
+        move |id, amount| {
+            if let Err(err) = state.set_transaction_outflow(&id, &amount) {
+                warn!("{err}");
+            }
+        }
+    });
+
+    global_state.on_set_transaction_inflow({
+        let mut state = state.clone();
+        move |id, amount| {
+            if let Err(err) = state.set_transaction_inflow(&id, &amount) {
+                warn!("{err}");
+            }
+        }
+    });
+
     global_state.on_set_transaction_account({
         let mut state = state.clone();
         move |id, account_id| {

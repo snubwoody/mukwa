@@ -16,7 +16,9 @@
 
 use jiff::Zoned;
 use jiff::civil::date;
-use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, UpdateTransactionOpts};
+use mukwa::service::{
+    CreateBudgetOpts, CreateTransactionOpts, Service, TransactionType, UpdateTransactionOpts,
+};
 use mukwa::{Money, create_test_db};
 use uuid::Uuid;
 
@@ -463,6 +465,51 @@ fn set_transaction_account() -> mukwa::Result<()> {
             assert_eq!(sender_id, account2.id.to_string());
             Ok(())
         })?;
+    Ok(())
+}
+
+#[test]
+fn set_transaction_outflow() -> mukwa::Result<()> {
+    let connection = create_test_db();
+
+    let service = Service::new(connection);
+    let account = service.create_account("")?;
+
+    let create_opts = CreateTransactionOpts {
+        account_id: Some(account.id),
+        ..Default::default()
+    };
+
+    let transaction = service.create_transaction(create_opts)?;
+    let transaction = service.set_transaction_outflow(transaction.id, Money::new(500))?;
+    assert_eq!(transaction.amount, Money::new(500));
+    service
+        .connection()
+        .query_one("SELECT * FROM transactions", [], |row| {
+            let amount: i64 = row.get("amount")?;
+            assert_eq!(amount, Money::new(500).inner());
+            Ok(())
+        })?;
+    Ok(())
+}
+
+#[test]
+fn set_transaction_inflow_for_expense() -> mukwa::Result<()> {
+    let connection = create_test_db();
+
+    let service = Service::new(connection);
+    let account = service.create_account("")?;
+
+    let create_opts = CreateTransactionOpts {
+        account_id: Some(account.id),
+        ..Default::default()
+    };
+
+    let transaction = service.create_transaction(create_opts)?;
+    let transaction = service.set_transaction_inflow(transaction.id, Money::new(500))?;
+    assert_eq!(transaction.amount, Money::new(500));
+    assert_eq!(transaction.transaction_type(), TransactionType::Income);
+    assert_eq!(transaction.receiver_id.unwrap(), account.id);
     Ok(())
 }
 

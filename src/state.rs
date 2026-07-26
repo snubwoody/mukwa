@@ -272,7 +272,47 @@ impl AppState {
         let id = Uuid::parse_str(id)?;
         let account_id = Uuid::parse_str(account_id)?;
         let new_transaction = self.service.set_transaction_account(id, account_id)?;
-        info!(id=?id,"Updated transaction account ");
+        info!(id=?id,"Updated transaction account");
+        let transactions: Vec<ui::Transaction> = self
+            .transactions
+            .iter()
+            .map(|transaction| {
+                if transaction.id == new_transaction.id.to_shared_string() {
+                    new_transaction.clone().into()
+                } else {
+                    transaction
+                }
+            })
+            .collect();
+        self.transactions.set_vec(transactions);
+        Ok(())
+    }
+
+    pub fn set_transaction_outflow(&mut self, id: &str, amount: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let amount = Money::from_str(amount)?;
+        let new_transaction = self.service.set_transaction_outflow(id, amount)?;
+        info!(id=?id,"Updated transaction outflow");
+        let transactions: Vec<ui::Transaction> = self
+            .transactions
+            .iter()
+            .map(|transaction| {
+                if transaction.id == new_transaction.id.to_shared_string() {
+                    new_transaction.clone().into()
+                } else {
+                    transaction
+                }
+            })
+            .collect();
+        self.transactions.set_vec(transactions);
+        Ok(())
+    }
+
+    pub fn set_transaction_inflow(&mut self, id: &str, amount: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let amount = Money::from_str(amount)?;
+        let new_transaction = self.service.set_transaction_inflow(id, amount)?;
+        info!(id=?id,"Updated transaction inflow");
         let transactions: Vec<ui::Transaction> = self
             .transactions
             .iter()

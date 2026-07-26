@@ -325,9 +325,14 @@ impl From<Transaction> for ui::Transaction {
 
         let note = value.note.unwrap_or_default().to_shared_string();
 
+        let account_id = match transaction_type {
+            TransactionType::Income => value.receiver_id.unwrap().to_shared_string(),
+            _ => value.sender_id.unwrap().to_shared_string(),
+        };
+
         Self {
             id: value.id.to_shared_string(),
-            account_id: value.sender_id.unwrap().to_shared_string(),
+            account_id,
             category_id: category_id.to_shared_string(),
             date: value.date.to_shared_string(),
             outflow,
@@ -362,14 +367,14 @@ impl From<&Transaction> for ui::Transaction {
 
         let note = value.note.clone().unwrap_or_default().to_shared_string();
 
+        let account_id = match transaction_type {
+            TransactionType::Income => value.receiver_id.unwrap().to_shared_string(),
+            _ => value.sender_id.unwrap().to_shared_string(),
+        };
+
         Self {
             id: value.id.to_string().into(),
-            account_id: value
-                .sender_id
-                .or(value.receiver_id)
-                .unwrap()
-                .to_string()
-                .into(),
+            account_id,
             category_id: category_id.into(),
             note,
             date: value.date.to_string().into(),
@@ -725,6 +730,69 @@ impl Service {
         })?;
         let transaction = rows.next().unwrap()?;
         Ok(transaction)
+    }
+
+    pub fn set_transaction_outflow(&self, id: Uuid, amount: Money) -> crate::Result<Transaction> {
+        let transaction = self.get_transaction(id)?;
+        let connection = self.connection();
+        match transaction.transaction_type() {
+            TransactionType::Income => {
+                let sql = "UPDATE transactions SET amount = ?1, sender_id = ?2, receiver_id = null WHERE id = ?3 RETURNING *";
+                let mut stmt = connection.prepare_cached(sql)?;
+                let mut rows = stmt.query_and_then(
+                    params![
+                        amount.inner(),
+                        transaction.receiver_id.unwrap().to_string(),
+                        id.to_string()
+                    ],
+                    |row| Transaction::try_from(row),
+                )?;
+                let transaction = rows.next().unwrap()?;
+                Ok(transaction)
+            }
+            _ => {
+                let sql = "UPDATE transactions SET amount = ?1 WHERE id = ?2 RETURNING *";
+                let mut stmt = connection.prepare_cached(sql)?;
+                let mut rows = stmt
+                    .query_and_then(params![amount.inner(), id.to_string()], |row| {
+                        Transaction::try_from(row)
+                    })?;
+                let transaction = rows.next().unwrap()?;
+                Ok(transaction)
+            }
+        }
+    }
+
+    pub fn set_transaction_inflow(&self, id: Uuid, amount: Money) -> crate::Result<Transaction> {
+        let transaction = self.get_transaction(id)?;
+        let connection = self.connection();
+        match transaction.transaction_type() {
+            TransactionType::Expense => {
+                let sql = "UPDATE transactions SET amount = ?1, receiver_id = ?2, sender_id = null WHERE id = ?3 RETURNING *";
+                let mut stmt = connection.prepare_cached(sql)?;
+                let mut rows = stmt.query_and_then(
+                    params![
+                        amount.inner(),
+                        transaction.sender_id.unwrap().to_string(),
+                        id.to_string()
+                    ],
+                    |row| Transaction::try_from(row),
+                )?;
+                let transaction = rows.next().unwrap()?;
+                Ok(transaction)
+            }
+            TransactionType::Income => {
+                let sql = "UPDATE transactions SET amount = ?1 WHERE id = ?2 RETURNING *";
+                let mut stmt = connection.prepare_cached(sql)?;
+                let mut rows = stmt
+                    .query_and_then(params![amount.inner(), id.to_string()], |row| {
+                        Transaction::try_from(row)
+                    })?;
+                let transaction = rows.next().unwrap()?;
+                Ok(transaction)
+            }
+            TransactionType::Transfer => Err(Error::new("Invalid transaction type")),
+        }
     }
 
     pub fn update_transaction(&self, opts: UpdateTransactionOpts) -> crate::Result<Transaction> {
