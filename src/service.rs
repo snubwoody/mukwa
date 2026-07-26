@@ -387,6 +387,7 @@ impl From<&Transaction> for ui::Transaction {
 }
 
 #[derive(Clone, PartialEq, PartialOrd, Ord, Eq, Debug)]
+#[deprecated(note = "Use TransactionBuilder instead")]
 pub struct CreateTransactionOpts {
     /// The sending account
     pub account_id: Option<Uuid>,
@@ -1035,6 +1036,7 @@ impl Service {
     }
 
     /// Creates a new [`Transaction`].
+    #[deprecated(note = "Use TransactionBuilder instead")]
     pub fn create_transaction(&self, opts: CreateTransactionOpts) -> crate::Result<Transaction> {
         let account_id = match opts.account_id {
             Some(id) => id,
