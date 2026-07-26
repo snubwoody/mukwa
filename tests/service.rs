@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use jiff::Zoned;
 use jiff::civil::date;
+use jiff::Zoned;
 use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, TransactionType};
-use mukwa::{Money, create_test_db};
+use mukwa::{create_test_db, Money};
 use uuid::Uuid;
 
 #[test]
@@ -232,7 +232,11 @@ fn account_balance() -> mukwa::Result<()> {
         amount: Money::new(500),
         ..opts
     })?;
-    service.create_income(Money::new(700), account.id)?;
+    service
+        .create_income()
+        .amount(Money::new(700))
+        .account(account.id)
+        .submit()?;
 
     let total = service.account_balance(account.id)?;
     assert_eq!(total, Money::new(200));
@@ -254,7 +258,11 @@ fn account_balance_negative() -> mukwa::Result<()> {
         amount: Money::new(900),
         ..opts
     })?;
-    service.create_income(Money::new(700), account.id)?;
+    service
+        .create_income()
+        .amount(Money::new(700))
+        .account(account.id)
+        .submit()?;
 
     let total = service.account_balance(account.id)?;
     assert_eq!(total, Money::new(-200));
@@ -267,7 +275,11 @@ fn account_balance_with_no_transactions() -> mukwa::Result<()> {
     let account = service.create_account("")?;
 
     service.create_category("")?;
-    service.create_income(Money::new(700), account.id)?;
+    service
+        .create_income()
+        .account(account.id)
+        .amount(Money::new(700))
+        .submit()?;
 
     let total = service.account_balance(Uuid::now_v7())?;
     assert_eq!(total, Money::ZERO);
@@ -442,7 +454,11 @@ fn can_only_set_category_for_expenses() -> mukwa::Result<()> {
     let account = service.create_account("")?;
 
     let category = service.create_category("")?;
-    let transaction = service.create_income(Money::new(300), account.id)?;
+    let transaction = service
+        .create_income()
+        .amount(Money::new(300))
+        .account(account.id)
+        .submit()?;
     let result = service.set_transaction_category(transaction.id, category.id);
     assert!(result.is_err());
     service
