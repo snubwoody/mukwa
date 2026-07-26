@@ -30,6 +30,9 @@ export component ComboBox {
     in property <bool> enabled;
 
     callback changed(value: string);
+    public function open() {
+        popup.show();
+    }
 
     public function select(index: int) {
         current-index = index;

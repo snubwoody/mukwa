@@ -108,6 +108,9 @@ component TransactionRow inherits TableRow {
         if self.is-editing: ComboBox {
             width: 100%;
             options: State.account-options;
+            init => {
+                self.open();
+            }
             changed(value) => {
                 State.set-transaction-account(transaction.id,value);
                 parent.is-editing = false;
@@ -125,6 +128,9 @@ component TransactionRow inherits TableRow {
         if self.is-editing: ComboBox {
             width: 100%;
             options: State.category-options;
+            init => {
+                self.open();
+            }
             changed(value) => {
                 State.set-transaction-category(transaction.id,value);
                 parent.is-editing = false;
@@ -142,6 +148,9 @@ component TransactionRow inherits TableRow {
         if self.is-editing: TextField {
             width: 100%;
             text: transaction.note;
+            init => {
+                self.focus();
+            }
             accepted => {
                 State.set-transaction-note(transaction.id, self.text);
                 parent.is-editing = false;
@@ -160,6 +169,9 @@ component TransactionRow inherits TableRow {
             width: 100%;
             text: transaction.outflow;
             input-type: decimal;
+            init => {
+                self.focus();
+            }
             accepted => {
                 State.set-transaction-outflow(transaction.id, self.text);
                 parent.is-editing = false;
@@ -178,6 +190,9 @@ component TransactionRow inherits TableRow {
             width: 100%;
             text: transaction.inflow;
             input-type: decimal;
+            init => {
+                self.focus();
+            }
             accepted => {
                 State.set-transaction-inflow(transaction.id, self.text);
                 parent.is-editing = false;
