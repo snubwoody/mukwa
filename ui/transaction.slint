@@ -93,22 +93,14 @@ component TransactionRow inherits TableRow {
 
     date-cell := TableCell {
         width: parent.width / length;
-        if !parent.is-editing: Text {
-            text: State.format-date(transaction.date);
-            color: Colors.textBody;
+
+        clicked => {
+            calendar-popup.show();
         }
 
-        if parent.is-editing: touch-area := TouchArea {
-            Text {
-                horizontal-stretch: 1;
-                horizontal-alignment: start;
-                text: date;
-                color: Colors.textBody;
-            }
-
-            clicked => {
-                calendar-popup.show();
-            }
+        Text {
+            text: State.format-date(transaction.date);
+            color: Colors.textBody;
         }
 
         calendar-popup := PopupWindow {
@@ -122,7 +114,7 @@ component TransactionRow inherits TableRow {
 
             calendar := Calendar {
                 changed(value) => {
-                    date = value.year + "-" + value.month + "-" + value.day;
+                    State.set-transaction-date(transaction.id, value.year + "-" + value.month + "-" + value.day);
                     calendar-popup.close();
                 }
             }

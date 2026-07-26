@@ -233,6 +233,15 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    global_state.on_set_transaction_date({
+        let mut state = state.clone();
+        move |id, date| {
+            if let Err(err) = state.set_transaction_date(&id, &date) {
+                warn!("{err}");
+            }
+        }
+    });
+
     global_state.on_set_transaction_account({
         let mut state = state.clone();
         move |id, account_id| {
