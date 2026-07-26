@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::service::{CreateBudgetOpts, Service, UpdateTransactionOpts};
+use crate::service::{CreateBudgetOpts, Service, Transaction};
 use crate::{Money, ui};
 use jiff::Zoned;
 use jiff::civil::Date;
@@ -229,68 +229,72 @@ impl AppState {
         Ok(())
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn update_transaction(
-        &mut self,
-        id: &str,
-        account_id: &str,
-        category_id: &str,
-        outflow: &str,
-        inflow: &str,
-        date: &str,
-        note: &str,
-    ) -> crate::Result<()> {
-        let account_id = Uuid::parse_str(account_id).ok();
-        let category_id = Uuid::parse_str(category_id).ok();
-        let outflow = Money::from_str(outflow).ok();
-        let inflow = Money::from_str(inflow).ok();
-        let date = Date::strptime("%Y-%m-%d", date).ok();
-
-        let mut sender_id = None;
-        let mut receiver_id = None;
-        let mut amount = None;
-
-        if let Some(value) = outflow {
-            amount = Some(value);
-            sender_id = account_id;
-        }
-
-        if let Some(value) = inflow {
-            amount = Some(value);
-            receiver_id = account_id;
-        }
-
-        let note = if note.is_empty() {
-            None
-        } else {
-            Some(note.to_string())
-        };
-
-        let opts = UpdateTransactionOpts {
-            id: Uuid::parse_str(id)?,
-            date,
-            sender_id,
-            amount,
-            category_id,
-            receiver_id,
-            note,
-        };
-
-        self.service.update_transaction(opts)?;
-        info!(id=?id,"Updated transaction");
-        self.reset_transactions()?;
+    pub fn set_transaction_date(&mut self, id: &str, date: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let date = Date::strptime("%Y-%m-%d", date)?;
+        let transaction = self.service.set_transaction_date(id, date)?;
+        info!(id=?id,"Updated transaction date");
+        self.replace_transaction(transaction);
         Ok(())
     }
 
-    fn reset_transactions(&mut self) -> crate::Result<()> {
+    pub fn set_transaction_note(&mut self, id: &str, note: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let transaction = self.service.set_transaction_note(id, note)?;
+        info!(id=?id,"Updated transaction note");
+        self.replace_transaction(transaction);
+        Ok(())
+    }
+
+    pub fn set_transaction_account(&mut self, id: &str, account_id: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let account_id = Uuid::parse_str(account_id)?;
+        let transaction = self.service.set_transaction_account(id, account_id)?;
+        info!(id=?id,"Updated transaction account");
+        self.replace_transaction(transaction);
+        Ok(())
+    }
+
+    pub fn set_transaction_outflow(&mut self, id: &str, amount: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let amount = Money::from_str(amount)?;
+        let transaction = self.service.set_transaction_outflow(id, amount)?;
+        info!(id=?id,"Updated transaction outflow");
+        self.replace_transaction(transaction);
+        Ok(())
+    }
+
+    pub fn set_transaction_inflow(&mut self, id: &str, amount: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let amount = Money::from_str(amount)?;
+        let transaction = self.service.set_transaction_inflow(id, amount)?;
+        info!(id=?id,"Updated transaction inflow");
+        self.replace_transaction(transaction);
+        Ok(())
+    }
+
+    pub fn set_transaction_category(&mut self, id: &str, category_id: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let category_id = Uuid::parse_str(category_id)?;
+        let transaction = self.service.set_transaction_category(id, category_id)?;
+        info!(id=?id,"Updated transaction category");
+        self.replace_transaction(transaction);
+        Ok(())
+    }
+
+    fn replace_transaction(&mut self, transaction: Transaction) {
         let transactions: Vec<ui::Transaction> = self
-            .service
-            .fetch_transactions()?
+            .transactions
             .iter()
-            .map(|t| t.into())
+            .map(|t| {
+                if t.id == transaction.id.to_shared_string() {
+                    transaction.clone().into()
+                } else {
+                    t
+                }
+            })
             .collect();
         self.transactions.set_vec(transactions);
-        Ok(())
     }
 
     fn reset_budgets(&mut self, month: Date) -> crate::Result<()> {

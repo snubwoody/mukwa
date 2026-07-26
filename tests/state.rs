@@ -16,7 +16,7 @@
 
 use jiff::Zoned;
 use jiff::civil::date;
-use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, TransactionType};
+use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service};
 use mukwa::state::AppState;
 use mukwa::{Money, create_test_db};
 use slint::Model;
@@ -86,59 +86,6 @@ fn create_account_adds_to_account_options() -> mukwa::Result<()> {
     state.create_account("")?;
 
     assert_eq!(state.account_options().iter().len(), 2);
-    Ok(())
-}
-
-#[test]
-fn update_expense() -> mukwa::Result<()> {
-    let connection = create_test_db();
-    let service = Service::new(connection);
-    let account = service.create_account("")?;
-    let transaction = service.create_transaction(Default::default())?;
-    let mut state = AppState::new(service)?;
-
-    state.update_transaction(
-        &transaction.id.to_string(),
-        &account.id.to_string(),
-        "",
-        "200",
-        "",
-        "",
-        "",
-    )?;
-    let transaction = state.transactions().remove(0);
-    assert_eq!(transaction.outflow.as_str(), Money::new(200).to_string());
-    assert_eq!(transaction.inflow.as_str(), "");
-    Ok(())
-}
-
-#[test]
-fn convert_expense_to_income() -> mukwa::Result<()> {
-    let connection = create_test_db();
-    let service = Service::new(connection);
-    let account = service.create_account("")?;
-    let transaction = service.create_transaction(Default::default())?;
-    let mut state = AppState::new(service.clone())?;
-
-    state.update_transaction(
-        &transaction.id.to_string(),
-        &account.id.to_string(),
-        "",
-        "",
-        "500",
-        "",
-        "",
-    )?;
-    let transaction = state.transactions().remove(0);
-    assert_eq!(transaction.inflow.as_str(), Money::new(500).to_string());
-    assert_eq!(transaction.outflow.as_str(), "");
-
-    let transactions = service.fetch_transactions()?;
-    let transaction = &transactions[0];
-    assert_eq!(transaction.transaction_type(), TransactionType::Income);
-    assert!(transaction.sender_id.is_none());
-    assert_eq!(transaction.receiver_id.unwrap(), account.id);
-    assert_eq!(transaction.amount, Money::new(500));
     Ok(())
 }
 

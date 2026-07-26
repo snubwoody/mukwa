@@ -34,17 +34,9 @@ import { Calendar } from "widgets/calendar.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
 
 component TransactionRow inherits TableRow {
-    // FIXME: combobox state not changing after updating
     in property <Transaction> transaction;
     in property <int> length;
     in property <int> index;
-    out property <string> category-id: transaction.category-id;
-    out property <string> account-id: transaction.account-id;
-    out property <string> outflow: transaction.outflow;
-    out property <string> note: transaction.note;
-    out property <string> inflow: transaction.inflow;
-    out property <string> date: transaction.date;
-    callback select-row(int);
 
     right-clicked => {
         context-menu.show();
@@ -52,21 +44,6 @@ component TransactionRow inherits TableRow {
 
     padding-left: 8px;
     padding-right: 8px;
-    forward-focus: focus-scope;
-
-    focus-scope := FocusScope {
-        key-pressed(event) => {
-            if (event.text == Key.Space) {
-                select-row(index);
-                return accept;
-            }
-            if (event.text == Key.Escape) {
-                select-row(-1);
-                return accept;
-            }
-            return reject;
-        }
-    }
 
     context-menu := PopupWindow {
         close-policy: close-on-click-outside;
@@ -93,22 +70,14 @@ component TransactionRow inherits TableRow {
 
     date-cell := TableCell {
         width: parent.width / length;
-        if !parent.is-editing: Text {
-            text: State.format-date(transaction.date);
-            color: Colors.textBody;
+
+        clicked => {
+            calendar-popup.show();
         }
 
-        if parent.is-editing: touch-area := TouchArea {
-            Text {
-                horizontal-stretch: 1;
-                horizontal-alignment: start;
-                text: date;
-                color: Colors.textBody;
-            }
-
-            clicked => {
-                calendar-popup.show();
-            }
+        Text {
+            text: State.format-date(transaction.date);
+            color: Colors.textBody;
         }
 
         calendar-popup := PopupWindow {
@@ -122,7 +91,7 @@ component TransactionRow inherits TableRow {
 
             calendar := Calendar {
                 changed(value) => {
-                    date = value.year + "-" + value.month + "-" + value.day;
+                    State.set-transaction-date(transaction.id, value.year + "-" + value.month + "-" + value.day);
                     calendar-popup.close();
                 }
             }
@@ -131,88 +100,102 @@ component TransactionRow inherits TableRow {
 
     TableCell {
         width: parent.width / length;
-        if !parent.is-editing: Text {
+        if !self.is-editing: Text {
             text: State.get_account_name(transaction.account-id);
             color: Colors.textBody;
         }
 
-        if parent.is-editing: ComboBox {
+        if self.is-editing: ComboBox {
             width: 100%;
             options: State.account-options;
+            init => {
+                self.open();
+            }
             changed(value) => {
-                account-id = value;
+                State.set-transaction-account(transaction.id,value);
+                parent.is-editing = false;
             }
         }
     }
 
     TableCell {
         width: parent.width / length;
-        if !parent.is-editing: Text {
+        if !self.is-editing: Text {
             text: State.get-category(transaction.category-id).title;
             color: Colors.textBody;
         }
 
-        if parent.is-editing: ComboBox {
+        if self.is-editing: ComboBox {
             width: 100%;
             options: State.category-options;
+            init => {
+                self.open();
+            }
             changed(value) => {
-                category-id = value;
+                State.set-transaction-category(transaction.id,value);
+                parent.is-editing = false;
             }
         }
     }
 
     TableCell {
         width: parent.width / length;
-        if !parent.is-editing: Text {
+        if !self.is-editing: Text {
             text: transaction.note;
             color: Colors.textBody;
         }
 
-        if parent.is-editing: TextField {
+        if self.is-editing: TextField {
             width: 100%;
-            text: note;
-            edited => {
-                note = self.text;
+            text: transaction.note;
+            init => {
+                self.focus();
+            }
+            accepted => {
+                State.set-transaction-note(transaction.id, self.text);
+                parent.is-editing = false;
             }
         }
     }
 
     TableCell {
         width: parent.width / length;
-        if !parent.is-editing: Text {
+        if !self.is-editing: Text {
             text: State.format-money(transaction.outflow);
             color: Colors.textBody;
         }
 
-        if parent.is-editing: TextField {
+        if self.is-editing: TextField {
             width: 100%;
-            text: outflow;
+            text: transaction.outflow;
             input-type: decimal;
-            edited => {
-                outflow = self.text;
-                inflow = "";
-                // FIXME
-                // inflow-input.text = "";
+            init => {
+                self.focus();
+            }
+            accepted => {
+                State.set-transaction-outflow(transaction.id, self.text);
+                parent.is-editing = false;
             }
         }
     }
 
     TableCell {
         width: parent.width / length;
-        if !parent.is-editing: Text {
+        if !self.is-editing: Text {
             text: State.format-money(transaction.inflow);
             color: Colors.textBody;
         }
 
-        if parent.is-editing: TextField {
+        if self.is-editing: TextField {
             width: 100%;
-            text: inflow;
+            text: transaction.inflow;
             input-type: decimal;
-            edited => {
-                inflow = self.text;
-                outflow = "";
-                // FIXME
-                //inflow-input.text = "";
+            init => {
+                self.focus();
+            }
+            accepted => {
+                State.set-transaction-inflow(transaction.id, self.text);
+                parent.is-editing = false;
             }
         }
     }
@@ -275,24 +258,9 @@ export component TransactionPage inherits VerticalLayout {
         }
 
         for transaction[index] in transactions: TransactionRow {
-            is-editing: active-row == index;
             index: index;
             transaction: transaction;
             length: length;
-
-            select-row(value) => {
-                select-row(value);
-            }
-            clicked => {
-                select-row(index);
-            }
-            cancelled => {
-                select-row(-1);
-            }
-            confirmed => {
-                State.update-transaction(transaction.id, self.account-id,self.category-id, self.outflow,self.inflow,self.date,self.note);
-                select-row(-1);
-            }
         }
     }
 }

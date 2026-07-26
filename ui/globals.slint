@@ -78,6 +78,12 @@ export global State {
     callback delete_transaction(id: string);
     callback edit-budget(id: string, amount: string);
     callback set-current-budget-month(Date);
+    callback set-transaction-date(id: string, date: string);
+    callback set-transaction-account(id: string, account-id: string);
+    callback set-transaction-note(id: string, note: string);
+    callback set-transaction-category(id: string, category-id: string);
+    callback set-transaction-outflow(id: string, amount: string);
+    callback set-transaction-inflow(id: string, amount: string);
     pure callback left-to-spend(id: string) -> string;
     pure callback get_account_name(id: string) -> string;
     pure callback total_balance() -> string;
@@ -87,7 +93,6 @@ export global State {
     pure callback format-dateym(Date) -> string;
     pure callback format-date(string) -> string;
     pure callback format-money(value: string) -> string;
-    pure callback update-transaction(id: string, account-id: string, category-id: string, outflow: string, inflow: string, date: string, note: string);
     pure callback update-category(id: string, title: string);
     pure callback create-category(title: string);
     pure callback total-spent(budget-id: string) -> string;

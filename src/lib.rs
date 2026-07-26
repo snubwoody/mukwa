@@ -207,19 +207,56 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
-    global_state.on_update_transaction({
+    global_state.on_set_transaction_category({
         let mut state = state.clone();
-        move |id, account_id, category_id, outflow, inflow, date, note| {
-            if let Err(err) = state.update_transaction(
-                &id,
-                &account_id,
-                &category_id,
-                &outflow,
-                &inflow,
-                &date,
-                &note,
-            ) {
-                warn!("Failed to update transaction: {err}");
+        move |id, category_id| {
+            if let Err(err) = state.set_transaction_category(&id, &category_id) {
+                warn!("{err}");
+            }
+        }
+    });
+
+    global_state.on_set_transaction_date({
+        let mut state = state.clone();
+        move |id, date| {
+            if let Err(err) = state.set_transaction_date(&id, &date) {
+                warn!("{err}");
+            }
+        }
+    });
+
+    global_state.on_set_transaction_outflow({
+        let mut state = state.clone();
+        move |id, amount| {
+            if let Err(err) = state.set_transaction_outflow(&id, &amount) {
+                warn!("{err}");
+            }
+        }
+    });
+
+    global_state.on_set_transaction_inflow({
+        let mut state = state.clone();
+        move |id, amount| {
+            if let Err(err) = state.set_transaction_inflow(&id, &amount) {
+                warn!("{err}");
+            }
+        }
+    });
+
+    global_state.on_set_transaction_account({
+        let mut state = state.clone();
+        move |id, account_id| {
+            if let Err(err) = state.set_transaction_account(&id, &account_id) {
+                warn!("{err}");
+            }
+        }
+    });
+
+    global_state.on_set_transaction_note({
+        let mut state = state.clone();
+        move |id, note| {
+            if let Err(err) = state.set_transaction_note(&id, &note) {
+                warn!("{err}");
             }
         }
     });

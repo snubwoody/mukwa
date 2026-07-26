@@ -24,6 +24,8 @@ export component TextField {
     callback edited <=> text-input.edited;
     callback accepted <=> text-input.accepted;
 
+    forward-focus: text-input;
+
     Rectangle {
         background: white;
         border-color: text-input.has-focus ? Colors.accent : Colors.neutral50;
