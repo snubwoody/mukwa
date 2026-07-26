@@ -331,9 +331,15 @@ impl From<Transaction> for ui::Transaction {
             _ => value.sender_id.unwrap().to_shared_string(),
         };
 
+        let payee_id = match transaction_type {
+            TransactionType::Transfer => value.receiver_id.unwrap().to_shared_string(),
+            _ => SharedString::new(),
+        };
+
         Self {
             id: value.id.to_shared_string(),
             account_id,
+            payee_id,
             category_id: category_id.to_shared_string(),
             date: value.date.to_shared_string(),
             outflow,
@@ -373,9 +379,15 @@ impl From<&Transaction> for ui::Transaction {
             _ => value.sender_id.unwrap().to_shared_string(),
         };
 
+        let payee_id = match transaction_type {
+            TransactionType::Transfer => value.receiver_id.unwrap().to_shared_string(),
+            _ => SharedString::new(),
+        };
+
         Self {
             id: value.id.to_string().into(),
             account_id,
+            payee_id,
             category_id: category_id.into(),
             note,
             date: value.date.to_string().into(),

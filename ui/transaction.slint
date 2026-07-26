@@ -143,13 +143,15 @@ component TransactionRow inherits TableRow {
 
     // TODO: add icon showing direction or Transfer to and Transfer from
     // TODO: test displayed accounts
+    // TODO: add transaction type property
     TableCell {
         width: parent.width / length;
         if !self.is-editing: Text {
-            text: "Payee";
+            text: State.get-account(transaction.payee-id).name;
             color: Colors.textBody;
         }
 
+        // TODO: could add disabled property or disabled value/callback
         if self.is-editing: ComboBox {
             width: 100%;
             options: State.account-options;
@@ -157,7 +159,7 @@ component TransactionRow inherits TableRow {
                 self.open();
             }
             changed(value) => {
-                State.set-transaction-account(transaction.id,value);
+                State.set-transaction-payee(transaction.id,value);
                 parent.is-editing = false;
             }
         }

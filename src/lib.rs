@@ -178,6 +178,17 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    global_state.on_get_account({
+        let state = state.clone();
+        move |id| {
+            state
+                .accounts()
+                .iter()
+                .find(|a| a.id == id)
+                .unwrap_or_default()
+        }
+    });
+
     global_state.on_create_transaction({
         let mut state = state.clone();
         move || {
