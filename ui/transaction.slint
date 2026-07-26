@@ -75,7 +75,6 @@ component TransactionRow inherits TableRow {
 
         clicked => {
             calendar-popup.show();
-            debug("Date cell absolute position: ",self.absolute-position);
         }
 
         Text {
@@ -85,26 +84,19 @@ component TransactionRow inherits TableRow {
 
         calendar-popup := PopupWindow {
             x: 0;
-            y: date-cell.height;
+            y: popup-position-y();
 
-            width: 250px;
-            height: 250px;
+            width: calendar.preferred-width;
+            height: calendar.preferred-height;
             close-policy: close-on-click-outside;
 
             function popup-position-y() -> length {
                 if (date-cell.absolute-position.y > Api.window-size().height * 1px * 0.5) {
-                    return date-cell.y - self.height;
+                    return -100px;
                 }
 
-                return date-cell.y;
+                return date-cell.height;
             }
-
-            init => {
-                debug("Window size: ",Api.window-size());
-                debug("Calendar absolute position: ",self.absolute-position);
-                debug("Calendar position: ",self.x, self.y);
-            }
-
 
             calendar := Calendar {
                 x: parent.x;
