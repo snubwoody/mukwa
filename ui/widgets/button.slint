@@ -21,6 +21,7 @@ import { IconDisplay, IconSet, Icon } from "@lucide";
 export component Button inherits Rectangle {
     in property <string> text;
     in property <color> text-color: Colors.textBody;
+    in property <color> hover-background;
     in property <bool> enabled <=> touch-area.enabled;
     out property <bool> has-focus: focus-scope.has-focus;
     in property <LayoutAlignment> alignment: center;
@@ -36,8 +37,17 @@ export component Button inherits Rectangle {
     accessible-enabled: true;
     accessible-role: button;
 
+    states [
+        hovered when touch-area.has-hover: {
+            background: hover-background;
+            in {
+                animate background { duration: 150ms; }
+            }
+        }
+    ]
+
     accessible-action-default() => {
-        clicked()
+        clicked();
     }
 
     forward-focus: focus-scope;
@@ -186,6 +196,17 @@ export component PrimaryButton {
         return transparent;
     }
 
+    function hover-background-color(button-theme: PrimaryButtonTheme) -> color {
+        if (button-theme == PrimaryButtonTheme.accent) {
+            return Colors.accent.darker(0.2);
+        }
+        if (button-theme == PrimaryButtonTheme.neutral) {
+            return Colors.neutral100;
+        }
+        return transparent;
+    }
+
+
     function text-color(button-theme: PrimaryButtonTheme) -> color {
         if (button-theme == PrimaryButtonTheme.accent) {
             return white;
@@ -196,6 +217,7 @@ export component PrimaryButton {
     button := Button {
         text: text;
         background: background-color(theme);
+        hover-background: hover-background-color(theme);
         text-color: text-color(theme);
 
         border-radius: 4px;

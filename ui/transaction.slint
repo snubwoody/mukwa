@@ -47,22 +47,34 @@ component TransactionRow inherits TableRow {
     padding-right: 8px;
 
     context-menu := PopupWindow {
+        width: parent.width;
+        height: parent.height;
         close-policy: close-on-click-outside;
 
+        // FIXME: context menu passthrough
         Rectangle {
+            width: context-menu-inner.preferred-width;
+            height: context-menu-inner.preferred-height;
             background: white;
             border-radius: 4px;
-            VerticalLayout {
+            border-color: Colors.neutral50;
+            border-width: 1px;
+
+            context-menu-inner := VerticalLayout {
                 cross-axis-alignment: start;
                 padding: 4px;
                 spacing: 4px;
                 Button {
+                    width: 100%;
                     text: @tr("Duplicate");
+                    hover-background: Colors.neutral50;
                     clicked => State.duplicate_transaction(transaction.id);
                 }
 
                 Button {
+                    width: 100%;
                     text: @tr("Delete");
+                    hover-background: Colors.neutral50;
                     clicked => State.delete_transaction(transaction.id);
                 }
             }
