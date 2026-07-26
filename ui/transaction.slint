@@ -165,16 +165,17 @@ component TransactionRow inherits TableRow {
 
     TableCell {
         width: parent.width / length;
-        if !parent.is-editing: Text {
+        if !self.is-editing: Text {
             text: transaction.note;
             color: Colors.textBody;
         }
 
-        if parent.is-editing: TextField {
+        if self.is-editing: TextField {
             width: 100%;
             text: note;
-            edited => {
-                note = self.text;
+            accepted => {
+                State.set-transaction-note(transaction.id, self.text);
+                parent.is-editing = false;
             }
         }
     }

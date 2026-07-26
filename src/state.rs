@@ -249,6 +249,25 @@ impl AppState {
         Ok(())
     }
 
+    pub fn set_transaction_note(&mut self, id: &str, note: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let new_transaction = self.service.set_transaction_note(id, note)?;
+        info!(id=?id,"Updated transaction note");
+        let transactions: Vec<ui::Transaction> = self
+            .transactions
+            .iter()
+            .map(|transaction| {
+                if transaction.id == new_transaction.id.to_shared_string() {
+                    new_transaction.clone().into()
+                } else {
+                    transaction
+                }
+            })
+            .collect();
+        self.transactions.set_vec(transactions);
+        Ok(())
+    }
+
     pub fn set_transaction_account(&mut self, id: &str, account_id: &str) -> crate::Result<()> {
         let id = Uuid::parse_str(id)?;
         let account_id = Uuid::parse_str(account_id)?;

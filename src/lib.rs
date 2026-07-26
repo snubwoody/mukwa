@@ -242,6 +242,15 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    global_state.on_set_transaction_note({
+        let mut state = state.clone();
+        move |id, note| {
+            if let Err(err) = state.set_transaction_note(&id, &note) {
+                warn!("{err}");
+            }
+        }
+    });
+
     global_state.on_total_balance({
         let state = state.clone();
         move || {
