@@ -962,17 +962,18 @@ impl Service {
 
     pub fn set_transaction_payee(&self, id: Uuid, account_id: Uuid) -> crate::Result<Transaction> {
         let transaction = self.get_transaction(id)?;
-        // TODO: check for self transfers
+        // TODO: check for self transfers4
+        // TODO: maybe setting payee on an income sets the sender_id
         // Error::new("The account is already...")
         let sql = match transaction.transaction_type() {
             TransactionType::Income => {
-                "UPDATE transactions SET receiver_id = ?1, sender_id = null WHERE id = ?2 RETURNING *"
+                "UPDATE transactions SET sender_id = ?1 WHERE id = ?2 RETURNING *"
             }
             TransactionType::Expense => {
                 "UPDATE transactions SET receiver_id = ?1 WHERE id = ?2 RETURNING *"
             }
             TransactionType::Transfer => {
-                "UPDATE transactions SET sender_id = ?1 WHERE id = ?2 RETURNING *"
+                "UPDATE transactions SET receiver_id = ?1 WHERE id = ?2 RETURNING *"
             }
         };
         let connection = self.connection();
