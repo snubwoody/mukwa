@@ -42,11 +42,10 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(service: Service) -> crate::Result<AppState> {
-        let transactions_list: Vec<ui::Transaction> = service
-            .fetch_transactions()?
-            .iter()
-            .map(|t| t.into())
-            .collect();
+        let mut transactions = service.fetch_transactions()?;
+        transactions.sort_by(|a, b| a.date.cmp(&b.date).reverse());
+        let transactions_list: Vec<ui::Transaction> =
+            transactions.iter().map(|t| t.into()).collect();
 
         let transactions_model = Rc::new(VecModel::from(transactions_list));
 
