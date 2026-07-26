@@ -205,7 +205,7 @@ impl From<TransactionType> for ui::TransactionType {
     }
 }
 
-#[derive(PartialOrd, PartialEq, Debug, Default, Clone)]
+#[derive(PartialEq, Eq, Debug, Default, Clone)]
 pub struct Transaction {
     pub id: Uuid,
     /// The sending account.
