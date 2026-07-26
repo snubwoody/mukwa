@@ -556,7 +556,6 @@ pub struct Service {
     connection: Rc<Mutex<Connection>>,
 }
 
-// TODO: check if foreign keys are enabled
 impl Service {
     pub fn new(connection: Connection) -> Service {
         Service {
@@ -577,6 +576,7 @@ impl Service {
         Ok(service)
     }
 
+    /// Opens an in-memory service for testing.
     pub fn open_in_memory() -> crate::Result<Service> {
         let connection = create_test_db();
         let service = Service {
@@ -933,7 +933,31 @@ impl Service {
                 "UPDATE transactions SET receiver_id = ?1, sender_id = null WHERE id = ?2 RETURNING *"
             }
             TransactionType::Expense => {
-                "UPDATE transactions SET sender_id = ?1, receiver_id = null WHERE id = ?2 RETURNING *"
+                "UPDATE transactions SET receiver_id = ?1 WHERE id = ?2 RETURNING *"
+            }
+            TransactionType::Transfer => {
+                "UPDATE transactions SET sender_id = ?1 WHERE id = ?2 RETURNING *"
+            }
+        };
+        let connection = self.connection();
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt.query_and_then([account_id.to_string(), id.to_string()], |row| {
+            Transaction::try_from(row)
+        })?;
+        let transaction = rows.next().unwrap()?;
+        Ok(transaction)
+    }
+
+    pub fn set_transaction_payee(&self, id: Uuid, account_id: Uuid) -> crate::Result<Transaction> {
+        let transaction = self.get_transaction(id)?;
+        // TODO: check for self transfers
+        // Error::new("The account is already...")
+        let sql = match transaction.transaction_type() {
+            TransactionType::Income => {
+                "UPDATE transactions SET receiver_id = ?1, sender_id = null WHERE id = ?2 RETURNING *"
+            }
+            TransactionType::Expense => {
+                "UPDATE transactions SET receiver_id = ?1 WHERE id = ?2 RETURNING *"
             }
             TransactionType::Transfer => {
                 "UPDATE transactions SET sender_id = ?1 WHERE id = ?2 RETURNING *"

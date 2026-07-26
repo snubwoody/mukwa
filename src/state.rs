@@ -15,9 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::service::{CreateBudgetOpts, Service, Transaction};
-use crate::{Money, ui};
-use jiff::Zoned;
+use crate::{ui, Money};
 use jiff::civil::Date;
+use jiff::Zoned;
 use slint::{Model, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
@@ -250,6 +250,15 @@ impl AppState {
         let account_id = Uuid::parse_str(account_id)?;
         let transaction = self.service.set_transaction_account(id, account_id)?;
         info!(id=?id,"Updated transaction account");
+        self.replace_transaction(transaction);
+        Ok(())
+    }
+
+    pub fn set_transaction_payee(&mut self, id: &str, account_id: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let account_id = Uuid::parse_str(account_id)?;
+        let transaction = self.service.set_transaction_payee(id, account_id)?;
+        info!(id=?id,"Updated transaction payee");
         self.replace_transaction(transaction);
         Ok(())
     }

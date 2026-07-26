@@ -618,3 +618,28 @@ fn min_budget_amount_is_zero() -> mukwa::Result<()> {
     assert!(result.is_err());
     Ok(())
 }
+
+#[test]
+fn set_payee_for_expense() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("")?;
+    let account2 = service.create_account("")?;
+
+    let expense = service.create_expense().account(account.id).submit()?;
+    let transfer = service.set_transaction_payee(expense.id, account2.id)?;
+
+    assert_eq!(transfer.transaction_type(), TransactionType::Transfer);
+    assert_eq!(transfer.sender_id.unwrap(), account.id);
+    assert_eq!(transfer.receiver_id.unwrap(), account2.id);
+
+    service
+        .connection()
+        .query_one("SELECT * FROM transactions", [], |row| {
+            let sender_id: String = row.get("sender_id")?;
+            let receiver_id: String = row.get("receiver_id")?;
+            assert_eq!(sender_id, account.id.to_string());
+            assert_eq!(receiver_id, account2.id.to_string());
+            Ok(())
+        })?;
+    Ok(())
+}

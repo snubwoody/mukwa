@@ -252,6 +252,15 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    global_state.on_set_transaction_payee({
+        let mut state = state.clone();
+        move |id, account_id| {
+            if let Err(err) = state.set_transaction_payee(&id, &account_id) {
+                warn!("{err}");
+            }
+        }
+    });
+
     global_state.on_set_transaction_note({
         let mut state = state.clone();
         move |id, note| {
