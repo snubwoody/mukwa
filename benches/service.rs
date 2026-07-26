@@ -16,7 +16,7 @@
 
 use divan::Bencher;
 use mukwa::migrator::Migrator;
-use mukwa::service::{Service, UpdateTransactionOpts};
+use mukwa::service::Service;
 use rusqlite::Connection;
 use tempfile::tempdir;
 

@@ -141,6 +141,28 @@ component TransactionRow inherits TableRow {
         }
     }
 
+    // TODO: add icon showing direction or Transfer to and Transfer from
+    // TODO: test displayed accounts
+    TableCell {
+        width: parent.width / length;
+        if !self.is-editing: Text {
+            text: "Payee";
+            color: Colors.textBody;
+        }
+
+        if self.is-editing: ComboBox {
+            width: 100%;
+            options: State.account-options;
+            init => {
+                self.open();
+            }
+            changed(value) => {
+                State.set-transaction-account(transaction.id,value);
+                parent.is-editing = false;
+            }
+        }
+    }
+
     TableCell {
         width: parent.width / length;
         if !self.is-editing: Text {
@@ -266,7 +288,7 @@ export component TransactionPage inherits VerticalLayout {
 
     Table {
         width: 100%;
-        property <int> length: 6;
+        property <int> length: 7;
 
         TableRow {
             padding-left: 8px;
