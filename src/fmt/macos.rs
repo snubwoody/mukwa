@@ -19,31 +19,47 @@ use core_foundation::date::CFDate;
 use core_foundation::string::CFString;
 use core_foundation_sys::base::kCFAllocatorDefault;
 use core_foundation_sys::date_formatter::{
+    CFDateFormatterCreate, CFDateFormatterCreateDateFromString,
+    CFDateFormatterCreateStringWithDate, CFDateFormatterRef, CFDateFormatterSetFormat,
     kCFDateFormatterNoStyle, kCFDateFormatterShortStyle,
-    CFDateFormatterCreate, CFDateFormatterCreateDateFromString, CFDateFormatterCreateStringWithDate,
-    CFDateFormatterSetFormat,
 };
-use core_foundation_sys::locale::CFLocaleCopyCurrent;
+use core_foundation_sys::locale::{CFLocaleCopyCurrent, CFLocaleRef};
 use jiff::civil::Date;
 
-fn parse_cf_date(date: Date) -> CFDate {
-    let date = CFString::new(&date.to_string());
+// CoreFoundation types are not thread safe.
+thread_local! {
+    static CURRENT_LOCALE: CFLocaleRef = unsafe { CFLocaleCopyCurrent() };
 
-    unsafe {
+     static DATE_FORMATTER: CFDateFormatterRef = unsafe {
+        CFDateFormatterCreate(
+            kCFAllocatorDefault,
+            CURRENT_LOCALE.with(|locale| *locale),
+            kCFDateFormatterShortStyle,
+            kCFDateFormatterNoStyle,
+        )
+    };
+
+    static PARSE_DATE_FORMATTER: CFDateFormatterRef = unsafe {
         let formatter = CFDateFormatterCreate(
             kCFAllocatorDefault,
-            // TODO: use static thread_local
-            CFLocaleCopyCurrent(),
+            CURRENT_LOCALE.with(|locale| *locale),
             kCFDateFormatterNoStyle,
             kCFDateFormatterNoStyle,
         );
 
         let date_format = CFString::new("yyyy-MM-dd");
         CFDateFormatterSetFormat(formatter, date_format.as_concrete_TypeRef());
+        formatter
+    };
+}
 
+fn parse_cf_date(date: Date) -> CFDate {
+    let date = CFString::new(&date.to_string());
+
+    unsafe {
         let date = CFDateFormatterCreateDateFromString(
             kCFAllocatorDefault,
-            formatter,
+            PARSE_DATE_FORMATTER.with(|formatter| *formatter),
             date.as_concrete_TypeRef(),
             std::ptr::null_mut(),
         );
@@ -52,24 +68,11 @@ fn parse_cf_date(date: Date) -> CFDate {
 }
 
 pub fn format_date(date: Date) -> crate::Result<String> {
-    // TODO: check zed repo for formatting
-    // TODO: use thread_local!
-    // TODO: release using CFRelease?
-    // static CURRENT_LOCALE: CFLocaleRef = unsafe { CFLocaleCopyCurrent() };
-
     let date = parse_cf_date(date);
     let formatted_date = unsafe {
-        let locale = CFLocaleCopyCurrent();
-        let formatter = CFDateFormatterCreate(
-            kCFAllocatorDefault,
-            locale,
-            kCFDateFormatterShortStyle,
-            kCFDateFormatterNoStyle,
-        );
-
         let date_string = CFDateFormatterCreateStringWithDate(
             kCFAllocatorDefault,
-            formatter,
+            DATE_FORMATTER.with(|formatter| *formatter),
             date.as_concrete_TypeRef(),
         );
 
@@ -77,16 +80,4 @@ pub fn format_date(date: Date) -> crate::Result<String> {
     };
 
     Ok(formatted_date)
-}
-
-#[cfg(test)]
-mod test {
-    use jiff::civil::date;
-
-    #[test]
-    fn format() {
-        let date = super::format_date(date(2026, 12, 31)).unwrap();
-        dbg!(date);
-        panic!()
-    }
 }
