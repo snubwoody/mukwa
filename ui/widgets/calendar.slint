@@ -15,7 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { Colors } from "../colors.slint";
-import { Button } from "button.slint";
+import { Button, IconButton } from "button.slint";
+import { IconSet } from "@lucide";
 
 export struct Date {
     year: int,
@@ -99,6 +100,9 @@ export component Calendar {
 
     Rectangle {
         background: white;
+        border-color: Colors.neutral50;
+        border-width: 1px;
+        border-radius: 8px;
     }
 
     focus-scope := FocusScope {
@@ -128,16 +132,17 @@ export component Calendar {
     }
 
     VerticalLayout {
+        padding: 8px;
         HorizontalLayout {
             alignment: space-between;
             padding: 4px;
             cross-axis-alignment: center;
 
-            Button {
-                text: @tr("Prev");
-                clicked => {
-                    decrement-month();
-                }
+            IconButton {
+                icon: IconSet.ChevronLeft;
+                theme: ghost;
+                accessible-label: "Previous month";
+                clicked => decrement-month();
             }
 
             Text {
@@ -145,14 +150,16 @@ export component Calendar {
                 color: Colors.textBody;
             }
 
-            Button {
-                text: @tr("Next");
+            IconButton {
+                icon: IconSet.ChevronRight;
+                theme: ghost;
+                accessible-label: "Next month";
                 clicked => increment-month();
             }
         }
 
         GridLayout {
-            spacing: 8px;
+            spacing: 4px;
             Row {
                 for day-title in day-titles: Rectangle {
                     Text {
@@ -166,7 +173,6 @@ export component Calendar {
                 for day in week: Rectangle {
                     property <bool> enabled: day > 0;
                     border-radius: 4px;
-                    background: day == date.day ? Colors.surfacePrimary : transparent;
                     accessible-role: button;
                     accessible-checkable: true;
                     accessible-checked: day == date.day;
@@ -194,11 +200,25 @@ export component Calendar {
                                 animate background { duration: 50ms; }
                             }
                         }
+                        selected when day == date.day && enabled: {
+                            background: Colors.accent;
+                            in {
+                                animate background { duration: 50ms; }
+                            }
+                            out {
+                                animate background { duration: 50ms; }
+                            }
+                        }
                     ]
 
-                    Text {
-                        text: enabled ? day : "";
-                        color: day == date.day ? white : Colors.textBody;
+                    HorizontalLayout {
+                        padding: 4px;
+                        alignment: center;
+                        cross-axis-alignment: center;
+                        Text {
+                            text: enabled ? day : "";
+                            color: day == date.day ? white : Colors.textBody;
+                        }
                     }
                 }
             }
