@@ -84,7 +84,6 @@ component TransactionRow inherits TableRow {
     date-cell := TableCell {
         width: parent.width / length;
 
-
         clicked => {
             calendar-popup.show();
         }
@@ -113,6 +112,7 @@ component TransactionRow inherits TableRow {
             calendar := Calendar {
                 x: parent.x;
                 y: parent.y;
+                date: Api.parse-date(transaction.date);
                 changed(value) => {
                     State.set-transaction-date(transaction.id, value.year + "-" + value.month + "-" + value.day);
                     calendar-popup.close();

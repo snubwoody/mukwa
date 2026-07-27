@@ -424,6 +424,18 @@ fn setup_api(window: &ui::MainWindow) {
             (pos.x, pos.y)
         }
     });
+
+    api.on_parse_date(|date| {
+        let date = Date::strptime("%Y-%m-%d", &date)
+            .inspect_err(|err| warn!("{err}"))
+            .unwrap_or(Zoned::now().date());
+
+        ui::Date {
+            year: date.year() as i32,
+            month: date.month() as i32,
+            day: date.day() as i32,
+        }
+    });
 }
 
 pub fn run() -> Result<()> {
