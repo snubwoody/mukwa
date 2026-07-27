@@ -25,4 +25,4 @@ Name: "{group}\{#AppName}"; Filename: "{app}\mukwa.exe"
 Type: filesandordirs; Name: "{app}"
 
 [Files]
-Source: "{#ResourceDir}\mukwa.exe"; DestDir: "{app}"
+Source: "{#ResourceDir}\mukwa.exe"; DestDir: "{app}"; Flags: ignoreversion
