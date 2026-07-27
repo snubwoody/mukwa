@@ -21,6 +21,8 @@ use jiff::civil::Date;
 
 #[cfg(target_os = "windows")]
 mod windows;
+// #[cfg(target_os = "macos")]
+mod macos;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct CurrencyFormatter {
