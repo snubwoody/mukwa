@@ -264,10 +264,20 @@ impl AppState {
     }
 
     pub fn update_category(&mut self, id: &str, title: &str) -> crate::Result<()> {
-        let budget_id = Uuid::parse_str(id)?;
-        self.service.update_category(budget_id, title)?;
+        let id = Uuid::parse_str(id)?;
+        self.service.update_category(id, title)?;
         info!(id=?id,"Updated category");
         self.reset_categories()?;
+        self.reset_budgets(self.current_budget_month)?;
+        Ok(())
+    }
+
+    pub fn update_category_group(&mut self, id: &str, title: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        self.service.update_category_group(id, title)?;
+        info!(id=?id,"Updated category group");
+        self.reset_categories()?;
+        self.reset_category_groups()?;
         self.reset_budgets(self.current_budget_month)?;
         Ok(())
     }
@@ -368,6 +378,17 @@ impl AppState {
             .map(|b| b.into())
             .collect();
         self.categories.set_vec(categories);
+        Ok(())
+    }
+
+    fn reset_category_groups(&mut self) -> crate::Result<()> {
+        let groups: Vec<ui::CategoryGroup> = self
+            .service
+            .fetch_category_groups()?
+            .iter()
+            .map(|b| b.into())
+            .collect();
+        self.category_groups.set_vec(groups);
         Ok(())
     }
 

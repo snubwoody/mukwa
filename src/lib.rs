@@ -417,6 +417,15 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    global_state.on_update_category_group({
+        let mut state = state.clone();
+        move |id, title| {
+            if let Err(err) = state.update_category_group(&id, &title) {
+                warn!("{err}");
+            }
+        }
+    });
+
     global_state.on_left_to_spend({
         let state = state.clone();
         move |id| match state.left_to_spend(&id) {
