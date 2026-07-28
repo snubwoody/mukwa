@@ -45,6 +45,7 @@ export struct Transaction {
     id: string,
     date: string,
     account-id: string,
+    payee-id: string,
     category-id: string,
     transaction-type: TransactionType,
     outflow: string,
@@ -82,6 +83,7 @@ export global State {
     callback set-current-budget-month(Date);
     callback set-transaction-date(id: string, date: string);
     callback set-transaction-account(id: string, account-id: string);
+    callback set-transaction-payee(id: string, account-id: string);
     callback set-transaction-note(id: string, note: string);
     callback set-transaction-category(id: string, category-id: string);
     callback set-transaction-outflow(id: string, amount: string);
@@ -90,6 +92,7 @@ export global State {
     pure callback get_account_name(id: string) -> string;
     pure callback total_balance() -> string;
     pure callback get-category(id: string) -> Category;
+    pure callback get-account(id: string) -> Account;
     pure callback account-balance(id: string) -> string;
     // Returns the year and month as a formatted string
     pure callback format-dateym(Date) -> string;

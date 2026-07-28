@@ -142,7 +142,7 @@ impl AppState {
 
     /// Creates a new expense.
     pub fn create_transaction(&mut self) -> crate::Result<()> {
-        let transaction = self.service.create_transaction(Default::default())?;
+        let transaction = self.service.create_expense().submit()?;
         info!(id=?transaction.id,"Created new transaction");
         self.transactions.insert(0, transaction.into());
         Ok(())
@@ -250,6 +250,15 @@ impl AppState {
         let account_id = Uuid::parse_str(account_id)?;
         let transaction = self.service.set_transaction_account(id, account_id)?;
         info!(id=?id,"Updated transaction account");
+        self.replace_transaction(transaction);
+        Ok(())
+    }
+
+    pub fn set_transaction_payee(&mut self, id: &str, account_id: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let account_id = Uuid::parse_str(account_id)?;
+        let transaction = self.service.set_transaction_payee(id, account_id)?;
+        info!(id=?id,"Updated transaction payee");
         self.replace_transaction(transaction);
         Ok(())
     }
