@@ -142,7 +142,7 @@ impl AppState {
 
     /// Creates a new expense.
     pub fn create_transaction(&mut self) -> crate::Result<()> {
-        let transaction = self.service.create_transaction(Default::default())?;
+        let transaction = self.service.create_expense().submit()?;
         info!(id=?transaction.id,"Created new transaction");
         self.transactions.insert(0, transaction.into());
         Ok(())

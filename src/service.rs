@@ -398,35 +398,12 @@ impl From<&Transaction> for ui::Transaction {
     }
 }
 
-#[derive(Clone, PartialEq, PartialOrd, Ord, Eq, Debug)]
-#[deprecated(note = "Use TransactionBuilder instead")]
-pub struct CreateTransactionOpts {
-    /// The sending account
-    pub account_id: Option<Uuid>,
-    pub category_id: Option<Uuid>,
-    pub date: Date,
-    pub note: Option<String>,
-    pub amount: Money,
-}
-
-impl Default for CreateTransactionOpts {
-    fn default() -> Self {
-        CreateTransactionOpts {
-            account_id: None,
-            category_id: None,
-            note: None,
-            date: Zoned::now().date(),
-            amount: Money::ZERO,
-        }
-    }
-}
-
 pub struct Income;
 pub struct Expense;
 pub struct Transfer;
 
 pub struct TransactionBuilder<T> {
-    connection: Rc<Mutex<Connection>>,
+    service: Service,
     amount: Money,
     sender_id: Option<Uuid>,
     receiver_id: Option<Uuid>,
@@ -437,9 +414,9 @@ pub struct TransactionBuilder<T> {
 }
 
 impl<T> TransactionBuilder<T> {
-    fn new(connection: Rc<Mutex<Connection>>) -> TransactionBuilder<T> {
+    fn new(service: Service) -> TransactionBuilder<T> {
         Self {
-            connection,
+            service,
             amount: Money::ZERO,
             sender_id: None,
             receiver_id: None,
@@ -479,9 +456,18 @@ impl TransactionBuilder<Income> {
 
     /// Submits the query.
     pub fn submit(self) -> crate::Result<Transaction> {
-        let account_id = self.receiver_id.ok_or(Error::new("Missing account id"))?;
+        let account_id = match self.receiver_id {
+            Some(id) => id,
+            None => {
+                let accounts = self.service.fetch_accounts()?;
+                if accounts.is_empty() {
+                    return Err(Error::new("Cannot create a transaction without an account"));
+                }
+                accounts[0].id
+            }
+        };
 
-        let connection = self.connection.lock().unwrap();
+        let connection = self.service.connection();
         let sql = "INSERT INTO transactions(id,transaction_date,receiver_id,amount,note) \
             VALUES(?1,?2,?3,?4,?5) \
             RETURNING *";
@@ -512,9 +498,18 @@ impl TransactionBuilder<Expense> {
 
     /// Submits the query.
     pub fn submit(self) -> crate::Result<Transaction> {
-        let account_id = self.sender_id.ok_or(Error::new("Missing account id"))?;
+        let account_id = match self.sender_id {
+            Some(id) => id,
+            None => {
+                let accounts = self.service.fetch_accounts()?;
+                if accounts.is_empty() {
+                    return Err(Error::new("Cannot create a transaction without an account"));
+                }
+                accounts[0].id
+            }
+        };
 
-        let connection = self.connection.lock().unwrap();
+        let connection = self.service.connection();
         let sql = "INSERT INTO transactions(id,transaction_date,sender_id,category_id,amount,note) \
             VALUES(?1,?2,?3,?4,?5,?6) \
             RETURNING *";
@@ -544,7 +539,7 @@ impl TransactionBuilder<Transfer> {
         let receiver_id = self.receiver_id.ok_or(Error::new("Missing receiver id"))?;
         let sender_id = self.sender_id.ok_or(Error::new("Missing sender id"))?;
 
-        let connection = self.connection.lock().unwrap();
+        let connection = self.service.connection();
         let sql = "INSERT INTO transactions(id,transaction_date,receiver_id,sender_id,amount,note) \
             VALUES(?1,?2,?3,?4,?5,?6) \
             RETURNING *";
@@ -636,7 +631,7 @@ impl Service {
     /// }
     /// ```
     pub fn create_expense(&self) -> TransactionBuilder<Expense> {
-        TransactionBuilder::new(self.connection.clone())
+        TransactionBuilder::new(self.clone())
     }
 
     /// Creates a new income builder.
@@ -666,7 +661,7 @@ impl Service {
     /// }
     /// ```
     pub fn create_income(&self) -> TransactionBuilder<Income> {
-        TransactionBuilder::new(self.connection.clone())
+        TransactionBuilder::new(self.clone())
     }
 
     /// Creates a new transfer builder.
@@ -693,7 +688,7 @@ impl Service {
     /// }
     /// ```
     pub fn create_transfer(&self) -> TransactionBuilder<Transfer> {
-        TransactionBuilder::new(self.connection.clone())
+        TransactionBuilder::new(self.clone())
     }
 
     /// Fetches all the budgets in a specific month.
@@ -942,10 +937,10 @@ impl Service {
         let transaction = self.get_transaction(id)?;
         let sql = match transaction.transaction_type() {
             TransactionType::Income => {
-                "UPDATE transactions SET receiver_id = ?1, sender_id = null WHERE id = ?2 RETURNING *"
+                "UPDATE transactions SET receiver_id = ?1, sender_id = NULL WHERE id = ?2 RETURNING *"
             }
             TransactionType::Expense => {
-                "UPDATE transactions SET receiver_id = ?1 WHERE id = ?2 RETURNING *"
+                "UPDATE transactions SET sender_id = ?1, receiver_id = NULL WHERE id = ?2 RETURNING *"
             }
             TransactionType::Transfer => {
                 "UPDATE transactions SET sender_id = ?1 WHERE id = ?2 RETURNING *"
@@ -1065,39 +1060,6 @@ impl Service {
             .query_and_then([Uuid::now_v7().to_string(), id.to_string()], |row| {
                 Transaction::try_from(row)
             })?;
-        let transaction = rows.next().unwrap()?;
-        Ok(transaction)
-    }
-
-    /// Creates a new [`Transaction`].
-    #[deprecated(note = "Use TransactionBuilder instead")]
-    pub fn create_transaction(&self, opts: CreateTransactionOpts) -> crate::Result<Transaction> {
-        let account_id = match opts.account_id {
-            Some(id) => id,
-            None => {
-                let accounts = self.fetch_accounts()?;
-                if accounts.is_empty() {
-                    return Err(Error::new("Cannot create a transaction without an account"));
-                }
-                accounts[0].id
-            }
-        };
-
-        let category_id = opts.category_id.map(|id| id.to_string());
-
-        let connection = self.connection.lock().unwrap();
-        let sql = "INSERT INTO transactions(id,transaction_date,sender_id,category_id,amount) \
-            VALUES(?1,?2,?3,?4,?5) \
-            RETURNING *";
-        let mut stmt = connection.prepare_cached(sql)?;
-        let params = params![
-            Uuid::now_v7().to_string(),
-            opts.date.to_string(),
-            account_id.to_string(),
-            category_id,
-            opts.amount.inner()
-        ];
-        let mut rows = stmt.query_and_then(params, |row| Transaction::try_from(row))?;
         let transaction = rows.next().unwrap()?;
         Ok(transaction)
     }

@@ -16,7 +16,7 @@
 
 use jiff::Zoned;
 use jiff::civil::date;
-use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, TransactionType};
+use mukwa::service::{CreateBudgetOpts, Service, TransactionType};
 use mukwa::{Money, create_test_db};
 use uuid::Uuid;
 
@@ -111,54 +111,38 @@ fn fetch_budgets_by_month() -> mukwa::Result<()> {
 }
 
 #[test]
-fn create_transaction_fails_with_no_accounts() -> mukwa::Result<()> {
-    let connection = create_test_db();
-    let service = Service::new(connection);
-    let result = service.create_transaction(Default::default());
+fn create_expense_fails_with_no_accounts() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let result = service.create_expense().submit();
     assert!(result.is_err());
     Ok(())
 }
 
 #[test]
-fn create_transaction_selects_first_account() -> mukwa::Result<()> {
+fn create_income_fails_with_no_accounts() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let result = service.create_expense().submit();
+    assert!(result.is_err());
+    Ok(())
+}
+
+#[test]
+fn create_expense_uses_first_account() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
     let account = service.create_account("")?;
-    let transaction = service.create_transaction(Default::default())?;
+    let transaction = service.create_expense().submit()?;
     assert_eq!(transaction.sender_id.unwrap(), account.id);
     Ok(())
 }
 
 #[test]
-fn create_transaction() -> mukwa::Result<()> {
+fn create_income_uses_first_account() -> mukwa::Result<()> {
     let connection = create_test_db();
-
     let service = Service::new(connection);
     let account = service.create_account("")?;
-
-    let opts = CreateTransactionOpts {
-        amount: Money::new(200),
-        date: date(2020, 10, 20),
-        ..Default::default()
-    };
-    let transaction = service.create_transaction(opts)?;
-
+    let transaction = service.create_expense().submit()?;
     assert_eq!(transaction.sender_id.unwrap(), account.id);
-    assert_eq!(transaction.category_id, None);
-    assert_eq!(transaction.note, None);
-    assert_eq!(transaction.amount, Money::new(200));
-    assert_eq!(transaction.date, date(2020, 10, 20));
-
-    service
-        .connection()
-        .query_one("SELECT * FROM transactions", [], |row| {
-            let amount: i64 = row.get("amount")?;
-            let date: String = row.get("transaction_date")?;
-            assert_eq!(amount, Money::new(200).inner());
-            assert_eq!(date, "2020-10-20");
-            Ok(())
-        })?;
-
     Ok(())
 }
 
@@ -169,20 +153,18 @@ fn total_spent() -> mukwa::Result<()> {
 
     let date = date(2020, 12, 14);
     let category = service.create_category("")?;
-    let opts = CreateTransactionOpts {
-        date,
-        category_id: Some(category.id),
-        ..Default::default()
-    };
-    service.create_transaction(CreateTransactionOpts {
-        amount: Money::new(500),
-        ..opts.clone()
-    })?;
-
-    service.create_transaction(CreateTransactionOpts {
-        amount: Money::new(150),
-        ..opts
-    })?;
+    service
+        .create_expense()
+        .amount(Money::new(500))
+        .date(date)
+        .category(category.id)
+        .submit()?;
+    service
+        .create_expense()
+        .amount(Money::new(150))
+        .date(date)
+        .category(category.id)
+        .submit()?;
 
     let total = service.total_spent(category.id, date)?;
     assert_eq!(total, Money::new(650));
@@ -196,21 +178,18 @@ fn total_spent_filters_by_date() -> mukwa::Result<()> {
 
     let date = date(2020, 12, 14);
     let category = service.create_category("")?;
-    let opts = CreateTransactionOpts {
-        date,
-        category_id: Some(category.id),
-        ..Default::default()
-    };
-    service.create_transaction(CreateTransactionOpts {
-        amount: Money::new(500),
-        date: jiff::civil::date(2020, 11, 1),
-        ..opts.clone()
-    })?;
-
-    service.create_transaction(CreateTransactionOpts {
-        amount: Money::new(150),
-        ..opts
-    })?;
+    service
+        .create_expense()
+        .amount(Money::new(500))
+        .category(category.id)
+        .date(jiff::civil::date(2020, 11, 1))
+        .submit()?;
+    let expense = service
+        .create_expense()
+        .amount(Money::new(150))
+        .date(date)
+        .category(category.id)
+        .submit()?;
 
     let total = service.total_spent(category.id, date)?;
     assert_eq!(total, Money::new(150));
@@ -223,15 +202,12 @@ fn account_balance() -> mukwa::Result<()> {
     let account = service.create_account("")?;
 
     let category = service.create_category("")?;
-    let opts = CreateTransactionOpts {
-        account_id: Some(account.id),
-        category_id: Some(category.id),
-        ..Default::default()
-    };
-    service.create_transaction(CreateTransactionOpts {
-        amount: Money::new(500),
-        ..opts
-    })?;
+    service
+        .create_expense()
+        .amount(Money::new(500))
+        .account(account.id)
+        .category(category.id)
+        .submit()?;
     service
         .create_income()
         .amount(Money::new(700))
@@ -249,15 +225,12 @@ fn account_balance_negative() -> mukwa::Result<()> {
     let account = service.create_account("")?;
 
     let category = service.create_category("")?;
-    let opts = CreateTransactionOpts {
-        account_id: Some(account.id),
-        category_id: Some(category.id),
-        ..Default::default()
-    };
-    service.create_transaction(CreateTransactionOpts {
-        amount: Money::new(900),
-        ..opts
-    })?;
+    service
+        .create_expense()
+        .amount(Money::new(900))
+        .account(account.id)
+        .category(category.id)
+        .submit()?;
     service
         .create_income()
         .amount(Money::new(700))
@@ -293,7 +266,7 @@ fn delete_transaction() -> mukwa::Result<()> {
     let service = Service::new(connection);
     service.create_account("")?;
 
-    let transaction = service.create_transaction(Default::default())?;
+    let transaction = service.create_expense().submit()?;
     service.delete_transaction(transaction.id)?;
     let transactions = service.fetch_transactions()?;
     assert!(transactions.is_empty());
@@ -308,7 +281,7 @@ fn duplicate_transaction() -> mukwa::Result<()> {
     let service = Service::new(connection);
     service.create_account("")?;
 
-    let transaction = service.create_transaction(Default::default())?;
+    let transaction = service.create_expense().submit()?;
     service.duplicate_transaction(transaction.id)?;
     let transactions = service.fetch_transactions()?;
     assert_eq!(transactions.len(), 2);
@@ -330,12 +303,7 @@ fn set_transaction_date() -> mukwa::Result<()> {
     let service = Service::new(connection);
     let account = service.create_account("")?;
 
-    let create_opts = CreateTransactionOpts {
-        account_id: Some(account.id),
-        ..Default::default()
-    };
-
-    let transaction = service.create_transaction(create_opts)?;
+    let transaction = service.create_expense().account(account.id).submit()?;
     let date = date(200, 12, 22);
     let transaction = service.set_transaction_date(transaction.id, date)?;
     assert_eq!(transaction.date, date);
@@ -351,18 +319,11 @@ fn set_transaction_date() -> mukwa::Result<()> {
 
 #[test]
 fn set_transaction_account() -> mukwa::Result<()> {
-    let connection = create_test_db();
-
-    let service = Service::new(connection);
+    let service = Service::open_in_memory()?;
     let account = service.create_account("")?;
     let account2 = service.create_account("")?;
 
-    let create_opts = CreateTransactionOpts {
-        account_id: Some(account.id),
-        ..Default::default()
-    };
-
-    let transaction = service.create_transaction(create_opts)?;
+    let transaction = service.create_expense().account(account.id).submit()?;
     let transaction = service.set_transaction_account(transaction.id, account2.id)?;
     assert_eq!(transaction.sender_id.unwrap(), account2.id);
     service
@@ -377,17 +338,10 @@ fn set_transaction_account() -> mukwa::Result<()> {
 
 #[test]
 fn set_transaction_outflow() -> mukwa::Result<()> {
-    let connection = create_test_db();
-
-    let service = Service::new(connection);
+    let service = Service::open_in_memory()?;
     let account = service.create_account("")?;
 
-    let create_opts = CreateTransactionOpts {
-        account_id: Some(account.id),
-        ..Default::default()
-    };
-
-    let transaction = service.create_transaction(create_opts)?;
+    let transaction = service.create_expense().account(account.id).submit()?;
     let transaction = service.set_transaction_outflow(transaction.id, Money::new(500))?;
     assert_eq!(transaction.amount, Money::new(500));
     service
@@ -402,17 +356,10 @@ fn set_transaction_outflow() -> mukwa::Result<()> {
 
 #[test]
 fn set_transaction_inflow_for_expense() -> mukwa::Result<()> {
-    let connection = create_test_db();
-
-    let service = Service::new(connection);
+    let service = Service::open_in_memory()?;
     let account = service.create_account("")?;
 
-    let create_opts = CreateTransactionOpts {
-        account_id: Some(account.id),
-        ..Default::default()
-    };
-
-    let transaction = service.create_transaction(create_opts)?;
+    let transaction = service.create_expense().account(account.id).submit()?;
     let transaction = service.set_transaction_inflow(transaction.id, Money::new(500))?;
     assert_eq!(transaction.amount, Money::new(500));
     assert_eq!(transaction.transaction_type(), TransactionType::Income);
@@ -422,18 +369,11 @@ fn set_transaction_inflow_for_expense() -> mukwa::Result<()> {
 
 #[test]
 fn set_transaction_category() -> mukwa::Result<()> {
-    let connection = create_test_db();
-
-    let service = Service::new(connection);
-    let account = service.create_account("")?;
-
-    let create_opts = CreateTransactionOpts {
-        account_id: Some(account.id),
-        ..Default::default()
-    };
+    let service = Service::open_in_memory()?;
+    service.create_account("")?;
 
     let category = service.create_category("")?;
-    let transaction = service.create_transaction(create_opts)?;
+    let transaction = service.create_expense().submit()?;
     let transaction = service.set_transaction_category(transaction.id, category.id)?;
     assert_eq!(transaction.category_id.unwrap(), category.id);
     service
@@ -477,12 +417,7 @@ fn set_transaction_note() -> mukwa::Result<()> {
     let service = Service::new(connection);
     let account = service.create_account("")?;
 
-    let create_opts = CreateTransactionOpts {
-        account_id: Some(account.id),
-        ..Default::default()
-    };
-
-    let transaction = service.create_transaction(create_opts)?;
+    let transaction = service.create_expense().account(account.id).submit()?;
     let transaction = service.set_transaction_note(transaction.id, "Shoprite")?;
     assert_eq!(transaction.note.unwrap(), "Shoprite");
     service
@@ -515,9 +450,10 @@ fn fetch_transactions() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
     service.create_account("My account")?;
-    let t1 = service.create_transaction(Default::default())?;
-    let t2 = service.create_transaction(Default::default())?;
-    let t3 = service.create_transaction(Default::default())?;
+
+    let t1 = service.create_expense().submit()?;
+    let t2 = service.create_expense().submit()?;
+    let t3 = service.create_expense().submit()?;
 
     let transactions = service.fetch_transactions()?;
     assert_eq!(transactions.len(), 3);

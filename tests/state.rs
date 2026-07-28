@@ -16,7 +16,7 @@
 
 use jiff::Zoned;
 use jiff::civil::date;
-use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service};
+use mukwa::service::{CreateBudgetOpts, Service};
 use mukwa::state::AppState;
 use mukwa::{Money, create_test_db};
 use slint::Model;
@@ -93,11 +93,14 @@ fn create_account_adds_to_account_options() -> mukwa::Result<()> {
 fn state_loads_data_from_service() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
+
     service.create_account("")?;
     service.create_account("")?;
-    service.create_transaction(Default::default())?;
-    service.create_transaction(Default::default())?;
-    service.create_transaction(Default::default())?;
+
+    service.create_expense().submit()?;
+    service.create_expense().submit()?;
+    service.create_expense().submit()?;
+
     let state = AppState::new(service)?;
     assert_eq!(state.transactions().iter().len(), 3);
     assert_eq!(state.accounts().iter().len(), 2);
@@ -120,12 +123,12 @@ fn calculate_total_spent() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("")?;
     let category = service.create_category(Default::default())?;
-    let opts = CreateTransactionOpts {
-        amount: Money::new(500),
-        category_id: Some(category.id),
-        ..Default::default()
-    };
-    service.create_transaction(opts)?;
+    service
+        .create_expense()
+        .amount(Money::new(500))
+        .category(category.id)
+        .submit()?;
+
     let budget = service.create_budget(CreateBudgetOpts {
         category_id: category.id,
         ..Default::default()
@@ -141,16 +144,17 @@ fn calculate_total_spent_only_includes_current_month() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("")?;
     let category = service.create_category(Default::default())?;
-    let opts = CreateTransactionOpts {
-        amount: Money::new(500),
-        category_id: Some(category.id),
-        ..Default::default()
-    };
-    service.create_transaction(opts.clone())?;
-    service.create_transaction(CreateTransactionOpts {
-        date: date(1990, 1, 1),
-        ..opts
-    })?;
+    service
+        .create_expense()
+        .amount(Money::new(500))
+        .category(category.id)
+        .submit()?;
+    service
+        .create_expense()
+        .amount(Money::new(500))
+        .category(category.id)
+        .date(date(1990, 1, 1))
+        .submit()?;
     let budget = service.create_budget(CreateBudgetOpts {
         category_id: category.id,
         ..Default::default()
@@ -171,12 +175,12 @@ fn left_to_spend_caps_at_zero() -> mukwa::Result<()> {
         amount: Some(Money::new(200)),
         month: Some(Zoned::now().date()),
     })?;
-    service.create_transaction(CreateTransactionOpts {
-        amount: Money::new(500),
-        date: Zoned::now().date(),
-        category_id: Some(category.id),
-        ..Default::default()
-    })?;
+    service
+        .create_expense()
+        .amount(Money::new(500))
+        .date(Zoned::now().date())
+        .category(category.id)
+        .submit()?;
     let state = AppState::new(service)?;
     let total = state.left_to_spend(budget.id.to_string().as_str())?;
     assert_eq!(total, Money::ZERO);
