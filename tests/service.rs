@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use jiff::civil::date;
 use jiff::Zoned;
+use jiff::civil::date;
 use mukwa::service::{CreateBudgetOpts, CreateTransactionOpts, Service, TransactionType};
-use mukwa::{create_test_db, Money};
+use mukwa::{Money, create_test_db};
 use uuid::Uuid;
 
 #[test]
@@ -650,22 +650,47 @@ fn set_payee_on_an_income() -> mukwa::Result<()> {
     let account = service.create_account("")?;
     let account2 = service.create_account("")?;
 
-    let expense = service.create_expense().account(account.id).submit()?;
+    let expense = service.create_income().account(account.id).submit()?;
     let transfer = service.set_transaction_payee(expense.id, account2.id)?;
 
     assert_eq!(transfer.transaction_type(), TransactionType::Transfer);
-    assert_eq!(transfer.sender_id.unwrap(), account.id);
-    assert_eq!(transfer.receiver_id.unwrap(), account2.id);
+    assert_eq!(transfer.sender_id.unwrap(), account2.id);
+    assert_eq!(transfer.receiver_id.unwrap(), account.id);
 
     service
         .connection()
         .query_one("SELECT * FROM transactions", [], |row| {
             let sender_id: String = row.get("sender_id")?;
             let receiver_id: String = row.get("receiver_id")?;
-            assert_eq!(sender_id, account.id.to_string());
-            assert_eq!(receiver_id, account2.id.to_string());
+            assert_eq!(sender_id, account2.id.to_string());
+            assert_eq!(receiver_id, account.id.to_string());
             Ok(())
         })?;
-    todo!();
+    Ok(())
+}
+
+#[test]
+fn set_payee_sets_category_to_null() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("")?;
+    let account2 = service.create_account("")?;
+    let category = service.create_category("")?;
+
+    let expense = service
+        .create_expense()
+        .account(account.id)
+        .category(category.id)
+        .submit()?;
+    let transfer = service.set_transaction_payee(expense.id, account2.id)?;
+
+    assert!(transfer.category_id.is_none());
+
+    service
+        .connection()
+        .query_one("SELECT * FROM transactions", [], |row| {
+            let category_id: Option<String> = row.get("category_id")?;
+            assert!(category_id.is_none());
+            Ok(())
+        })?;
     Ok(())
 }
