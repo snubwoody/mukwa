@@ -428,6 +428,39 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    global_state.on_left_to_spend_in_group({
+        let state = state.clone();
+        move |id, date| match state.left_to_spend_in_group(&id, date) {
+            Ok(value) => value.to_shared_string(),
+            Err(err) => {
+                warn!("Failed to calculate the amount left to spend in group {id}: {err}");
+                Money::ZERO.to_shared_string()
+            }
+        }
+    });
+
+    global_state.on_total_assigned_in_group({
+        let state = state.clone();
+        move |id, date| match state.total_assigned_in_group(&id, date) {
+            Ok(value) => value.to_shared_string(),
+            Err(err) => {
+                warn!(group_id=?id,"Failed to calculate total assigned in group: {err}");
+                Money::ZERO.to_shared_string()
+            }
+        }
+    });
+
+    global_state.on_total_spent_in_group({
+        let state = state.clone();
+        move |id, date| match state.total_spent_in_group(&id, date) {
+            Ok(value) => value.to_shared_string(),
+            Err(err) => {
+                warn!(group_id=?id,"Failed to calculate total spent in group: {err}");
+                Money::ZERO.to_shared_string()
+            }
+        }
+    });
+
     global_state.on_duplicate_transaction({
         let mut state = state.clone();
         move |id| {

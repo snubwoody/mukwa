@@ -245,8 +245,7 @@ component CategoryGroupItem {
 
                 Text {
                     width: 100px;
-                    text: "$0.00";
-                    // text: State.format-money(State.total-spent(budget.id));
+                    text: State.format-money(State.total-assigned-in-group(category-group.id,current-date));
                     color: Colors.textBody;
                     horizontal-alignment: end;
                 }
@@ -260,8 +259,7 @@ component CategoryGroupItem {
 
                 Text {
                     width: 100px;
-                    text: "$0.00";
-                    // text: State.format-money(State.left-to-spend(budget.id));
+                    text: State.format-money(State.left-to-spend-in-group(category-group.id,current-date));
                     color: Colors.textBody;
                     horizontal-alignment: end;
                 }

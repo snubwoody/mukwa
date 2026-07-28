@@ -852,6 +852,31 @@ impl Service {
         Ok(total)
     }
 
+    pub fn total_assigned_in_group(&self, group_id: Uuid, month: Date) -> crate::Result<Money> {
+        let connection = self.connection();
+
+        let sql = "SELECT b.* FROM budgets b \
+            LEFT JOIN categories c ON b.category_id = c.id \
+            WHERE c.group_id = ?";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows = stmt.query_and_then([group_id.to_string()], |row| Budget::try_from(row))?;
+
+        let mut total = Money::ZERO;
+        for row in rows {
+            let budget = row?;
+
+            let is_same_month =
+                budget.month == month.month().into() && budget.year == month.year().into();
+
+            if !is_same_month {
+                continue;
+            }
+
+            total += budget.amount;
+        }
+        Ok(total)
+    }
+
     /// Calculates the account balance.
     pub fn account_balance(&self, account_id: Uuid) -> crate::Result<Money> {
         let connection = self.connection();

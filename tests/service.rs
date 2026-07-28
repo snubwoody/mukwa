@@ -220,7 +220,7 @@ fn total_spent_in_group() -> mukwa::Result<()> {
     let date = date(2020, 12, 14);
     let group = service.create_category_group("")?;
     let group2 = service.create_category_group("")?;
-    let category = service.create_category("", group.id)?;
+    service.create_category("", group.id)?;
 
     service
         .create_expense()
@@ -237,6 +237,34 @@ fn total_spent_in_group() -> mukwa::Result<()> {
     assert_eq!(total, Money::new(150));
     let total = service.total_spent_in_group(group2.id, date)?;
     assert_eq!(total, Money::ZERO);
+    Ok(())
+}
+
+#[test]
+fn total_assigned_in_group() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    service.create_account("")?;
+
+    let group = service.create_category_group("")?;
+    let group2 = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
+    let category2 = service.create_category("", group.id)?;
+    service.create_budget(CreateBudgetOpts {
+        amount: Some(Money::new(500)),
+        category_id: category.id,
+        ..Default::default()
+    })?;
+    service.create_budget(CreateBudgetOpts {
+        amount: Some(Money::new(250)),
+        category_id: category2.id,
+        ..Default::default()
+    })?;
+
+    let t1 = service.total_assigned_in_group(group.id, Zoned::now().date())?;
+    let t2 = service.total_assigned_in_group(group2.id, Zoned::now().date())?;
+
+    assert_eq!(t1, Money::new(750));
+    assert_eq!(t2, Money::ZERO);
     Ok(())
 }
 

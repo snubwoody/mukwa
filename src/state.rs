@@ -209,6 +209,13 @@ impl AppState {
         Ok(total)
     }
 
+    pub fn total_assigned_in_group(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
+        let id = Uuid::parse_str(id)?;
+        let date = Date::new(date.year as i16, date.month as i8, date.day as i8)?;
+        let total = self.service.total_assigned_in_group(id, date)?;
+        Ok(total)
+    }
+
     pub fn fetch_or_init_budgets(&self, date: Date) -> crate::Result<Vec<ui::Budget>> {
         let budgets: Vec<ui::Budget> = self
             .service
@@ -224,6 +231,15 @@ impl AppState {
         let id = Uuid::parse_str(id)?;
         let budget = self.service.get_budget(id)?;
         let available = budget.amount - total;
+        Ok(available.max(Money::ZERO))
+    }
+
+    pub fn left_to_spend_in_group(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
+        let total = self.total_spent_in_group(id, date.clone())?;
+        let id = Uuid::parse_str(id)?;
+        let date = Date::new(date.year as i16, date.month as i8, date.day as i8)?;
+        let assigned = self.service.total_assigned_in_group(id, date)?;
+        let available = assigned - total;
         Ok(available.max(Money::ZERO))
     }
 
