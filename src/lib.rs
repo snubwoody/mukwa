@@ -24,7 +24,7 @@ pub mod state;
 pub use error::Error;
 pub use error::Result;
 pub use money::Money;
-use slint::ModelExt;
+use slint::{DataTransfer, ModelExt};
 
 use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
@@ -433,6 +433,24 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
             Err(err) => {
                 warn!("{err}");
                 Money::ZERO.to_shared_string()
+            }
+        }
+    });
+
+    global_state.on_category_to_transfer(DataTransfer::from);
+
+    global_state.on_transfer_to_category(|data| {
+        data.plain_text().unwrap_or_else(|err| {
+            warn!("{err}");
+            SharedString::new()
+        })
+    });
+
+    global_state.on_move_category({
+        let mut state = state.clone();
+        move |id, group_id| {
+            if let Err(err) = state.move_category(&id, &group_id) {
+                warn!("Failed to move category: {err}");
             }
         }
     });

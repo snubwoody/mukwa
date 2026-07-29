@@ -57,6 +57,27 @@ fn create_category() -> mukwa::Result<()> {
 }
 
 #[test]
+fn move_category() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+
+    let group = service.create_category_group("")?;
+    let group2 = service.create_category_group("")?;
+    let category = service.create_category("Groceries", group.id)?;
+    let category = service.move_category(category.id, group2.id)?;
+
+    assert_eq!(category.group_id.unwrap(), group2.id);
+
+    service
+        .connection()
+        .query_one("SELECT * FROM categories", [], |row| {
+            let group_id: String = row.get("group_id")?;
+            assert_eq!(group_id, group2.id.to_string());
+            Ok(())
+        })?;
+    Ok(())
+}
+
+#[test]
 fn create_category_group() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     let group = service.create_category_group("Wants")?;
