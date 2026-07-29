@@ -565,6 +565,7 @@ pub fn run() -> Result<()> {
     migrator.load_embedded()?;
     migrator.migrate(&mut connection)?;
 
+    connection.pragma_update(None, "journal_mode", "WAL")?;
     let service = Service::new(connection);
 
     let main_window = ui::MainWindow::new().unwrap();
