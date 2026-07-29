@@ -21,7 +21,7 @@ use jiff::civil::Date;
 use slint::{Model, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
-use tracing::info;
+use tracing::{debug, info};
 use uuid::Uuid;
 
 // TODO: set the new transaction to editing
@@ -241,6 +241,17 @@ impl AppState {
         let assigned = self.service.total_assigned_in_group(id, date)?;
         let available = assigned - total;
         Ok(available.max(Money::ZERO))
+    }
+
+    pub fn move_category(&mut self, id: &str, group_id: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let group_id = Uuid::parse_str(group_id)?;
+        self.service.move_category(id, group_id)?;
+        self.reset_budgets(self.current_budget_month)?;
+        self.reset_category_groups()?;
+        self.reset_categories()?;
+        debug!("Moved category {id} into group {group_id}");
+        Ok(())
     }
 
     pub fn update_budget(&mut self, id: &str, amount: &str) -> crate::Result<()> {

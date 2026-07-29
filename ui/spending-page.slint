@@ -37,6 +37,11 @@ component CategoryItem {
     in property <Category> category;
     property <Budget> budget: State.get-budget(category.id, current-date);
 
+    DragArea {
+        data: State.category-to-transfer(category.id);
+        allow-move: true;
+    }
+
     HorizontalLayout {
         padding-left: 16px;
         padding-right: 16px;
@@ -93,7 +98,6 @@ component CategoryItem {
                 horizontal-alignment: end;
 
                 accepted => {
-                    // TODO: maybe just manually reset
                     State.edit-budget(budget.id, self.text);
                     active = false;
                 }
@@ -126,6 +130,27 @@ component CategoryItem {
 component CategoryGroupItem {
     in property <Date> current-date;
     in property <CategoryGroup> category-group;
+
+    drop-area := DropArea {
+        can-drop(event) => event.proposed-action;
+        dropped(event) => {
+            State.move-category(State.transfer-to-category(event.data), category-group.id);
+            return event.proposed-action;
+        }
+    }
+
+    Rectangle {
+        states [
+            drag-over when drop-area.has-drag: {
+                background: Colors.neutral50;
+                in {
+                    animate background{
+                        duration: 150ms;
+                    }
+                }
+            }
+        ]
+    }
 
     VerticalLayout {
         category-popup := PopupWindow {
@@ -163,6 +188,10 @@ component CategoryGroupItem {
 
                 text-field := TextField {
                     placeholder-text: @tr("New category");
+                    accepted => {
+                        State.create-category(self.text,category-group.id);
+                        category-popup.close();
+                    }
                 }
 
                 HorizontalLayout {
@@ -339,6 +368,10 @@ export component SpendingPage inherits VerticalLayout {
 
             text-field := TextField {
                 placeholder-text: @tr("New category group");
+                accepted => {
+                    State.create-category-group(self.text);
+                    popup.close();
+                }
             }
 
             HorizontalLayout {

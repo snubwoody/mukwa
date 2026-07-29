@@ -999,6 +999,19 @@ impl Service {
         Ok(category)
     }
 
+    /// Moves the category into the category group.
+    pub fn move_category(&self, id: Uuid, group_id: Uuid) -> crate::Result<Category> {
+        let connection = self.connection.lock().unwrap();
+        let sql = "UPDATE categories SET group_id = ?1 WHERE id = ?2 RETURNING *";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt.query_and_then(
+            [group_id.to_string().as_str(), id.to_string().as_str()],
+            |row| Category::try_from(row),
+        )?;
+        let category = rows.next().unwrap()?;
+        Ok(category)
+    }
+
     pub fn update_category_group(&self, id: Uuid, title: &str) -> crate::Result<CategoryGroup> {
         let connection = self.connection.lock().unwrap();
         let sql = "UPDATE category_groups SET title = ?1 WHERE id = ?2 RETURNING *";
