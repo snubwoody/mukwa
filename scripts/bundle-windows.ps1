@@ -1,10 +1,3 @@
-# Write-Output "Usage: test.ps1 [-Install] [-Help]"
-# Write-Output "Build the installer for Windows.\n"
-# Write-Output "Options:"
-# Write-Output "  -Architecture, -a Which architecture to build (x86_64 or aarch64)"
-# Write-Output "  -Install, -i      Run the installer after building."
-# Write-Output "  -Help, -h         Show this help message."
-
 $OSArchitecture = switch ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)
 {
     "X64" {
@@ -27,7 +20,7 @@ else
     $OSArchitecture
 }
 
-$AppVersion = "0.1.0-alpha.3"
+$AppVersion = "0.1.0-alpha.4"
 $CargoTarget = "$Architecture-pc-windows-msvc"
 $CargoBuildDir = "target/$CargoTarget/release"
 $ResourceDir = "$env:TEMP\MukwaBundleDir";
