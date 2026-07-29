@@ -163,6 +163,10 @@ component CategoryGroupItem {
 
                 text-field := TextField {
                     placeholder-text: @tr("New category");
+                    accepted => {
+                        State.create-category(self.text,category-group.id);
+                        category-popup.close();
+                    }
                 }
 
                 HorizontalLayout {
@@ -339,6 +343,10 @@ export component SpendingPage inherits VerticalLayout {
 
             text-field := TextField {
                 placeholder-text: @tr("New category group");
+                accepted => {
+                    State.create-category-group(self.text);
+                    popup.close();
+                }
             }
 
             HorizontalLayout {
