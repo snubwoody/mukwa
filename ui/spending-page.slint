@@ -409,6 +409,32 @@ export component SpendingPage inherits VerticalLayout {
                     category-group: category-group;
                     current-date: current-date;
                 }
+
+                Rectangle {
+                    background: Colors.neutral25;
+                    HorizontalLayout {
+                        alignment: start;
+                        padding-left: 16px;
+                        padding-right: 16px;
+                        padding-top: 4px;
+                        padding-bottom: 4px;
+                        Text{
+                            text: "No group";
+                            color: Colors.textBody;
+                        }
+                    }
+                }
+
+                for category in State.categories: Rectangle{
+                    width: 100%;
+                    visible: category.group-id == "";
+                    height: self.visible ? category-item.preferred-height: 0;
+                    category-item := CategoryItem {
+                        width: 100%;
+                        current-date: current-date;
+                        category: category;
+                    }
+                }
             }
         }
 
