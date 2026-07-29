@@ -137,7 +137,7 @@ fn calculate_total_spent() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("")?;
     let group = service.create_category_group("")?;
-    let category = service.create_category("",group.id)?;
+    let category = service.create_category("", group.id)?;
     service
         .create_expense()
         .amount(Money::new(500))
@@ -159,7 +159,7 @@ fn calculate_total_spent_only_includes_current_month() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("")?;
     let group = service.create_category_group("")?;
-    let category = service.create_category(Default::default(),group.id)?;
+    let category = service.create_category(Default::default(), group.id)?;
     service
         .create_expense()
         .amount(Money::new(500))

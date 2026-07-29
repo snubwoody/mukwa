@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use jiff::civil::date;
 use jiff::Zoned;
+use jiff::civil::date;
 use mukwa::service::{CreateBudgetOpts, Service, TransactionType};
-use mukwa::{create_test_db, Money};
+use mukwa::{Money, create_test_db};
 use uuid::Uuid;
 
 #[test]
@@ -217,26 +217,24 @@ fn total_spent_in_group() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("")?;
 
-    let date = date(2020, 12, 14);
     let group = service.create_category_group("")?;
-    let group2 = service.create_category_group("")?;
-    service.create_category("", group.id)?;
+    let category = service.create_category("", group.id)?;
 
     service
         .create_expense()
         .amount(Money::new(500))
         .date(Zoned::now().date())
+        .category(category.id)
         .submit()?;
     service
         .create_expense()
+        .category(category.id)
         .amount(Money::new(150))
         .date(Zoned::now().date())
         .submit()?;
 
-    let total = service.total_spent_in_group(group.id, date)?;
-    assert_eq!(total, Money::new(150));
-    let total = service.total_spent_in_group(group2.id, date)?;
-    assert_eq!(total, Money::ZERO);
+    let total = service.total_spent_in_group(group.id, Zoned::now().date())?;
+    assert_eq!(total, Money::new(650));
     Ok(())
 }
 

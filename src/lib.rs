@@ -187,8 +187,8 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
             let filtered_categories = state
                 .categories()
                 .filter(move |category| category.group_id == group_id);
-            let model = ModelRc::new(filtered_categories);
-            model
+
+            ModelRc::new(filtered_categories)
         }
     });
 
