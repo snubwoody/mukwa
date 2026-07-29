@@ -127,6 +127,65 @@ component CategoryGroupItem {
     in property <CategoryGroup> category-group;
 
     VerticalLayout {
+        category-popup := PopupWindow {
+            width: 250px;
+            x: category-button.x;
+            y: popup-position-y();
+            height: layout.preferred-height;
+
+            function popup-position-y() -> length {
+                if (category-button.absolute-position.y > Api.window-size().height * 1px * 0.5) {
+                    return category-button.y - self.height;
+                }
+
+                return category-button.y + category-button.height + 4px;
+            }
+
+            init => {
+                if (self.y > Api.window-size().height * 1px * 0.5) {
+                    self.y = category-button.y - self.width
+                }
+            }
+
+            close-policy: close-on-click-outside;
+
+            Rectangle {
+                background: white;
+                border-width: 1px;
+                border-radius: 4px;
+                border-color: Colors.neutral50;
+            }
+
+            layout := VerticalLayout {
+                alignment: start;
+                padding: 8px;
+                spacing: 12px;
+
+                text-field := TextField {
+                    placeholder-text: @tr("New category");
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    cross-axis-alignment: start;
+
+                    PrimaryButton {
+                        theme: ghost;
+                        text: @tr("Cancel");
+                        clicked => category-popup.close();
+                    }
+
+                    PrimaryButton {
+                        text: @tr("Confirm");
+                        clicked => {
+                            State.create-category(text-field.text,category-group.id);
+                            category-popup.close();
+                        }
+                    }
+                }
+            }
+        }
+
         Rectangle {
             background: Colors.neutral25;
             HorizontalLayout {
@@ -143,12 +202,11 @@ component CategoryGroupItem {
                     color: Colors.textBody;
                 }
 
-                IconButton {
+                category-button := IconButton {
                     icon: IconSet.Plus;
                     theme: ghost;
-                // TODO: add popup
-                clicked => {
-                        State.create-category("Category group",category-group.id);
+                    clicked => {
+                        category-popup.show();
                     }
                 }
 
@@ -241,13 +299,6 @@ export component SpendingPage inherits VerticalLayout {
         x: button.x;
         y: button.y + button.height + 4px;
         height: layout.preferred-height;
-
-        init => {
-            if (self.x > Api.window-position().x * 1px * 0.5) {
-                self.x = button.x + button.width - self.width
-            }
-        }
-
         close-policy: close-on-click-outside;
 
         Rectangle {
@@ -288,8 +339,6 @@ export component SpendingPage inherits VerticalLayout {
     }
 
     VerticalLayout {
-        //alignment: start;
-
         HorizontalLayout {
             padding-left: 16px;
             padding-right: 16px;
