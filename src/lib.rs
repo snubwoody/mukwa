@@ -24,6 +24,7 @@ pub mod state;
 pub use error::Error;
 pub use error::Result;
 pub use money::Money;
+use slint::ModelExt;
 
 use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
@@ -149,6 +150,7 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     let transactions_model_rc = ModelRc::new(state.transactions());
     let accounts_model_rc = ModelRc::new(state.accounts());
     let categories_model_rc = ModelRc::new(state.categories());
+    let category_groups_model_rc = ModelRc::new(state.category_groups());
     let budgets_model_rc = ModelRc::new(state.budgets());
     let account_options_rc = ModelRc::new(state.account_options());
 
@@ -157,6 +159,7 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     global_state.set_transactions(transactions_model_rc);
     global_state.set_accounts(accounts_model_rc);
     global_state.set_categories(categories_model_rc);
+    global_state.set_category_groups(category_groups_model_rc);
     global_state.set_budgets(budgets_model_rc);
 
     global_state.set_account_options(account_options_rc);
@@ -174,6 +177,32 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
                 .categories()
                 .iter()
                 .find(|c| c.id == id)
+                .unwrap_or_default()
+        }
+    });
+
+    global_state.on_categories_in_group({
+        let state = state.clone();
+        move |group_id| {
+            let filtered_categories = state
+                .categories()
+                .filter(move |category| category.group_id == group_id);
+
+            ModelRc::new(filtered_categories)
+        }
+    });
+
+    global_state.on_get_budget({
+        let state = state.clone();
+        move |category_id, date| {
+            state
+                .budgets()
+                .iter()
+                .find(|budget| {
+                    budget.category_id == category_id
+                        && budget.month == date.month
+                        && budget.year == date.year
+                })
                 .unwrap_or_default()
         }
     });
@@ -200,9 +229,18 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     global_state.on_create_category({
         let mut state = state.clone();
-        move |title| {
-            if let Err(err) = state.create_category(&title) {
+        move |title, group_id| {
+            if let Err(err) = state.create_category(&title, &group_id) {
                 warn!("Failed to create category: {err}")
+            }
+        }
+    });
+
+    global_state.on_create_category_group({
+        let mut state = state.clone();
+        move |title| {
+            if let Err(err) = state.create_category_group(&title) {
+                warn!("{err}")
             }
         }
     });
@@ -315,6 +353,17 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    global_state.on_total_spent_in_group({
+        let state = state.clone();
+        move |id, date| match state.total_spent_in_group(&id, date) {
+            Ok(total) => total.to_shared_string(),
+            Err(err) => {
+                warn!("Failed to calculate total spent: {err}");
+                Money::ZERO.to_shared_string()
+            }
+        }
+    });
+
     global_state.on_delete_transaction({
         let mut state = state.clone();
         move |id| {
@@ -368,12 +417,54 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    global_state.on_update_category_group({
+        let mut state = state.clone();
+        move |id, title| {
+            if let Err(err) = state.update_category_group(&id, &title) {
+                warn!("{err}");
+            }
+        }
+    });
+
     global_state.on_left_to_spend({
         let state = state.clone();
         move |id| match state.left_to_spend(&id) {
             Ok(value) => value.to_shared_string(),
             Err(err) => {
                 warn!("{err}");
+                Money::ZERO.to_shared_string()
+            }
+        }
+    });
+
+    global_state.on_left_to_spend_in_group({
+        let state = state.clone();
+        move |id, date| match state.left_to_spend_in_group(&id, date) {
+            Ok(value) => value.to_shared_string(),
+            Err(err) => {
+                warn!("Failed to calculate the amount left to spend in group {id}: {err}");
+                Money::ZERO.to_shared_string()
+            }
+        }
+    });
+
+    global_state.on_total_assigned_in_group({
+        let state = state.clone();
+        move |id, date| match state.total_assigned_in_group(&id, date) {
+            Ok(value) => value.to_shared_string(),
+            Err(err) => {
+                warn!(group_id=?id,"Failed to calculate total assigned in group: {err}");
+                Money::ZERO.to_shared_string()
+            }
+        }
+    });
+
+    global_state.on_total_spent_in_group({
+        let state = state.clone();
+        move |id, date| match state.total_spent_in_group(&id, date) {
+            Ok(value) => value.to_shared_string(),
+            Err(err) => {
+                warn!(group_id=?id,"Failed to calculate total spent in group: {err}");
                 Money::ZERO.to_shared_string()
             }
         }

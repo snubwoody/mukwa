@@ -76,7 +76,6 @@ impl From<&Account> for ui::Account {
     }
 }
 
-// TODO: could maybe use default struct values
 #[derive(PartialOrd, PartialEq, Debug, Default, Clone, Copy)]
 pub struct CreateBudgetOpts {
     pub amount: Option<Money>,
@@ -142,6 +141,13 @@ impl<'a> TryFrom<&Row<'a>> for Budget {
 pub struct Category {
     pub id: Uuid,
     pub title: String,
+    pub group_id: Option<Uuid>,
+}
+
+#[derive(PartialOrd, PartialEq, Debug, Default, Clone)]
+pub struct CategoryGroup {
+    pub id: Uuid,
+    pub title: String,
 }
 
 impl Category {
@@ -149,12 +155,37 @@ impl Category {
         Category {
             id: Uuid::now_v7(),
             title: title.to_string(),
+            group_id: None,
         }
     }
 }
 
 impl From<Category> for ui::Category {
     fn from(value: Category) -> Self {
+        let group_id = match value.group_id {
+            Some(id) => id.to_shared_string(),
+            None => SharedString::new(),
+        };
+
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
+            group_id,
+        }
+    }
+}
+
+impl From<CategoryGroup> for ui::CategoryGroup {
+    fn from(value: CategoryGroup) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
+        }
+    }
+}
+
+impl From<&CategoryGroup> for ui::CategoryGroup {
+    fn from(value: &CategoryGroup) -> Self {
         Self {
             id: value.id.to_shared_string(),
             title: value.title.to_shared_string(),
@@ -164,9 +195,15 @@ impl From<Category> for ui::Category {
 
 impl From<&Category> for ui::Category {
     fn from(value: &Category) -> Self {
+        let group_id = match value.group_id {
+            Some(id) => id.to_shared_string(),
+            None => SharedString::new(),
+        };
+
         Self {
             id: value.id.to_shared_string(),
             title: value.title.to_shared_string(),
+            group_id,
         }
     }
 }
@@ -239,8 +276,29 @@ impl<'a> TryFrom<&Row<'a>> for Category {
     fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
         let id: String = value.get("id")?;
         let title: String = value.get("title")?;
+        let group_id: Option<String> = value.get("group_id")?;
+
+        let group_id = match group_id {
+            Some(id) => Some(Uuid::parse_str(&id)?),
+            None => None,
+        };
 
         Ok(Category {
+            id: Uuid::parse_str(&id)?,
+            title: title.to_string(),
+            group_id,
+        })
+    }
+}
+
+impl<'a> TryFrom<&Row<'a>> for CategoryGroup {
+    type Error = Error;
+
+    fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
+        let id: String = value.get("id")?;
+        let title: String = value.get("title")?;
+
+        Ok(CategoryGroup {
             id: Uuid::parse_str(&id)?,
             title: title.to_string(),
         })
@@ -766,6 +824,59 @@ impl Service {
         Ok(total)
     }
 
+    /// Calculates the total amount spent in the category group.
+    pub fn total_spent_in_group(&self, group_id: Uuid, month: Date) -> crate::Result<Money> {
+        let connection = self.connection();
+
+        let sql = "SELECT \
+            t.id,t.amount,t.transaction_date,t.sender_id,t.receiver_id,t.category_id,t.note \
+            FROM transactions t \
+            LEFT JOIN categories c ON t.category_id = c.id \
+            WHERE c.group_id = ?";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows = stmt.query_and_then([group_id.to_string()], |row| Transaction::try_from(row))?;
+
+        let mut total = Money::ZERO;
+        for row in rows {
+            let transaction = row?;
+
+            let is_same_month = transaction.date.month() == month.month()
+                && transaction.date.year() == month.year();
+
+            if !is_same_month {
+                continue;
+            }
+
+            total += transaction.amount;
+        }
+        Ok(total)
+    }
+
+    pub fn total_assigned_in_group(&self, group_id: Uuid, month: Date) -> crate::Result<Money> {
+        let connection = self.connection();
+
+        let sql = "SELECT b.* FROM budgets b \
+            LEFT JOIN categories c ON b.category_id = c.id \
+            WHERE c.group_id = ?";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows = stmt.query_and_then([group_id.to_string()], |row| Budget::try_from(row))?;
+
+        let mut total = Money::ZERO;
+        for row in rows {
+            let budget = row?;
+
+            let is_same_month =
+                budget.month == month.month().into() && budget.year == month.year().into();
+
+            if !is_same_month {
+                continue;
+            }
+
+            total += budget.amount;
+        }
+        Ok(total)
+    }
+
     /// Calculates the account balance.
     pub fn account_balance(&self, account_id: Uuid) -> crate::Result<Money> {
         let connection = self.connection();
@@ -801,6 +912,20 @@ impl Service {
         Ok(categories)
     }
 
+    /// Fetches all category groups from the database.
+    pub fn fetch_category_groups(&self) -> crate::Result<Vec<CategoryGroup>> {
+        let mut category_groups = vec![];
+        let connection = self.connection();
+        let sql = "SELECT * FROM category_groups";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows = stmt.query_and_then([], |row| CategoryGroup::try_from(row))?;
+
+        for row in rows {
+            category_groups.push(row?);
+        }
+        Ok(category_groups)
+    }
+
     /// Creates a new [`Account`].
     pub fn create_account(&self, name: &str) -> crate::Result<Account> {
         let connection = self.connection.lock().unwrap();
@@ -814,15 +939,29 @@ impl Service {
     }
 
     /// Creates a new [`Category`].
-    pub fn create_category(&self, title: &str) -> crate::Result<Category> {
-        let connection = self.connection.lock().unwrap();
-        let sql = "INSERT INTO categories(id,title) VALUES(?1,?2) RETURNING *";
+    pub fn create_category(&self, title: &str, group_id: Uuid) -> crate::Result<Category> {
+        let connection = self.connection();
+        let sql = "INSERT INTO categories(id,title,group_id) VALUES(?1,?2,?3) RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
-        let mut rows = stmt.query_and_then([&Uuid::now_v7().to_string(), title], |row| {
-            Category::try_from(row)
-        })?;
+
+        let mut rows = stmt.query_and_then(
+            params![&Uuid::now_v7().to_string(), title, group_id.to_string()],
+            |row| Category::try_from(row),
+        )?;
         let category = rows.next().unwrap()?;
         Ok(category)
+    }
+
+    /// Creates a new [`CategoryGroup`].
+    pub fn create_category_group(&self, title: &str) -> crate::Result<CategoryGroup> {
+        let connection = self.connection.lock().unwrap();
+        let sql = "INSERT INTO category_groups(id,title) VALUES(?1,?2) RETURNING *";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt.query_and_then([&Uuid::now_v7().to_string(), title], |row| {
+            CategoryGroup::try_from(row)
+        })?;
+        let group = rows.next().unwrap()?;
+        Ok(group)
     }
 
     /// Creates a new [`Budget`].
@@ -858,6 +997,17 @@ impl Service {
         })?;
         let category = rows.next().unwrap()?;
         Ok(category)
+    }
+
+    pub fn update_category_group(&self, id: Uuid, title: &str) -> crate::Result<CategoryGroup> {
+        let connection = self.connection.lock().unwrap();
+        let sql = "UPDATE category_groups SET title = ?1 WHERE id = ?2 RETURNING *";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let mut rows = stmt.query_and_then([title, id.to_string().as_str()], |row| {
+            CategoryGroup::try_from(row)
+        })?;
+        let group = rows.next().unwrap()?;
+        Ok(group)
     }
 
     pub fn update_budget(&self, id: Uuid, amount: Money) -> crate::Result<Budget> {
@@ -1074,7 +1224,8 @@ mod test {
     fn create_expense() -> crate::Result<()> {
         let service = Service::open_in_memory()?;
         let account = service.create_account("My account")?;
-        let category = service.create_category("Movies")?;
+        let group = service.create_category_group("")?;
+        let category = service.create_category("Movies", group.id)?;
         let expense = service
             .create_expense()
             .amount(Money::from_f64(25.24))

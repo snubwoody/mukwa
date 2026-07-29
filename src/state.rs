@@ -30,6 +30,7 @@ pub struct AppState {
     service: Service,
     accounts: Rc<VecModel<ui::Account>>,
     categories: Rc<VecModel<ui::Category>>,
+    category_groups: Rc<VecModel<ui::CategoryGroup>>,
     current_budget_month: Date,
     /// The budgets of the active month.
     budgets: Rc<VecModel<ui::Budget>>,
@@ -52,8 +53,12 @@ impl AppState {
         let categories = service.fetch_categories()?;
         let category_list: Vec<ui::Category> = categories.iter().map(|c| c.into()).collect();
         let category_options: Vec<ui::ComboBoxItem> = categories.iter().map(|c| c.into()).collect();
+        let category_groups = service.fetch_category_groups()?;
+        let category_group_list: Vec<ui::CategoryGroup> =
+            category_groups.iter().map(|c| c.into()).collect();
 
         let category_model = Rc::new(VecModel::from(category_list));
+        let category_group_model = Rc::new(VecModel::from(category_group_list));
         let category_options_model = Rc::new(VecModel::from(category_options));
 
         let budgets_list: Vec<ui::Budget> = service
@@ -74,6 +79,7 @@ impl AppState {
             service,
             accounts: accounts_model,
             categories: category_model,
+            category_groups: category_group_model,
             current_budget_month: Zoned::now().date(),
             account_options: account_options_model,
             transactions: transactions_model,
@@ -92,6 +98,10 @@ impl AppState {
 
     pub fn categories(&self) -> Rc<VecModel<ui::Category>> {
         self.categories.clone()
+    }
+
+    pub fn category_groups(&self) -> Rc<VecModel<ui::CategoryGroup>> {
+        self.category_groups.clone()
     }
 
     pub fn budgets(&self) -> Rc<VecModel<ui::Budget>> {
@@ -122,13 +132,24 @@ impl AppState {
     }
 
     /// Creates a new category.
-    pub fn create_category(&mut self, title: &str) -> crate::Result<()> {
-        let category = self.service.create_category(title)?;
+    pub fn create_category(&mut self, title: &str, group_id: &str) -> crate::Result<()> {
+        let group_id = Uuid::parse_str(group_id)?;
+        let category = self.service.create_category(title, group_id)?;
         info!(id=?category.id,"Created new category");
 
         self.reset_budgets(self.current_budget_month)?;
         self.category_options.push(category.clone().into());
         self.categories.push(category.into());
+        Ok(())
+    }
+
+    /// Creates a new category group.
+    pub fn create_category_group(&mut self, title: &str) -> crate::Result<()> {
+        let category_group = self.service.create_category_group(title)?;
+        info!(id=?category_group.id,"Created new category group");
+
+        self.reset_budgets(self.current_budget_month)?;
+        self.category_groups.push(category_group.into());
         Ok(())
     }
 
@@ -181,6 +202,20 @@ impl AppState {
         self.service.total_spent(budget.category_id, date)
     }
 
+    pub fn total_spent_in_group(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
+        let id = Uuid::parse_str(id)?;
+        let date = Date::new(date.year as i16, date.month as i8, date.day as i8)?;
+        let total = self.service.total_spent_in_group(id, date)?;
+        Ok(total)
+    }
+
+    pub fn total_assigned_in_group(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
+        let id = Uuid::parse_str(id)?;
+        let date = Date::new(date.year as i16, date.month as i8, date.day as i8)?;
+        let total = self.service.total_assigned_in_group(id, date)?;
+        Ok(total)
+    }
+
     pub fn fetch_or_init_budgets(&self, date: Date) -> crate::Result<Vec<ui::Budget>> {
         let budgets: Vec<ui::Budget> = self
             .service
@@ -196,6 +231,15 @@ impl AppState {
         let id = Uuid::parse_str(id)?;
         let budget = self.service.get_budget(id)?;
         let available = budget.amount - total;
+        Ok(available.max(Money::ZERO))
+    }
+
+    pub fn left_to_spend_in_group(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
+        let total = self.total_spent_in_group(id, date.clone())?;
+        let id = Uuid::parse_str(id)?;
+        let date = Date::new(date.year as i16, date.month as i8, date.day as i8)?;
+        let assigned = self.service.total_assigned_in_group(id, date)?;
+        let available = assigned - total;
         Ok(available.max(Money::ZERO))
     }
 
@@ -216,14 +260,26 @@ impl AppState {
             })
             .collect();
         self.budgets.set_vec(budgets);
+        self.reset_categories()?;
+        self.reset_category_groups()?;
         Ok(())
     }
 
     pub fn update_category(&mut self, id: &str, title: &str) -> crate::Result<()> {
-        let budget_id = Uuid::parse_str(id)?;
-        self.service.update_category(budget_id, title)?;
+        let id = Uuid::parse_str(id)?;
+        self.service.update_category(id, title)?;
         info!(id=?id,"Updated category");
         self.reset_categories()?;
+        self.reset_budgets(self.current_budget_month)?;
+        Ok(())
+    }
+
+    pub fn update_category_group(&mut self, id: &str, title: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        self.service.update_category_group(id, title)?;
+        info!(id=?id,"Updated category group");
+        self.reset_categories()?;
+        self.reset_category_groups()?;
         self.reset_budgets(self.current_budget_month)?;
         Ok(())
     }
@@ -324,6 +380,17 @@ impl AppState {
             .map(|b| b.into())
             .collect();
         self.categories.set_vec(categories);
+        Ok(())
+    }
+
+    fn reset_category_groups(&mut self) -> crate::Result<()> {
+        let groups: Vec<ui::CategoryGroup> = self
+            .service
+            .fetch_category_groups()?
+            .iter()
+            .map(|b| b.into())
+            .collect();
+        self.category_groups.set_vec(groups);
         Ok(())
     }
 

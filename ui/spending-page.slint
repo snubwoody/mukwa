@@ -13,9 +13,9 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import {
-    VerticalBox,
-    LineEdit,
+    ScrollView, ListView,
 } from "std-widgets.slint";
 import { Colors } from "colors.slint";
 import { Date, CalendarState } from "widgets/calendar.slint";
@@ -24,17 +24,23 @@ import {
     Transaction,
     State,
     Category,
+    CategoryGroup,
     Budget,
     Api,
 } from "globals.slint";
 import { Button, TextField, PrimaryButton, IconButton } from "widgets.slint";
-import { IconDisplay, IconSet, Icon } from "@lucide";
+import { IconSet} from "@lucide";
 
-component BudgetItem {
-    in property <Budget> budget;
-    property <Category> category: State.get-category(budget.category-id);
+component CategoryItem {
+    in property <Date> current-date;
+    in property <Category> category;
+    property <Budget> budget: State.get-budget(category.id, current-date);
 
     HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        padding-top: 8px;
+        padding-bottom: 8px;
         Rectangle {
             width: 100px;
             property <bool> active: false;
@@ -86,6 +92,7 @@ component BudgetItem {
                 horizontal-alignment: end;
 
                 accepted => {
+                    // TODO: maybe just manually reset
                     State.edit-budget(budget.id, self.text);
                     active = false;
                 }
@@ -115,16 +122,162 @@ component BudgetItem {
     }
 }
 
+component CategoryGroupItem {
+    in property <Date> current-date;
+    in property <CategoryGroup> category-group;
+
+    VerticalLayout {
+        category-popup := PopupWindow {
+            width: 250px;
+            x: category-button.x;
+            y: popup-position-y();
+            height: layout.preferred-height;
+
+            function popup-position-y() -> length {
+                if (category-button.absolute-position.y > Api.window-size().height * 1px * 0.5) {
+                    return category-button.y - self.height;
+                }
+
+                return category-button.y + category-button.height + 4px;
+            }
+
+            init => {
+                if (self.y > Api.window-size().height * 1px * 0.5) {
+                    self.y = category-button.y - self.width
+                }
+            }
+
+            close-policy: close-on-click-outside;
+
+            Rectangle {
+                background: white;
+                border-width: 1px;
+                border-radius: 4px;
+                border-color: Colors.neutral50;
+            }
+
+            layout := VerticalLayout {
+                alignment: start;
+                padding: 8px;
+                spacing: 12px;
+
+                text-field := TextField {
+                    placeholder-text: @tr("New category");
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    cross-axis-alignment: start;
+
+                    PrimaryButton {
+                        theme: ghost;
+                        text: @tr("Cancel");
+                        clicked => category-popup.close();
+                    }
+
+                    PrimaryButton {
+                        text: @tr("Confirm");
+                        clicked => {
+                            State.create-category(text-field.text,category-group.id);
+                            category-popup.close();
+                        }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            background: Colors.neutral25;
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                padding-top: 4px;
+                padding-bottom: 4px;
+
+                spacing: 4px;
+                cross-axis-alignment: center;
+
+                Rectangle {
+                    property <bool> active: false;
+
+                    TouchArea {
+                        clicked => {
+                            if(!active) {
+                                active = true;
+                            }
+                        }
+                    }
+
+                    Text {
+                        visible: !active;
+                        text: category-group.title;
+                        color: Colors.textBody;
+                    }
+
+                    if active: TextField {
+                        text: category-group.title;
+                        init => {
+                            self.focus();
+                        }
+                        accepted => {
+                            State.update-category-group(category-group.id, self.text);
+                            parent.active = false;
+                        }
+                    }
+                }
+
+                category-button := IconButton {
+                    icon: IconSet.Plus;
+                    theme: ghost;
+                    clicked => {
+                        category-popup.show();
+                    }
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                }
+
+                Text {
+                    width: 100px;
+                    text: State.format-money(State.total-assigned-in-group(category-group.id,current-date));
+                    color: Colors.textBody;
+                    horizontal-alignment: end;
+                }
+
+                Text {
+                    width: 100px;
+                    text: State.format-money(State.total-spent-in-group(category-group.id, current-date));
+                    color: Colors.textBody;
+                    horizontal-alignment: end;
+                }
+
+                Text {
+                    width: 100px;
+                    text: State.format-money(State.left-to-spend-in-group(category-group.id,current-date));
+                    color: Colors.textBody;
+                    horizontal-alignment: end;
+                }
+            }
+        }
+
+        for category in State.categories-in-group(category-group.id): CategoryItem {
+            current-date: current-date;
+            category: category;
+        }
+    }
+}
+
 export component SpendingPage inherits VerticalLayout {
     in-out property <Date> current-date: CalendarState.today();
     alignment: start;
     spacing: 12px;
-    padding: 16px;
 
     HorizontalLayout {
         spacing: 4px;
         cross-axis-alignment: center;
         alignment: start;
+        padding: 16px;
 
         IconButton {
             icon: IconSet.ChevronLeft;
@@ -154,9 +307,11 @@ export component SpendingPage inherits VerticalLayout {
     }
 
     HorizontalLayout {
-        alignment: end;
+        alignment: start;
+        padding-left: 16px;
+        padding-right: 16px;
         button := PrimaryButton {
-            text: @tr("New category");
+            text: @tr("New category group");
             clicked => {
                 popup.show();
             }
@@ -168,13 +323,6 @@ export component SpendingPage inherits VerticalLayout {
         x: button.x;
         y: button.y + button.height + 4px;
         height: layout.preferred-height;
-
-        init => {
-            if (self.x > Api.window-position().x * 1px * 0.5) {
-                self.x = button.x + button.width - self.width
-            }
-        }
-
         close-policy: close-on-click-outside;
 
         Rectangle {
@@ -190,7 +338,7 @@ export component SpendingPage inherits VerticalLayout {
             spacing: 12px;
 
             text-field := TextField {
-                placeholder-text: @tr("New category");
+                placeholder-text: @tr("New category group");
             }
 
             HorizontalLayout {
@@ -206,7 +354,7 @@ export component SpendingPage inherits VerticalLayout {
                 PrimaryButton {
                     text: @tr("Confirm");
                     clicked => {
-                        State.create-category(text-field.text);
+                        State.create-category-group(text-field.text);
                         popup.close();
                     }
                 }
@@ -215,10 +363,9 @@ export component SpendingPage inherits VerticalLayout {
     }
 
     VerticalLayout {
-        alignment: start;
-        spacing: 8px;
-
         HorizontalLayout {
+            padding-left: 16px;
+            padding-right: 16px;
             padding-bottom: 8px;
             padding-top: 8px;
 
@@ -253,8 +400,43 @@ export component SpendingPage inherits VerticalLayout {
             }
         }
 
-        for budget in State.budgets: BudgetItem {
-            budget: budget;
+        Flickable {
+            viewport-height: content.preferred-height;
+
+            content := VerticalLayout {
+                // TODO: add no group and don't have a plus button
+                for category-group in State.category-groups: CategoryGroupItem {
+                    category-group: category-group;
+                    current-date: current-date;
+                }
+
+                Rectangle {
+                    background: Colors.neutral25;
+                    HorizontalLayout {
+                        alignment: start;
+                        padding-left: 16px;
+                        padding-right: 16px;
+                        padding-top: 4px;
+                        padding-bottom: 4px;
+                        Text{
+                            text: "No group";
+                            color: Colors.textBody;
+                        }
+                    }
+                }
+
+                for category in State.categories: Rectangle{
+                    width: 100%;
+                    visible: category.group-id == "";
+                    height: self.visible ? category-item.preferred-height: 0;
+                    category-item := CategoryItem {
+                        width: 100%;
+                        current-date: current-date;
+                        category: category;
+                    }
+                }
+            }
         }
+
     }
 }

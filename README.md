@@ -6,3 +6,4 @@ A free personal finance app.
 
 - [Add support for filtering and mapping models in .slint directly](https://github.com/slint-ui/slint/issues/1328)
 - [Rectangle: add support for individual border width values](https://github.com/slint-ui/slint/issues/4930)
+- [Add array predicate expressions](https://github.com/slint-ui/slint/pull/11989)
