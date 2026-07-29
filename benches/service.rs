@@ -24,7 +24,6 @@ fn main() {
     divan::main();
 }
 
-// TODO: measure thread contention: https://nikolaivazquez.com/blog/divan/#measure-thread-contention
 #[divan::bench(consts = [1,10,50,100])]
 fn create_account<const N: usize>(bencher: Bencher) {
     bencher
