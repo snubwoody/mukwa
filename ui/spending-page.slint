@@ -15,9 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import {
-    VerticalBox,
-    LineEdit,
-    ScrollView,
+    ScrollView, ListView,
 } from "std-widgets.slint";
 import { Colors } from "colors.slint";
 import { Date, CalendarState } from "widgets/calendar.slint";
@@ -31,92 +29,7 @@ import {
     Api,
 } from "globals.slint";
 import { Button, TextField, PrimaryButton, IconButton } from "widgets.slint";
-import { IconDisplay, IconSet, Icon } from "@lucide";
-
-component BudgetItem {
-    in property <Budget> budget;
-    property <Category> category: State.get-category(budget.category-id);
-
-    HorizontalLayout {
-        Rectangle {
-            width: 100px;
-            property <bool> active: false;
-
-            TouchArea {
-                clicked => {
-                    if (!active) {
-                        active = true;
-                    }
-                }
-            }
-
-            if active: TextField {
-                width: 100%;
-                text: category.title;
-
-                accepted => {
-                    State.update-category(category.id, self.text);
-                    active = false;
-                }
-            }
-
-            if !active: Text {
-                width: 100%;
-                text: category.title;
-                color: Colors.textBody;
-            }
-        }
-
-        Rectangle {
-            horizontal-stretch: 1;
-        }
-
-        Rectangle {
-            width: 100px;
-            property <bool> active: false;
-
-            TouchArea {
-                clicked => {
-                    if (!active) {
-                        active = true;
-                    }
-                }
-            }
-
-            if active: TextField {
-                width: 100%;
-                text: budget.amount;
-                horizontal-alignment: end;
-
-                accepted => {
-                    State.edit-budget(budget.id, self.text);
-                    active = false;
-                }
-            }
-
-            if !active: Text {
-                width: 100%;
-                text: State.format-money(budget.amount);
-                color: Colors.textBody;
-                horizontal-alignment: end;
-            }
-        }
-
-        Text {
-            width: 100px;
-            text: State.format-money(State.total-spent(budget.id));
-            color: Colors.textBody;
-            horizontal-alignment: end;
-        }
-
-        Text {
-            width: 100px;
-            text: State.format-money(State.left-to-spend(budget.id));
-            color: Colors.textBody;
-            horizontal-alignment: end;
-        }
-    }
-}
+import { IconSet} from "@lucide";
 
 component CategoryItem {
     in property <Date> current-date;
@@ -375,7 +288,7 @@ export component SpendingPage inherits VerticalLayout {
     }
 
     VerticalLayout {
-        alignment: start;
+        //alignment: start;
 
         HorizontalLayout {
             padding-left: 16px;
@@ -414,10 +327,17 @@ export component SpendingPage inherits VerticalLayout {
             }
         }
 
-        // TODO: add no group and don't have a plus button
-        for category-group in State.category-groups: CategoryGroupItem {
-            category-group: category-group;
-            current-date: current-date;
+        Flickable {
+            viewport-height: content.preferred-height;
+
+            content := VerticalLayout {
+                // TODO: add no group and don't have a plus button
+                for category-group in State.category-groups: CategoryGroupItem {
+                    category-group: category-group;
+                    current-date: current-date;
+                }
+            }
         }
+
     }
 }
