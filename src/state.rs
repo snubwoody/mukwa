@@ -260,6 +260,8 @@ impl AppState {
             })
             .collect();
         self.budgets.set_vec(budgets);
+        self.reset_categories()?;
+        self.reset_category_groups()?;
         Ok(())
     }
 
