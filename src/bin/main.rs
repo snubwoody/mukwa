@@ -49,7 +49,7 @@ fn main() {
     let std_io_layer = fmt::layer().with_writer(std::io::stdout);
 
     let file_layer = fmt::layer()
-        .pretty()
+        // .pretty()
         .with_file(false)
         .with_line_number(false)
         .with_writer(file_writer)

@@ -192,6 +192,10 @@ component Sidebar {
 
                             text-field := TextField {
                                 placeholder-text: @tr("My account");
+                                accepted => {
+                                    State.create_account(text-field.text);
+                                    popup.close();
+                                }
                             }
                         }
 
