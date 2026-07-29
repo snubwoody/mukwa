@@ -21,7 +21,6 @@ name = "cli"
 path = "src/bin/cli.rs"
 
 [dependencies]
-slint = { version = "1.17.0", features = ["backend-winit", "renderer-skia", "log"] }
 tracing = "0.1.44"
 tempfile = "3.27.0"
 jiff = "0.2.29"
@@ -33,11 +32,18 @@ dirs = "6.0.0"
 tracing-appender = "0.2.5"
 rust-embed = "8.12.0"
 
+[dependencies.slint]
+git = "https://github.com/snubwoody/slint.git"
+branch = "mukwa"
+version = "1.17.0"
+features = ["backend-winit","renderer-skia","log"]
+
+
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-sys = { version = "0.61.2", features = ["Win32_Globalization"] }
 
 [build-dependencies]
-slint-build = "1.16.0"
+slint-build = { version = "1.16.0", git = "https://github.com/snubwoody/slint.git", branch = "mukwa"}
 winresource = "0.1.31"
 lucide-slint = "1.24.0"
 

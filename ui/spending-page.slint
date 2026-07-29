@@ -15,7 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import {
-    ScrollView, ListView,
+    ScrollView,
+    ListView,
 } from "std-widgets.slint";
 import { Colors } from "colors.slint";
 import { Date, CalendarState } from "widgets/calendar.slint";
@@ -29,7 +30,7 @@ import {
     Api,
 } from "globals.slint";
 import { Button, TextField, PrimaryButton, IconButton } from "widgets.slint";
-import { IconSet} from "@lucide";
+import { IconSet } from "@lucide";
 
 component CategoryItem {
     in property <Date> current-date;
@@ -137,7 +138,6 @@ component CategoryGroupItem {
                 if (category-button.absolute-position.y > Api.window-size().height * 1px * 0.5) {
                     return category-button.y - self.height;
                 }
-
                 return category-button.y + category-button.height + 4px;
             }
 
@@ -202,7 +202,7 @@ component CategoryGroupItem {
 
                     TouchArea {
                         clicked => {
-                            if(!active) {
+                            if (!active) {
                                 active = true;
                             }
                         }
@@ -401,7 +401,7 @@ export component SpendingPage inherits VerticalLayout {
         }
 
         Flickable {
-            viewport-height: content.preferred-height;
+            content-height: content.preferred-height;
 
             content := VerticalLayout {
                 // TODO: add no group and don't have a plus button
@@ -418,17 +418,17 @@ export component SpendingPage inherits VerticalLayout {
                         padding-right: 16px;
                         padding-top: 4px;
                         padding-bottom: 4px;
-                        Text{
+                        Text {
                             text: "No group";
                             color: Colors.textBody;
                         }
                     }
                 }
 
-                for category in State.categories: Rectangle{
+                for category in State.categories: Rectangle {
                     width: 100%;
                     visible: category.group-id == "";
-                    height: self.visible ? category-item.preferred-height: 0;
+                    height: self.visible ? category-item.preferred-height : 0;
                     category-item := CategoryItem {
                         width: 100%;
                         current-date: current-date;
@@ -437,6 +437,5 @@ export component SpendingPage inherits VerticalLayout {
                 }
             }
         }
-
     }
 }
