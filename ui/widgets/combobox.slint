@@ -136,7 +136,18 @@ export component ComboBox {
                 for option[i] in options: Rectangle {
                     background: current-index == i ? Colors.neutral50 : white;
                     height: 24px;
-                    TouchArea {
+
+                    states [
+                        hovered when inner-touch-area.has-hover: {
+                            background: Colors.neutral50;
+                            in {
+                                animate background{
+                                    duration: 150ms;
+                                }
+                            }
+                        }
+                    ]
+                    inner-touch-area := TouchArea {
                         clicked => {
                             root.select(i);
                             changed(options[current-index].value);
