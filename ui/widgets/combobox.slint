@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { Colors } from "../colors.slint";
-import { ListView } from "std-widgets.slint";
+import { ListView, ScrollView } from "std-widgets.slint";
 import { FocusBorder } from "./focus-border.slint";
 
 export struct ComboBoxItem {
@@ -99,7 +99,9 @@ export component ComboBox {
     popup := PopupWindow {
         width: max(root.width,250px);
         y: root.y + background.height;
-        height: 250px;
+        height: min(content.preferred-height,250px);
+        close-policy: close-on-click-outside;
+        forward-focus: popup-fs;
 
         popup-background := Rectangle {
             background: white;
@@ -107,10 +109,6 @@ export component ComboBox {
             border-width: 1px;
             border-color: Colors.neutral50;
         }
-
-        close-policy: close-on-click-outside;
-
-        forward-focus: popup-fs;
 
         popup-fs := FocusScope {
             key-pressed(event) => {
@@ -130,9 +128,12 @@ export component ComboBox {
                 }
                 return reject;
             }
+        }
 
-            // TODO: change background on hover
-            ListView {
+        flickable := Flickable {
+            max-height: 250px;
+            content-height: content.preferred-height;
+            content := VerticalLayout {
                 for option[i] in options: Rectangle {
                     background: current-index == i ? Colors.neutral50 : white;
                     height: 24px;
