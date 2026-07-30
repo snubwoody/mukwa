@@ -70,6 +70,22 @@ impl CurrencyFormatter {
         #[cfg(not(target_os = "windows"))]
         Ok(format!("{}{}", self.symbol, value))
     }
+
+    pub fn format_currency_no_cache(&self, value: Money) -> crate::Result<String> {
+        #[cfg(target_os = "windows")]
+        {
+            use std::sync::OnceLock;
+            use windows::CurrencyFormatOptions;
+
+            let currency_symbol = self.symbol.clone();
+            let mut opts = CurrencyFormatOptions::load_from_sys().unwrap();
+            opts.currency_symbol = currency_symbol;
+            windows::format_money(value, &opts)
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        Ok(format!("{}{}", self.symbol, value))
+    }
 }
 
 pub fn format_date(date: Date) -> crate::Result<String> {

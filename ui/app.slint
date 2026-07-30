@@ -23,21 +23,25 @@ import {
 } from "std-widgets.slint";
 import { Colors } from "colors.slint";
 import { Account, Transaction, State, Category, Settings } from "globals.slint";
-export { Account, Transaction, State, Category, Api, CategoryGroup, Settings } from "globals.slint";
+export {
+    Account,
+    Transaction,
+    State,
+    Category,
+    Api,
+    CategoryGroup,
+    Settings,
+}from "globals.slint";
 import { Button, TextField } from "widgets.slint";
 import { TransactionPage } from "transaction.slint";
 import { SpendingPage } from "spending-page.slint";
 import { PrimaryButton } from "widgets/button.slint";
 import { ComboBoxItem } from "widgets/combobox.slint";
-export { Date, CalendarState } from "widgets/calendar.slint";
+export { Date, CalendarState }from "widgets/calendar.slint";
 import { Table } from "tableview.slint";
-import { TransactionPage } from "transaction.slint";
 import { IconDisplay, IconSet, Icon } from "@lucide";
 
-enum Page {
-    spending,
-    transactions
-}
+enum Page { spending, transactions }
 
 component SidebarButton inherits Button {
     in property <bool> selected;
@@ -120,7 +124,7 @@ component Sidebar {
                                 }
 
                                 Text {
-                                    text: State.format-money(State.account-balance(account.id));
+                                    text: State.format-money(State.account-balance(account.id),Settings.currency-code);
                                     color: Colors.textBody;
                                 }
                             }
@@ -137,7 +141,7 @@ component Sidebar {
                     text: @tr("Create");
                     theme: neutral;
                     clicked => {
-                        Settings.set-currency-code("ZMW");
+                        Settings.set-currency-code("USD");
                     }
                 }
 

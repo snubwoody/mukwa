@@ -24,6 +24,8 @@ pub mod state;
 pub use error::Error;
 pub use error::Result;
 pub use money::Money;
+use slint::ModelNotify;
+use slint::ModelPeer;
 use slint::{DataTransfer, Global, ModelExt};
 use std::cell::{Ref, RefCell, RefMut};
 
@@ -510,7 +512,7 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     let settings = window.global::<ui::Settings>().as_weak();
     global_state.on_format_money({
         let settings = settings.unwrap();
-        move |value| {
+        move |value, currency_code| {
             static CURRENCY_FORMATTER: OnceLock<CurrencyFormatter> = OnceLock::new();
 
             // Empty strings represent null values
@@ -519,12 +521,14 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
             }
             match Money::from_str(&value) {
                 Ok(value) => {
-                    let formatter = CURRENCY_FORMATTER.get_or_init(|| {
-                        let mut formatter = CurrencyFormatter::new().unwrap();
-                        formatter.set_symbol(&settings.get_currency_code());
-                        formatter
-                    });
-                    let result = formatter.format_currency(value);
+                    let mut formatter = CurrencyFormatter::new().unwrap();
+                    formatter.set_symbol(&currency_code);
+                    // let formatter = CURRENCY_FORMATTER.get_or_init(|| {
+                    //     let mut formatter = CurrencyFormatter::new().unwrap();
+                    //     formatter.set_symbol(&settings.get_currency_code());
+                    //     formatter
+                    // });
+                    let result = formatter.format_currency_no_cache(value);
                     match result {
                         Ok(result) => result.to_shared_string(),
                         Err(err) => {
@@ -586,11 +590,14 @@ fn setup_settings(window: &ui::MainWindow) -> Result<()> {
     settings_state.set_currency_code(settings.currency_code().to_shared_string());
 
     settings_state.on_set_currency_code({
+        let settings_state = settings_state.as_weak();
         let store = settings.clone();
         move |code| {
             if let Err(err) = store.set_currency_code(&code) {
                 warn!("Failed to set currency code: {err}");
+                return;
             }
+            settings_state.unwrap().set_currency_code(code);
         }
     });
     Ok(())

@@ -41,11 +41,7 @@ export struct Budget {
     month: int,
 }
 
-export enum TransactionType {
-    income,
-    expense,
-    transfer
-}
+export enum TransactionType { income, expense, transfer }
 
 export struct Transaction {
     id: string,
@@ -73,12 +69,12 @@ export struct UpdateTransactionOpts {
 }
 
 export global Api {
-    pure callback window-position() -> { x: int, y: int};
-    pure callback window-size() -> { width: int, height: int};
+    pure callback window-position() -> { x: int, y: int };
+    pure callback window-size() -> { width: int, height: int };
     pure callback parse-date(string) -> Date;
 }
 
-export global Settings{ 
+export global Settings {
     callback set-currency-code(string);
     in-out property <string> currency-code;
 }
@@ -113,15 +109,17 @@ export global State {
     pure callback get-budget(category-id: string, month: Date) -> Budget;
     pure callback categories-in-group(id: string) -> [Category];
     pure callback account-balance(id: string) -> string;
+
     // Returns the year and month as a formatted string
     pure callback format-dateym(Date) -> string;
     pure callback format-date(string) -> string;
-    pure callback format-money(value: string) -> string;
+    pure callback format-money(value: string, currency-code: string) -> string;
+
     pure callback total-spent(budget-id: string) -> string;
     pure callback left-to-spend(id: string) -> string;
     pure callback total-spent-in-group(id: string, date: Date) -> string;
     pure callback total-assigned-in-group(id: string, date: Date) -> string;
-    pure callback left-to-spend-in-group(id: string,date: Date) -> string;
+    pure callback left-to-spend-in-group(id: string, date: Date) -> string;
 
     in-out property <[Transaction]> transactions;
     in-out property <[Category]> categories;
