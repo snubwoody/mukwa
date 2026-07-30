@@ -22,7 +22,6 @@ use slint::{SharedString, ToSharedString};
 use std::marker::PhantomData;
 use std::path::Path;
 use std::rc::Rc;
-use std::sync::{Mutex, MutexGuard};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Default, Ord, Eq)]
@@ -618,24 +617,24 @@ impl TransactionBuilder<Transfer> {
 
 #[derive(Clone)]
 pub struct Service {
-    connection: Rc<Mutex<Connection>>,
+    connection: Rc<Connection>,
 }
 
 impl Service {
     pub fn new(connection: Connection) -> Service {
         Service {
-            connection: Rc::new(Mutex::new(connection)),
+            connection: Rc::new(connection),
         }
     }
 
-    pub fn connection(&self) -> MutexGuard<'_, Connection> {
-        self.connection.lock().unwrap()
+    pub fn connection(&self) -> Rc<Connection> {
+        self.connection.clone()
     }
 
     pub fn open(path: impl AsRef<Path>) -> crate::Result<Service> {
         let connection = Connection::open(path)?;
         let service = Service {
-            connection: Rc::new(Mutex::new(connection)),
+            connection: Rc::new(connection),
         };
 
         Ok(service)
@@ -645,7 +644,7 @@ impl Service {
     pub fn open_in_memory() -> crate::Result<Service> {
         let connection = create_test_db();
         let service = Service {
-            connection: Rc::new(Mutex::new(connection)),
+            connection: Rc::new(connection),
         };
 
         Ok(service)
@@ -654,7 +653,7 @@ impl Service {
     /// Fetches all accounts from the database.
     pub fn fetch_accounts(&self) -> crate::Result<Vec<Account>> {
         let mut accounts = vec![];
-        let connection = self.connection.lock().unwrap();
+        let connection = self.connection();
         let sql = "SELECT * FROM accounts";
         let mut stmt = connection.prepare_cached(sql)?;
         let rows = stmt.query_and_then([], |row| Account::try_from(row))?;
@@ -752,7 +751,7 @@ impl Service {
     /// Fetches all the budgets in a specific month.
     pub fn fetch_budgets_by_month(&self, date: Date) -> crate::Result<Vec<Budget>> {
         let mut budgets = vec![];
-        let connection = self.connection.lock().unwrap();
+        let connection = self.connection();
         let sql = "SELECT * FROM budgets WHERE month = ?1 AND year = ?2";
         let mut stmt = connection.prepare_cached(sql)?;
         let rows = stmt.query_and_then(params![date.month(), date.year()], |row| {
@@ -790,7 +789,7 @@ impl Service {
     /// Fetches all transactions from the database.
     pub fn fetch_transactions(&self) -> crate::Result<Vec<Transaction>> {
         let mut transactions = vec![];
-        let connection = self.connection.lock().unwrap();
+        let connection = self.connection();
         let sql = "SELECT * FROM transactions";
         let mut stmt = connection.prepare_cached(sql)?;
         let rows = stmt.query_and_then([], |row| Transaction::try_from(row))?;
@@ -901,7 +900,7 @@ impl Service {
     /// Fetches all categories from the database.
     pub fn fetch_categories(&self) -> crate::Result<Vec<Category>> {
         let mut categories = vec![];
-        let connection = self.connection.lock().unwrap();
+        let connection = self.connection();
         let sql = "SELECT * FROM categories";
         let mut stmt = connection.prepare_cached(sql)?;
         let rows = stmt.query_and_then([], |row| Category::try_from(row))?;
@@ -928,7 +927,7 @@ impl Service {
 
     /// Creates a new [`Account`].
     pub fn create_account(&self, name: &str) -> crate::Result<Account> {
-        let connection = self.connection.lock().unwrap();
+        let connection = self.connection();
         let sql = "INSERT INTO accounts(id,name) VALUES(?1,?2) RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
         let mut rows = stmt.query_and_then([&Uuid::now_v7().to_string(), name], |row| {
@@ -954,7 +953,7 @@ impl Service {
 
     /// Creates a new [`CategoryGroup`].
     pub fn create_category_group(&self, title: &str) -> crate::Result<CategoryGroup> {
-        let connection = self.connection.lock().unwrap();
+        let connection = self.connection();
         let sql = "INSERT INTO category_groups(id,title) VALUES(?1,?2) RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
         let mut rows = stmt.query_and_then([&Uuid::now_v7().to_string(), title], |row| {
@@ -989,7 +988,7 @@ impl Service {
     }
 
     pub fn update_category(&self, id: Uuid, title: &str) -> crate::Result<Category> {
-        let connection = self.connection.lock().unwrap();
+        let connection = self.connection();
         let sql = "UPDATE categories SET title = ?1 WHERE id = ?2 RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
         let mut rows = stmt.query_and_then([title, id.to_string().as_str()], |row| {
@@ -1001,7 +1000,7 @@ impl Service {
 
     /// Moves the category into the category group.
     pub fn move_category(&self, id: Uuid, group_id: Uuid) -> crate::Result<Category> {
-        let connection = self.connection.lock().unwrap();
+        let connection = self.connection();
         let sql = "UPDATE categories SET group_id = ?1 WHERE id = ?2 RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
         let mut rows = stmt.query_and_then(
@@ -1013,7 +1012,7 @@ impl Service {
     }
 
     pub fn update_category_group(&self, id: Uuid, title: &str) -> crate::Result<CategoryGroup> {
-        let connection = self.connection.lock().unwrap();
+        let connection = self.connection();
         let sql = "UPDATE category_groups SET title = ?1 WHERE id = ?2 RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
         let mut rows = stmt.query_and_then([title, id.to_string().as_str()], |row| {
@@ -1024,7 +1023,7 @@ impl Service {
     }
 
     pub fn update_budget(&self, id: Uuid, amount: Money) -> crate::Result<Budget> {
-        let connection = self.connection.lock().unwrap();
+        let connection = self.connection();
         let sql = "UPDATE budgets SET amount = ?1 WHERE id = ?2 RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
         let mut rows = stmt
