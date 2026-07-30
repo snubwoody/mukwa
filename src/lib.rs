@@ -24,7 +24,8 @@ pub mod state;
 pub use error::Error;
 pub use error::Result;
 pub use money::Money;
-use slint::{DataTransfer, ModelExt};
+use slint::{DataTransfer, Global, ModelExt};
+use std::cell::{Ref, RefCell, RefMut};
 
 use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
@@ -33,12 +34,13 @@ use crate::state::AppState;
 use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
 use rusqlite::Connection;
+use serde::{Deserialize, Serialize};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::FromStr;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 use tracing::{info, warn};
 
 /// Slint auto generated code.
@@ -505,7 +507,9 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
+    let settings = window.global::<ui::Settings>().as_weak();
     global_state.on_format_money({
+        let settings = settings.unwrap();
         move |value| {
             static CURRENCY_FORMATTER: OnceLock<CurrencyFormatter> = OnceLock::new();
 
@@ -515,8 +519,11 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
             }
             match Money::from_str(&value) {
                 Ok(value) => {
-                    let formatter =
-                        CURRENCY_FORMATTER.get_or_init(|| CurrencyFormatter::new().unwrap());
+                    let formatter = CURRENCY_FORMATTER.get_or_init(|| {
+                        let mut formatter = CurrencyFormatter::new().unwrap();
+                        formatter.set_symbol(&settings.get_currency_code());
+                        formatter
+                    });
                     let result = formatter.format_currency(value);
                     match result {
                         Ok(result) => result.to_shared_string(),
@@ -567,6 +574,28 @@ fn setup_api(window: &ui::MainWindow) {
     });
 }
 
+fn setup_settings(window: &ui::MainWindow) -> Result<()> {
+    let settings_state = window.global::<ui::Settings>();
+    let settings_dir = if cfg!(debug_assertions) {
+        PathBuf::from(".mukwa")
+    } else {
+        config_dir()
+    };
+
+    let settings = SettingsStore::load(settings_dir.join("settings.toml"))?;
+    settings_state.set_currency_code(settings.currency_code().to_shared_string());
+
+    settings_state.on_set_currency_code({
+        let store = settings.clone();
+        move |code| {
+            if let Err(err) = store.set_currency_code(&code) {
+                warn!("Failed to set currency code: {err}");
+            }
+        }
+    });
+    Ok(())
+}
+
 pub fn run() -> Result<()> {
     let data_dir = if cfg!(debug_assertions) {
         PathBuf::from(".mukwa")
@@ -593,6 +622,7 @@ pub fn run() -> Result<()> {
     setup_global_state(state, &main_window);
     setup_calendar_state(&main_window);
     setup_api(&main_window);
+    setup_settings(&main_window)?;
 
     main_window.run().unwrap();
     Ok(())
@@ -615,6 +645,14 @@ pub fn data_dir() -> PathBuf {
     dirs::data_dir().unwrap().join("Mukwa")
 }
 
+/// Returns the path to the application's config directory.
+///
+/// # Panics
+/// Panics if the system's config directory cannot be found.
+pub fn config_dir() -> PathBuf {
+    dirs::config_dir().unwrap().join("Mukwa")
+}
+
 /// Returns the path to the application's log directory.
 ///
 /// ## Platform specific
@@ -634,5 +672,84 @@ pub fn log_dir() -> PathBuf {
         dirs::home_dir().unwrap().join("Library/Logs/Mukwa")
     } else {
         dirs::state_dir().unwrap().join("Mukwa/logs")
+    }
+}
+
+#[derive(Clone)]
+pub struct SettingsStore {
+    path: PathBuf,
+    inner: Rc<RefCell<Settings>>,
+}
+
+impl SettingsStore {
+    fn set_currency_code(&self, code: &str) -> Result<()> {
+        self.settings_mut().currency_code = code.to_owned();
+        info!("Updated currency code to {code}");
+        Ok(())
+    }
+
+    fn currency_code(&self) -> String {
+        self.settings().currency_code.clone()
+    }
+
+    fn settings(&self) -> Ref<'_, Settings> {
+        self.inner.borrow()
+    }
+
+    fn settings_mut(&self) -> RefMut<'_, Settings> {
+        self.inner.borrow_mut()
+    }
+
+    fn write(&self) -> Result<()> {
+        let settings = self.settings();
+        let contents = toml::to_string(&*settings)?;
+        fs::write(&self.path, contents)?;
+        Ok(())
+    }
+
+    pub fn load(path: impl AsRef<Path>) -> Result<SettingsStore> {
+        let data = fs::read_to_string(&path)?;
+        let settings: Settings = toml::from_str(&data)?;
+        let store = SettingsStore {
+            path: path.as_ref().to_path_buf(),
+            inner: Rc::new(RefCell::new(settings)),
+        };
+        Ok(store)
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct Settings {
+    // TODO: add under display or format group
+    currency_code: String,
+}
+
+impl Settings {
+    pub fn load(path: impl AsRef<Path>) -> Result<Settings> {
+        let data = fs::read_to_string(path)?;
+        let settings: Settings = toml::from_str(&data)?;
+        Ok(settings)
+    }
+}
+
+impl Default for Settings {
+    fn default() -> Settings {
+        Settings {
+            currency_code: String::from("USD"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::Settings;
+    use std::fs;
+
+    #[test]
+    fn settings() {
+        let settings = Settings::default();
+        let contents = toml::to_string(&settings).unwrap();
+        fs::write(".mukwa/settings.toml", contents).unwrap();
     }
 }

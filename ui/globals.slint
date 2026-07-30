@@ -78,6 +78,11 @@ export global Api {
     pure callback parse-date(string) -> Date;
 }
 
+export global Settings{ 
+    callback set-currency-code(string);
+    in-out property <string> currency-code;
+}
+
 // FIXME: use title-case for all methods
 export global State {
     callback create_account(name: string);
