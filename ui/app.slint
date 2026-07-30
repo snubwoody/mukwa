@@ -22,7 +22,7 @@ import {
     LineEdit,
 } from "std-widgets.slint";
 import { Colors } from "colors.slint";
-import { Account, Transaction, State, Category } from "globals.slint";
+import { Account, Transaction, State, Category, Settings } from "globals.slint";
 export { Account, Transaction, State, Category, Api, CategoryGroup, Settings } from "globals.slint";
 import { Button, TextField } from "widgets.slint";
 import { TransactionPage } from "transaction.slint";
@@ -132,6 +132,14 @@ component Sidebar {
             VerticalLayout {
                 spacing: 12px;
                 padding-left: 4px;
+
+                PrimaryButton {
+                    text: @tr("Create");
+                    theme: neutral;
+                    clicked => {
+                        Settings.set-currency-code("ZMW");
+                    }
+                }
 
                 create-account-btn := PrimaryButton {
                     theme: neutral;

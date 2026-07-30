@@ -684,6 +684,7 @@ pub struct SettingsStore {
 impl SettingsStore {
     fn set_currency_code(&self, code: &str) -> Result<()> {
         self.settings_mut().currency_code = code.to_owned();
+        self.write()?;
         info!("Updated currency code to {code}");
         Ok(())
     }
@@ -708,6 +709,7 @@ impl SettingsStore {
     }
 
     pub fn load(path: impl AsRef<Path>) -> Result<SettingsStore> {
+        info!("Loading settings from {:?}", path.as_ref());
         let data = fs::read_to_string(&path)?;
         let settings: Settings = toml::from_str(&data)?;
         let store = SettingsStore {
