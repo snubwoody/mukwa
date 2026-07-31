@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{Error, Money, create_test_db, ui};
-use jiff::Zoned;
+use crate::{create_test_db, ui, Error, Money};
 use jiff::civil::Date;
-use rusqlite::{Connection, Row, params};
+use jiff::Zoned;
+use rusqlite::{params, Connection, Row};
 use slint::{SharedString, ToSharedString};
 use std::marker::PhantomData;
 use std::path::Path;
@@ -858,7 +858,7 @@ impl Service {
             let budget = row?;
 
             let is_same_month =
-                budget.month == month.month().into() && budget.year == month.year().into();
+                budget.month == month.month() as i64 && budget.year == month.year() as i64;
 
             if !is_same_month {
                 continue;

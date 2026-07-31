@@ -12,6 +12,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+mod auto_update;
 pub mod error;
 pub mod fmt;
 pub mod migrator;
