@@ -141,7 +141,8 @@ from_error! {
     toml::de::Error,
     rusqlite::Error,
     std::str::Utf8Error,
-    ureq::Error,
     std::string::FromUtf16Error,
-    slint::PlatformError
+    slint::PlatformError,
+    ureq::Error,
+    serde_json::Error
 }
