@@ -120,6 +120,7 @@ export global State {
     pure callback total-spent-in-group(id: string, date: Date) -> string;
     pure callback total-assigned-in-group(id: string, date: Date) -> string;
     pure callback left-to-spend-in-group(id: string, date: Date) -> string;
+    pure callback check-for-update() -> bool;
 
     in-out property <[Transaction]> transactions;
     in-out property <[Category]> categories;

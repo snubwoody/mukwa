@@ -29,6 +29,7 @@ impl AutoUpdater {
 
     /// Checks for updates.
     fn check(&self, url: &str) -> crate::Result<Option<ReleaseManifest>> {
+        // TODO ignore ambiguous versions
         let response = ureq::get(url).call()?;
         let reader = response.into_body().into_reader();
 
