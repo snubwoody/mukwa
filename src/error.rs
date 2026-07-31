@@ -64,7 +64,10 @@ impl Error {
     }
 
     /// Creates a new `Error` with an underlying error source.
-    pub fn with_source<E: std::error::Error + Send + 'static>(message: &str, source: E) -> Self {
+    pub fn with_source<E>(message: &str, source: E) -> Self
+    where
+        E: std::error::Error + Send + 'static,
+    {
         Self {
             message: message.to_owned(),
             source: Some(Box::new(source)),
@@ -144,5 +147,6 @@ from_error! {
     std::string::FromUtf16Error,
     slint::PlatformError,
     ureq::Error,
-    serde_json::Error
+    serde_json::Error,
+    semver::Error
 }

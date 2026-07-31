@@ -3528,6 +3528,7 @@ dependencies = [
  "lucide-slint",
  "rusqlite",
  "rust-embed",
+ "semver",
  "serde",
  "serde_json",
  "slint",

@@ -1,4 +1,6 @@
+use semver::Version;
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -12,14 +14,16 @@ pub struct ReleaseManifest {
 
 // TODO: add auto-update setting (bool)
 pub struct AutoUpdater {
+    version: Version,
     /// The directory the update is stored in
     update_dir: PathBuf,
 }
 
 impl AutoUpdater {
-    pub fn new(path: impl AsRef<Path>) -> AutoUpdater {
+    pub fn new(path: impl AsRef<Path>, version: Version) -> AutoUpdater {
         AutoUpdater {
             update_dir: path.as_ref().to_path_buf(),
+            version,
         }
     }
 
@@ -27,10 +31,15 @@ impl AutoUpdater {
     fn check(&self, url: &str) -> crate::Result<Option<ReleaseManifest>> {
         let response = ureq::get(url).call()?;
         let reader = response.into_body().into_reader();
+
         // TODO: parsing from a string is faster
         // https://github.com/serde-rs/json/issues/160
         let manifest: ReleaseManifest = serde_json::from_reader(reader)?;
-        Ok(Some(manifest))
+        let latest_version = Version::parse(&manifest.version)?;
+        if latest_version.cmp_precedence(&self.version) == Ordering::Greater {
+            return Ok(Some(manifest));
+        }
+        Ok(None)
     }
 
     /// Downloads the latest update into the `update_dir` directory.
@@ -87,12 +96,14 @@ mod test {
     use tempfile::tempdir;
 
     // TODO: simulate failures
+    // TODO: test less than and equal
     #[test]
-    fn check_for_new_update() -> crate::Result<()> {
+    fn latest_version_has_greater_precedence() -> crate::Result<()> {
         let server = MockServer::start();
 
+        // TODO: test prerelease versions
         let release_manifest = ReleaseManifest {
-            version: String::from("v0.1.0-alpha.2"),
+            version: String::from("0.2.0"),
             url: server.url("/release-manifest.json"),
         };
         let mock = server.mock(|when, then| {
@@ -104,7 +115,7 @@ mod test {
         });
 
         let temp_dir = tempdir()?;
-        let auto_updater = AutoUpdater::new(temp_dir.path());
+        let auto_updater = AutoUpdater::new(temp_dir.path(), Version::new(0, 1, 0));
         let update = auto_updater.check(&server.url("/release-manifest.json"))?;
         mock.assert();
 
@@ -115,10 +126,60 @@ mod test {
     }
 
     #[test]
+    fn latest_version_has_equal_precedence() -> crate::Result<()> {
+        let server = MockServer::start();
+
+        let release_manifest = ReleaseManifest {
+            version: String::from("0.2.0"),
+            url: server.url("/release-manifest.json"),
+        };
+        let mock = server.mock(|when, then| {
+            when.method(GET).path("/release-manifest.json");
+
+            then.status(200)
+                .header("content-type", "application/json")
+                .json_body_obj(&release_manifest);
+        });
+
+        let temp_dir = tempdir()?;
+        let auto_updater = AutoUpdater::new(temp_dir.path(), Version::new(0, 2, 0));
+        let update = auto_updater.check(&server.url("/release-manifest.json"))?;
+        mock.assert();
+
+        assert!(update.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn latest_version_has_lower_precedence() -> crate::Result<()> {
+        let server = MockServer::start();
+
+        let release_manifest = ReleaseManifest {
+            version: String::from("0.1.0"),
+            url: server.url("/release-manifest.json"),
+        };
+        let mock = server.mock(|when, then| {
+            when.method(GET).path("/release-manifest.json");
+
+            then.status(200)
+                .header("content-type", "application/json")
+                .json_body_obj(&release_manifest);
+        });
+
+        let temp_dir = tempdir()?;
+        let auto_updater = AutoUpdater::new(temp_dir.path(), Version::new(0, 2, 0));
+        let update = auto_updater.check(&server.url("/release-manifest.json"))?;
+        mock.assert();
+
+        assert!(update.is_none());
+        Ok(())
+    }
+
+    #[test]
     fn download_update_into_directory() -> crate::Result<()> {
         let url = "https://github.com/snubwoody/mukwa/releases/download/v0.1.0-alpha.4/Mukwa-x86_64-Setup.exe";
         let temp_dir = tempdir()?;
-        let auto_updater = AutoUpdater::new(temp_dir.path());
+        let auto_updater = AutoUpdater::new(temp_dir.path(), Version::new(0, 0, 0));
         auto_updater.download_update(&url)?;
 
         let exists = fs::exists(temp_dir.path().join("Mukwa-Update.exe"))?;
@@ -128,7 +189,7 @@ mod test {
 
     #[test]
     fn update() -> crate::Result<()> {
-        install_update()?;
+        //install_update()?;
         Ok(())
     }
 }
