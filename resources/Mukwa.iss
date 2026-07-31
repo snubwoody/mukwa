@@ -16,6 +16,7 @@ AppPublisher=Wakunguma Kalimukwa
 AppPublisherURL=https://www.github.com/snubwoody/mukwa
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
+SetupIconFile={#ResourceDir}\app-icon.ico
 ;TODO: compile for arm and x86_64
 
 [Icons]

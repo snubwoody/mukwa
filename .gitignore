@@ -1,16 +1,9 @@
-.xmake/
-.cache/
 build/
+.build/
 .idea/
 .vs/
 .vscode/
 .zed/
-compile_commands.json
-CMakeLists.txt
-cmake-build-debug/
 .env
 /target
-*.sqlite
-/*.app
-*.data
 .mukwa/
