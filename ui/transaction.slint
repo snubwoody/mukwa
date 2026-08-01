@@ -103,7 +103,7 @@ component TransactionRow inherits TableRow {
             close-policy: close-on-click-outside;
 
             function popup-position-y() -> length {
-                if (date-cell.absolute-position.y > Api.window-size().height * 1px * 0.5) {
+                if (date-cell.absolute-position.y > Api.window-size().height * 0.5) {
                     return -100px;
                 }
                 return date-cell.height;

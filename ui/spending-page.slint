@@ -159,14 +159,14 @@ component CategoryGroupItem {
             height: layout.preferred-height;
 
             function popup-position-y() -> length {
-                if (category-button.absolute-position.y > Api.window-size().height * 1px * 0.5) {
+                if (category-button.absolute-position.y > Api.window-size().height * 0.5) {
                     return category-button.y - self.height;
                 }
                 return category-button.y + category-button.height + 4px;
             }
 
             init => {
-                if (self.y > Api.window-size().height * 1px * 0.5) {
+                if (self.y > Api.window-size().height * 0.5) {
                     self.y = category-button.y - self.width
                 }
             }

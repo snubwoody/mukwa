@@ -548,16 +548,26 @@ fn setup_api(window: &ui::MainWindow) {
     api.on_window_size({
         let window = window.as_weak();
         move || {
-            let size = window.unwrap().window().size();
-            (size.height as i32, size.width as i32)
+            if let Some(window) = window.upgrade() {
+                let window = window.window();
+                let size = window.size().to_logical(window.scale_factor());
+                return (size.height, size.width);
+            }
+            warn!("Empty window");
+            (0.0, 0.0)
         }
     });
 
     api.on_window_position({
         let window = window.as_weak();
         move || {
-            let pos = window.unwrap().window().position();
-            (pos.x, pos.y)
+            if let Some(window) = window.upgrade() {
+                let window = window.window();
+                let pos = window.position().to_logical(window.scale_factor());
+                return (pos.x, pos.y);
+            }
+            warn!("Empty window");
+            (0.0, 0.0)
         }
     });
 

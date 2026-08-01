@@ -69,8 +69,8 @@ export struct UpdateTransactionOpts {
 }
 
 export global Api {
-    pure callback window-position() -> { x: int, y: int };
-    pure callback window-size() -> { width: int, height: int };
+    pure callback window-position() -> { x: length, y: length };
+    pure callback window-size() -> { width: length, height: length };
     pure callback parse-date(string) -> Date;
 }
 
