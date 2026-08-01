@@ -24,8 +24,6 @@ pub mod state;
 pub use error::Error;
 pub use error::Result;
 pub use money::Money;
-use slint::ModelNotify;
-use slint::ModelPeer;
 use slint::{DataTransfer, Global, ModelExt};
 use std::cell::{Ref, RefCell, RefMut};
 
@@ -509,9 +507,7 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
-    let settings = window.global::<ui::Settings>().as_weak();
     global_state.on_format_money({
-        let settings = settings.unwrap();
         move |value, currency_code| {
             static CURRENCY_FORMATTER: OnceLock<CurrencyFormatter> = OnceLock::new();
 

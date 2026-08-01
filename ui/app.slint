@@ -22,7 +22,13 @@ import {
     LineEdit,
 } from "std-widgets.slint";
 import { Colors } from "colors.slint";
-import { Account, Transaction, State, Category, Settings } from "globals.slint";
+import {
+    Account,
+    Transaction,
+    State,
+    Category,
+    Api,
+} from "globals.slint";
 export {
     Account,
     Transaction,
@@ -30,8 +36,8 @@ export {
     Category,
     Api,
     CategoryGroup,
-    Settings,
 }from "globals.slint";
+export { Settings }from "settings.slint";
 import { Button, TextField } from "widgets.slint";
 import { TransactionPage } from "transaction.slint";
 import { SpendingPage } from "spending-page.slint";
@@ -40,6 +46,7 @@ import { ComboBoxItem } from "widgets/combobox.slint";
 export { Date, CalendarState }from "widgets/calendar.slint";
 import { Table } from "tableview.slint";
 import { IconDisplay, IconSet, Icon } from "@lucide";
+import { SettingsDialog, Settings } from "settings.slint";
 
 enum Page { spending, transactions }
 
@@ -137,14 +144,6 @@ component Sidebar {
                 spacing: 12px;
                 padding-left: 4px;
 
-                PrimaryButton {
-                    text: @tr("Create");
-                    theme: neutral;
-                    clicked => {
-                        Settings.set-currency-code("USD");
-                    }
-                }
-
                 create-account-btn := PrimaryButton {
                     theme: neutral;
                     text: @tr("Create account");
@@ -232,6 +231,12 @@ component Sidebar {
                     }
                 }
             }
+
+            Button {
+                text: @tr("Settings");
+                alignment: start;
+                clicked => settings-dialog.show();
+            }
         }
 
         Rectangle {
@@ -239,6 +244,8 @@ component Sidebar {
             background: Colors.neutral100;
         }
     }
+
+    settings-dialog := SettingsDialog { }
 }
 
 export component MainWindow inherits Window {
