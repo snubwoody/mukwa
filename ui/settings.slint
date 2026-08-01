@@ -14,67 +14,76 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import { Colors } from "colors.slint";
+import { Api } from "globals.slint";
 
 export global Settings {
     callback set-currency-code(string);
     in-out property <string> currency-code;
 }
-// TODO: sections
-// - General
-// - Appearance
 
-export component SettingsDialog inherits PopupWindow {
-    x: 0;
-    y: 0;
-    width: 600px;
-    height: 600px;
-
-    Rectangle {
-        background: white;
-    }
-
-    HorizontalLayout {
-        Rectangle {
-            max-width: 250px;
-            background: Colors.neutral25;
-            VerticalLayout {
-                padding-right: 8px;
-                padding-left: 8px;
-                padding-top: 12px;
-                padding-bottom: 12px;
-                spacing: 8px;
-                Text {
-                    text: "General";
-                    color: Colors.textBody;
-                }
-            }
+component GeneralSettings {
+    // TODO: dividers
+    // TODO: Section component
+    VerticalLayout {
+        padding: 12px;
+        alignment: start;
+        spacing: 12px;
+        Text {
+            text: "General";
+            font-size: 15px;
+            color: Colors.textBody;
         }
 
-        // TODO: dividers
-        // TODO: Section component
-        VerticalLayout {
-            padding: 12px;
-            alignment: start;
-            spacing: 12px;
+        HorizontalLayout {
+            alignment: space-between;
+            cross-axis-alignment: center;
             Text {
-                text: "General";
-                font-size: 15px;
+                text: "Currency";
+                font-size: 13px;
                 color: Colors.textBody;
             }
 
-            HorizontalLayout {
-                alignment: space-between;
-                cross-axis-alignment: center;
-                Text {
-                    text: "Currency";
-                    color: Colors.textBody;
-                }
+            Text {
+                text: "CAD";
+                color: Colors.textBody;
+            }
+        }
+    }
+}
 
-                Text {
-                    text: "CAD";
-                    color: Colors.textBody;
+// TODO: sections
+// - General
+// - Appearance
+export component SettingsDialog inherits PopupWindow {
+    x: Api.window-size().width * 0.5 - self.width * 0.5;
+    y: Api.window-size().height * 0.5 - self.height * 0.5;
+    width: Api.window-size().width * 0.80;
+    height: Api.window-size().height * 0.85;
+    close-policy: close-on-click-outside;
+
+    // TODO: add X button and red on hover
+
+    Rectangle {
+        background: white;
+        border-radius: 20px;
+        border-color: Colors.borderNeutral;
+        border-width: 1px;
+
+        HorizontalLayout {
+            Rectangle {
+                max-width: 250px;
+                background: Colors.neutral25;
+                VerticalLayout {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text {
+                        text: "General";
+                        color: Colors.textBody;
+                    }
                 }
             }
+
+            GeneralSettings { }
         }
     }
 }
