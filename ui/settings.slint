@@ -14,7 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import { Colors } from "colors.slint";
-import { Api } from "globals.slint";
+import { Api, State } from "globals.slint";
+import { ComboBox } from "widgets.slint";
 
 export global Settings {
     callback set-currency-code(string);
@@ -39,13 +40,15 @@ component GeneralSettings {
             cross-axis-alignment: center;
             Text {
                 text: "Currency";
-                font-size: 13px;
+                font-size: 14px;
                 color: Colors.textBody;
             }
 
-            Text {
-                text: "CAD";
-                color: Colors.textBody;
+            ComboBox {
+                options: State.currency-options;
+                changed(value) => {
+                    Settings.set-currency-code(value);
+                }
             }
         }
     }
@@ -66,13 +69,15 @@ export component SettingsDialog inherits PopupWindow {
     Rectangle {
         background: white;
         border-radius: 20px;
-        border-color: Colors.borderNeutral;
+        border-color: Colors.neutral50;
         border-width: 1px;
 
         HorizontalLayout {
+            padding: 2px;
             Rectangle {
                 max-width: 250px;
                 background: Colors.neutral25;
+                border-top-left-radius: 20px;
                 VerticalLayout {
                     padding: 16px;
                     spacing: 8px;

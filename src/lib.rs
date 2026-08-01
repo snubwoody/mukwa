@@ -29,6 +29,7 @@ use std::cell::{Ref, RefCell, RefMut};
 
 use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
+use crate::money::Currency;
 use crate::service::Service;
 use crate::state::AppState;
 use jiff::civil::Date;
@@ -149,6 +150,16 @@ fn setup_calendar_state(window: &ui::MainWindow) {
 }
 
 fn setup_global_state(state: AppState, window: &ui::MainWindow) {
+    let currencies: Vec<_> = Currency::ALL_CURRENCIES
+        .iter()
+        .map(|currency| ui::ComboBoxItem {
+            value: currency.code().to_shared_string(),
+            text: currency.name().to_shared_string(),
+        })
+        .collect();
+
+    let currencies_model = Rc::new(VecModel::from(currencies));
+    let currencies_model_rc = ModelRc::new(currencies_model);
     let transactions_model_rc = ModelRc::new(state.transactions());
     let accounts_model_rc = ModelRc::new(state.accounts());
     let categories_model_rc = ModelRc::new(state.categories());
@@ -158,6 +169,7 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     let global_state = window.global::<ui::State>();
 
+    global_state.set_currency_options(currencies_model_rc);
     global_state.set_transactions(transactions_model_rc);
     global_state.set_accounts(accounts_model_rc);
     global_state.set_categories(categories_model_rc);
