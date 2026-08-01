@@ -23,13 +23,12 @@ pub mod state;
 
 pub use error::Error;
 pub use error::Result;
-pub use money::Money;
+pub use money::{Currency, Money};
 use slint::{DataTransfer, Global, ModelExt};
 use std::cell::{Ref, RefCell, RefMut};
 
 use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
-use crate::money::Currency;
 use crate::service::Service;
 use crate::state::AppState;
 use jiff::civil::Date;
@@ -521,23 +520,17 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     global_state.on_format_money({
         move |value, currency_code| {
-            static CURRENCY_FORMATTER: OnceLock<CurrencyFormatter> = OnceLock::new();
-
             // Empty strings represent null values
             if value.is_empty() {
                 return value;
             }
+
             match Money::from_str(&value) {
                 Ok(value) => {
-                    let mut formatter = CurrencyFormatter::new().unwrap();
-                    formatter.set_symbol(&currency_code);
-                    // let formatter = CURRENCY_FORMATTER.get_or_init(|| {
-                    //     let mut formatter = CurrencyFormatter::new().unwrap();
-                    //     formatter.set_symbol(&settings.get_currency_code());
-                    //     formatter
-                    // });
-                    let result = formatter.format_currency_no_cache(value);
-                    match result {
+                    let mut formatter = CurrencyFormatter::new();
+                    let currency = Currency::from_str(&currency_code).unwrap();
+                    formatter.set_currency(currency);
+                    match formatter.format_money(value) {
                         Ok(result) => result.to_shared_string(),
                         Err(err) => {
                             warn!("Error occurred while formatting Money: {err}");
