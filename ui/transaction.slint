@@ -136,6 +136,15 @@ component TransactionRow inherits TableRow {
 
     TableCell {
         width: parent.width / length;
+
+        forward-focus: account-cell-fs;
+        account-cell-fs := FocusScope {
+            focus-gained(reason) => {
+                parent.is-editing = true;
+                //self.focus();
+            }
+        }
+
         if !self.is-editing: Text {
             text: State.get_account_name(transaction.account-id);
             color: Colors.textBody;
