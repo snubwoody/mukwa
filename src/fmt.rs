@@ -19,6 +19,8 @@
 use crate::{Currency, Money};
 use jiff::civil::Date;
 
+#[cfg(target_os = "macos")]
+mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
 
@@ -74,6 +76,9 @@ pub fn format_date(date: Date) -> crate::Result<String> {
     #[cfg(target_os = "windows")]
     return windows::format_date(date);
 
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
+    return macos::format_date(date);
+
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
     Ok(date.strftime("%d/%m/%Y").to_string())
 }

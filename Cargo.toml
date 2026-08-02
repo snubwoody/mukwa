@@ -34,15 +34,19 @@ rust-embed = "8.12.0"
 toml = "1.1.4"
 serde = { version = "1.0.229", features = ["derive"] }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation-sys = "0.8.7"
+core-foundation = "0.10.1"
+
 [dependencies.slint]
 git = "https://github.com/snubwoody/slint.git"
 branch = "mukwa"
 version = "1.17.0"
 features = ["backend-winit", "renderer-skia", "log"]
 
-
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-sys = { version = "0.61.2", features = ["Win32_Globalization"] }
+
 
 [build-dependencies]
 slint-build = { version = "1.16.0", git = "https://github.com/snubwoody/slint.git", branch = "mukwa" }
