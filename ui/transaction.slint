@@ -89,11 +89,20 @@ component TransactionRow inherits TableRow {
             calendar-popup.show();
         }
 
+        forward-focus: date-cell-fs;
+        date-cell-fs := FocusScope {
+            focus-gained(reason) => {
+                calendar-popup.show();
+            }
+        }
+
         Text {
             text: State.format-date(transaction.date);
             color: Colors.textBody;
         }
 
+        // FIXME: add focus border
+        // FIXME: continue tab to calendar days
         calendar-popup := PopupWindow {
             x: 0;
             y: popup-position-y();
@@ -101,6 +110,10 @@ component TransactionRow inherits TableRow {
             width: calendar.preferred-width;
             height: calendar.preferred-height;
             close-policy: close-on-click-outside;
+
+            init => {
+                calendar.focus();
+            }
 
             function popup-position-y() -> length {
                 if (date-cell.absolute-position.y > Api.window-size().height * 0.5) {
