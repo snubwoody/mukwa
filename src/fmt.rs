@@ -16,7 +16,7 @@
 
 //! Utilities for formatting dates and money.
 
-use crate::Money;
+use crate::{Currency, Money};
 use jiff::civil::Date;
 
 #[cfg(target_os = "windows")]
@@ -24,51 +24,49 @@ mod windows;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct CurrencyFormatter {
-    /// The currency symbol
-    symbol: String,
+    currency: Currency,
 }
 
 impl CurrencyFormatter {
     /// Creates a new currency formatter.
-    pub fn new() -> crate::Result<Self> {
-        let formatter = CurrencyFormatter {
-            symbol: String::from("$"),
-        };
-
-        Ok(formatter)
+    pub fn new() -> Self {
+        CurrencyFormatter {
+            currency: Currency::USD,
+        }
     }
 
     /// Set the currency symbol
-    pub fn set_symbol(&mut self, symbol: &str) {
-        self.symbol = symbol.to_owned();
+    pub fn set_currency(&mut self, currency: Currency) {
+        self.currency = currency;
     }
 
     /// Returns the currency symbol.
-    pub fn symbol(&self) -> &str {
-        self.symbol.as_str()
+    pub fn currency(&self) -> Currency {
+        self.currency
     }
 
     /// Formats [`Money`] as a currency string.
-    pub fn format_currency(&self, value: Money) -> crate::Result<String> {
+    pub fn format_money(&self, value: Money) -> crate::Result<String> {
+        let symbol = self.currency.symbol().to_owned();
         #[cfg(target_os = "windows")]
         {
-            use std::sync::OnceLock;
             use windows::CurrencyFormatOptions;
-
-            static CURRENCY_FORMAT_OPTS: OnceLock<CurrencyFormatOptions> = OnceLock::new();
-            let currency_symbol = self.symbol.clone();
-            // FIXME: invalidate when editing
-            // TODO: maybe just a function with options?
-            let opts = CURRENCY_FORMAT_OPTS.get_or_init(move || {
-                let mut opts = CurrencyFormatOptions::load_from_sys().unwrap();
-                opts.currency_symbol = currency_symbol;
-                opts
-            });
-            windows::format_money(value, opts)
+            let mut opts = CurrencyFormatOptions::load_from_sys()?;
+            opts.currency_symbol = symbol;
+            windows::format_money(value, &opts)
         }
 
         #[cfg(not(target_os = "windows"))]
-        Ok(format!("{}{}", self.symbol, value))
+        {
+            let precision = self.currency.precision().unwrap_or(2) as usize;
+            Ok(format!("{}{:0precision$}", symbol, value))
+        }
+    }
+}
+
+impl Default for CurrencyFormatter {
+    fn default() -> Self {
+        CurrencyFormatter::new()
     }
 }
 

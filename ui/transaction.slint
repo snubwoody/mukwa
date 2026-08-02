@@ -33,6 +33,7 @@ import { Button, ComboBox, TextField, PrimaryButton } from "widgets.slint";
 import { FocusBorder } from "widgets/focus-border.slint";
 import { Calendar } from "widgets/calendar.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
+import { Settings } from "settings.slint";
 
 component TransactionRow inherits TableRow {
     in property <Transaction> transaction;
@@ -102,10 +103,9 @@ component TransactionRow inherits TableRow {
             close-policy: close-on-click-outside;
 
             function popup-position-y() -> length {
-                if (date-cell.absolute-position.y > Api.window-size().height * 1px * 0.5) {
+                if (date-cell.absolute-position.y > Api.window-size().height * 0.5) {
                     return -100px;
                 }
-
                 return date-cell.height;
             }
 
@@ -209,7 +209,7 @@ component TransactionRow inherits TableRow {
     TableCell {
         width: parent.width / length;
         if !self.is-editing: Text {
-            text: State.format-money(transaction.outflow);
+            text: State.format-money(transaction.outflow,Settings.currency-code);
             color: Colors.textBody;
         }
 
@@ -230,7 +230,7 @@ component TransactionRow inherits TableRow {
     TableCell {
         width: parent.width / length;
         if !self.is-editing: Text {
-            text: State.format-money(transaction.inflow);
+            text: State.format-money(transaction.inflow,Settings.currency-code);
             color: Colors.textBody;
         }
 
@@ -270,7 +270,7 @@ export component TransactionPage inherits VerticalLayout {
         }
 
         Text {
-            text: State.format-money(State.total_balance());
+            text: State.format-money(State.total_balance(),Settings.currency-code);
             font-size: 1.25rem;
             color: Colors.textHeading;
         }

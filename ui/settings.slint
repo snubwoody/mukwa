@@ -1,0 +1,94 @@
+// Mukwa - Personal finance
+// Copyright (C) 2026  Wakunguma Kalimukwa
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import { Colors } from "colors.slint";
+import { Api, State } from "globals.slint";
+import { ComboBox } from "widgets.slint";
+
+export global Settings {
+    callback set-currency-code(string);
+    in-out property <string> currency-code;
+}
+
+component GeneralSettings {
+    // TODO: dividers
+    // TODO: Section component
+    VerticalLayout {
+        padding: 12px;
+        alignment: start;
+        spacing: 12px;
+        Text {
+            text: "General";
+            font-size: 15px;
+            color: Colors.textBody;
+        }
+
+        HorizontalLayout {
+            alignment: space-between;
+            cross-axis-alignment: center;
+            Text {
+                text: "Currency";
+                font-size: 14px;
+                color: Colors.textBody;
+            }
+
+            ComboBox {
+                options: State.currency-options;
+                changed(value) => {
+                    Settings.set-currency-code(value);
+                }
+            }
+        }
+    }
+}
+
+// TODO: sections
+// - General
+// - Appearance
+export component SettingsDialog inherits PopupWindow {
+    x: Api.window-size().width * 0.5 - self.width * 0.5;
+    y: Api.window-size().height * 0.5 - self.height * 0.5;
+    width: Api.window-size().width * 0.80;
+    height: Api.window-size().height * 0.85;
+    close-policy: close-on-click-outside;
+
+    // TODO: add X button and red on hover
+
+    Rectangle {
+        background: white;
+        border-radius: 20px;
+        border-color: Colors.neutral50;
+        border-width: 1px;
+
+        HorizontalLayout {
+            padding: 2px;
+            Rectangle {
+                max-width: 250px;
+                background: Colors.neutral25;
+                border-top-left-radius: 20px;
+                VerticalLayout {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text {
+                        text: "General";
+                        color: Colors.textBody;
+                    }
+                }
+            }
+
+            GeneralSettings { }
+        }
+    }
+}

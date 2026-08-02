@@ -137,6 +137,8 @@ from_error! {
     uuid::Error,
     ParseFloatError,
     ParseIntError,
+    toml::ser::Error,
+    toml::de::Error,
     rusqlite::Error,
     std::str::Utf8Error,
     std::string::FromUtf16Error

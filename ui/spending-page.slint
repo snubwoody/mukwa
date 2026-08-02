@@ -31,6 +31,7 @@ import {
 } from "globals.slint";
 import { Button, TextField, PrimaryButton, IconButton } from "widgets.slint";
 import { IconSet } from "@lucide";
+import { Settings } from "settings.slint";
 
 component CategoryItem {
     in property <Date> current-date;
@@ -105,7 +106,7 @@ component CategoryItem {
 
             if !active: Text {
                 width: 100%;
-                text: State.format-money(budget.amount);
+                text: State.format-money(budget.amount,Settings.currency-code);
                 color: Colors.textBody;
                 horizontal-alignment: end;
             }
@@ -113,14 +114,14 @@ component CategoryItem {
 
         Text {
             width: 100px;
-            text: State.format-money(State.total-spent(budget.id));
+            text: State.format-money(State.total-spent(budget.id),Settings.currency-code);
             color: Colors.textBody;
             horizontal-alignment: end;
         }
 
         Text {
             width: 100px;
-            text: State.format-money(State.left-to-spend(budget.id));
+            text: State.format-money(State.left-to-spend(budget.id),Settings.currency-code);
             color: Colors.textBody;
             horizontal-alignment: end;
         }
@@ -144,9 +145,7 @@ component CategoryGroupItem {
             drag-over when drop-area.has-drag: {
                 background: Colors.neutral50;
                 in {
-                    animate background{
-                        duration: 150ms;
-                    }
+                    animate background { duration: 150ms; }
                 }
             }
         ]
@@ -160,14 +159,14 @@ component CategoryGroupItem {
             height: layout.preferred-height;
 
             function popup-position-y() -> length {
-                if (category-button.absolute-position.y > Api.window-size().height * 1px * 0.5) {
+                if (category-button.absolute-position.y > Api.window-size().height * 0.5) {
                     return category-button.y - self.height;
                 }
                 return category-button.y + category-button.height + 4px;
             }
 
             init => {
-                if (self.y > Api.window-size().height * 1px * 0.5) {
+                if (self.y > Api.window-size().height * 0.5) {
                     self.y = category-button.y - self.width
                 }
             }
@@ -269,21 +268,21 @@ component CategoryGroupItem {
 
                 Text {
                     width: 100px;
-                    text: State.format-money(State.total-assigned-in-group(category-group.id,current-date));
+                    text: State.format-money(State.total-assigned-in-group(category-group.id,current-date),Settings.currency-code);
                     color: Colors.textBody;
                     horizontal-alignment: end;
                 }
 
                 Text {
                     width: 100px;
-                    text: State.format-money(State.total-spent-in-group(category-group.id, current-date));
+                    text: State.format-money(State.total-spent-in-group(category-group.id, current-date),Settings.currency-code);
                     color: Colors.textBody;
                     horizontal-alignment: end;
                 }
 
                 Text {
                     width: 100px;
-                    text: State.format-money(State.left-to-spend-in-group(category-group.id,current-date));
+                    text: State.format-money(State.left-to-spend-in-group(category-group.id,current-date),Settings.currency-code);
                     color: Colors.textBody;
                     horizontal-alignment: end;
                 }

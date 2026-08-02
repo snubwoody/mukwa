@@ -21,23 +21,34 @@ import {
     Palette,
     LineEdit,
 } from "std-widgets.slint";
-import { Colors } from "./colors.slint";
-import { Account, Transaction, State, Category } from "./globals.slint";
-export { Account, Transaction, State, Category, Api, CategoryGroup } from "./globals.slint";
+import { Colors } from "colors.slint";
+import {
+    Account,
+    Transaction,
+    State,
+    Category,
+    Api,
+} from "globals.slint";
+export {
+    Account,
+    Transaction,
+    State,
+    Category,
+    Api,
+    CategoryGroup,
+}from "globals.slint";
+export { Settings }from "settings.slint";
 import { Button, TextField } from "widgets.slint";
-import { TransactionPage } from "./transaction.slint";
+import { TransactionPage } from "transaction.slint";
 import { SpendingPage } from "spending-page.slint";
 import { PrimaryButton } from "widgets/button.slint";
 import { ComboBoxItem } from "widgets/combobox.slint";
-export { Date, CalendarState } from "./widgets/calendar.slint";
+export { Date, CalendarState }from "widgets/calendar.slint";
 import { Table } from "tableview.slint";
-import { TransactionPage } from "transaction.slint";
 import { IconDisplay, IconSet, Icon } from "@lucide";
+import { SettingsDialog, Settings } from "settings.slint";
 
-enum Page {
-    spending,
-    transactions
-}
+enum Page { spending, transactions }
 
 component SidebarButton inherits Button {
     in property <bool> selected;
@@ -51,6 +62,52 @@ component SidebarButton inherits Button {
     border-radius: 4px;
 
     @children
+}
+
+component AccountSection inherits VerticalLayout {
+    in property <[Account]> accounts;
+    in property <Page> current-page;
+    callback select-page(Page);
+
+    SidebarButton {
+        text: @tr("All accounts");
+        selected: current-page == Page.transactions;
+        clicked => select-page(Page.transactions);
+
+        IconDisplay {
+            icon: IconSet.PiggyBank;
+            size: 14px;
+            stroke-width: 1.5;
+            stroke: Colors.textBody;
+        }
+    }
+
+    Flickable {
+        max-height: 250px;
+        content-height: content.preferred-height;
+
+        content := VerticalLayout {
+            padding-left: 16px;
+
+            for account in accounts: HorizontalLayout{
+                padding-top: 4px;
+                padding-bottom: 4px;
+                padding-left: 8px;
+                padding-right: 8px;
+                alignment: space-between;
+
+                Text {
+                    text: account.name;
+                    color: Colors.textBody;
+                }
+
+                Text {
+                    text: State.format-money(State.account-balance(account.id), Settings.currency-code);
+                    color: Colors.textBody;
+                }
+            }
+        }
+    }
 }
 
 component Sidebar {
@@ -76,6 +133,7 @@ component Sidebar {
 
             VerticalLayout {
                 spacing: 4px;
+
                 SidebarButton {
                     text: @tr("Spending");
                     selected: current-page == Page.spending;
@@ -88,45 +146,12 @@ component Sidebar {
                     }
                 }
 
-                VerticalLayout {
-                    SidebarButton {
-                        text: @tr("All accounts");
-                        selected: current-page == Page.transactions;
-                        clicked => select-page(Page.transactions);
-
-                        IconDisplay {
-                            icon: IconSet.PiggyBank;
-                            size: 14px;
-                            stroke-width: 1.5;
-                            stroke: Colors.textBody;
-                        }
-                    }
-
-                    Flickable {
-                        max-height: 250px;
-                        content-height: content.preferred-height;
-
-                        content := VerticalLayout {
-                            padding-left: 16px;
-                            for account in accounts: HorizontalLayout {
-                                padding-top: 4px;
-                                padding-bottom: 4px;
-                                padding-left: 8px;
-                                padding-right: 8px;
-                                alignment: space-between;
-                                Text {
-                                    text: account.name;
-                                    color: Colors.textBody;
-                                }
-
-                                Text {
-                                    text: State.format-money(State.account-balance(account.id));
-                                    color: Colors.textBody;
-                                }
-                            }
-                        }
-                    }
+                AccountSection {
+                    current-page: current-page;
+                    select-page(page) => select-page(page);
+                    accounts: accounts;
                 }
+
             }
 
             VerticalLayout {
@@ -220,6 +245,22 @@ component Sidebar {
                     }
                 }
             }
+
+            Rectangle {
+                vertical-stretch: 1;
+            }
+
+            SidebarButton {
+                text: @tr("Settings");
+                clicked => settings-dialog.show();
+
+                IconDisplay {
+                    icon: IconSet.Settings;
+                    size: 13px;
+                    stroke-width: 2;
+                    stroke: Colors.textBody;
+                }
+            }
         }
 
         Rectangle {
@@ -227,6 +268,8 @@ component Sidebar {
             background: Colors.neutral100;
         }
     }
+
+    settings-dialog := SettingsDialog { }
 }
 
 export component MainWindow inherits Window {

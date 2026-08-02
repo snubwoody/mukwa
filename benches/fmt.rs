@@ -26,12 +26,12 @@ fn main() {
 fn format_money<const N: i64>(bencher: Bencher) {
     bencher
         .with_inputs(|| {
-            let formatter = CurrencyFormatter::new().unwrap();
+            let formatter = CurrencyFormatter::new();
             formatter
         })
         .bench_refs(|formatter| {
             formatter
-                .format_currency(divan::black_box(Money::new(N)))
+                .format_money(divan::black_box(Money::new(N)))
                 .unwrap();
         });
 }

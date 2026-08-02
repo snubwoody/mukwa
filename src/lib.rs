@@ -23,8 +23,12 @@ pub mod state;
 
 pub use error::Error;
 pub use error::Result;
-pub use money::Money;
-use slint::{DataTransfer, ModelExt};
+pub use money::{Currency, Money};
+use slint::{DataTransfer, Global, ModelExt};
+use std::cell::{Ref, RefCell, RefMut};
+use std::fs::File;
+use std::io;
+use std::io::Read;
 
 use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
@@ -33,12 +37,12 @@ use crate::state::AppState;
 use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
 use rusqlite::Connection;
+use serde::{Deserialize, Serialize};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::FromStr;
-use std::sync::OnceLock;
 use tracing::{info, warn};
 
 /// Slint auto generated code.
@@ -147,6 +151,16 @@ fn setup_calendar_state(window: &ui::MainWindow) {
 }
 
 fn setup_global_state(state: AppState, window: &ui::MainWindow) {
+    let currencies: Vec<_> = Currency::ALL_CURRENCIES
+        .iter()
+        .map(|currency| ui::ComboBoxItem {
+            value: currency.code().to_shared_string(),
+            text: currency.name().to_shared_string(),
+        })
+        .collect();
+
+    let currencies_model = Rc::new(VecModel::from(currencies));
+    let currencies_model_rc = ModelRc::new(currencies_model);
     let transactions_model_rc = ModelRc::new(state.transactions());
     let accounts_model_rc = ModelRc::new(state.accounts());
     let categories_model_rc = ModelRc::new(state.categories());
@@ -156,6 +170,7 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     let global_state = window.global::<ui::State>();
 
+    global_state.set_currency_options(currencies_model_rc);
     global_state.set_transactions(transactions_model_rc);
     global_state.set_accounts(accounts_model_rc);
     global_state.set_categories(categories_model_rc);
@@ -506,19 +521,18 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     });
 
     global_state.on_format_money({
-        move |value| {
-            static CURRENCY_FORMATTER: OnceLock<CurrencyFormatter> = OnceLock::new();
-
+        move |value, currency_code| {
             // Empty strings represent null values
             if value.is_empty() {
                 return value;
             }
+
             match Money::from_str(&value) {
                 Ok(value) => {
-                    let formatter =
-                        CURRENCY_FORMATTER.get_or_init(|| CurrencyFormatter::new().unwrap());
-                    let result = formatter.format_currency(value);
-                    match result {
+                    let mut formatter = CurrencyFormatter::new();
+                    let currency = Currency::from_str(&currency_code).unwrap();
+                    formatter.set_currency(currency);
+                    match formatter.format_money(value) {
                         Ok(result) => result.to_shared_string(),
                         Err(err) => {
                             warn!("Error occurred while formatting Money: {err}");
@@ -541,16 +555,26 @@ fn setup_api(window: &ui::MainWindow) {
     api.on_window_size({
         let window = window.as_weak();
         move || {
-            let size = window.unwrap().window().size();
-            (size.height as i32, size.width as i32)
+            if let Some(window) = window.upgrade() {
+                let window = window.window();
+                let size = window.size().to_logical(window.scale_factor());
+                return (size.height, size.width);
+            }
+            warn!("Empty window");
+            (0.0, 0.0)
         }
     });
 
     api.on_window_position({
         let window = window.as_weak();
         move || {
-            let pos = window.unwrap().window().position();
-            (pos.x, pos.y)
+            if let Some(window) = window.upgrade() {
+                let window = window.window();
+                let pos = window.position().to_logical(window.scale_factor());
+                return (pos.x, pos.y);
+            }
+            warn!("Empty window");
+            (0.0, 0.0)
         }
     });
 
@@ -565,6 +589,31 @@ fn setup_api(window: &ui::MainWindow) {
             day: date.day() as i32,
         }
     });
+}
+
+fn setup_settings(window: &ui::MainWindow) -> Result<()> {
+    let settings_state = window.global::<ui::Settings>();
+    let settings_dir = if cfg!(debug_assertions) {
+        PathBuf::from(".mukwa")
+    } else {
+        config_dir()
+    };
+
+    let settings = SettingsStore::open(settings_dir.join("settings.toml"))?;
+    settings_state.set_currency_code(settings.currency_code().to_shared_string());
+
+    settings_state.on_set_currency_code({
+        let settings_state = settings_state.as_weak();
+        let store = settings.clone();
+        move |code| {
+            if let Err(err) = store.set_currency_code(&code) {
+                warn!("Failed to set currency code: {err}");
+                return;
+            }
+            settings_state.unwrap().set_currency_code(code);
+        }
+    });
+    Ok(())
 }
 
 pub fn run() -> Result<()> {
@@ -593,6 +642,7 @@ pub fn run() -> Result<()> {
     setup_global_state(state, &main_window);
     setup_calendar_state(&main_window);
     setup_api(&main_window);
+    setup_settings(&main_window)?;
 
     main_window.run().unwrap();
     Ok(())
@@ -615,6 +665,14 @@ pub fn data_dir() -> PathBuf {
     dirs::data_dir().unwrap().join("Mukwa")
 }
 
+/// Returns the path to the application's config directory.
+///
+/// # Panics
+/// Panics if the system's config directory cannot be found.
+pub fn config_dir() -> PathBuf {
+    dirs::config_dir().unwrap().join("Mukwa")
+}
+
 /// Returns the path to the application's log directory.
 ///
 /// ## Platform specific
@@ -634,5 +692,102 @@ pub fn log_dir() -> PathBuf {
         dirs::home_dir().unwrap().join("Library/Logs/Mukwa")
     } else {
         dirs::state_dir().unwrap().join("Mukwa/logs")
+    }
+}
+
+#[derive(Clone)]
+pub struct SettingsStore {
+    path: PathBuf,
+    inner: Rc<RefCell<Settings>>,
+}
+
+impl SettingsStore {
+    fn set_currency_code(&self, code: &str) -> Result<()> {
+        self.settings_mut().currency_code = code.to_owned();
+        self.write()?;
+        info!("Updated currency code to {code}");
+        Ok(())
+    }
+
+    fn currency_code(&self) -> String {
+        self.settings().currency_code.clone()
+    }
+
+    fn settings(&self) -> Ref<'_, Settings> {
+        self.inner.borrow()
+    }
+
+    fn settings_mut(&self) -> RefMut<'_, Settings> {
+        self.inner.borrow_mut()
+    }
+
+    fn write(&self) -> Result<()> {
+        let settings = self.settings();
+        let contents = toml::to_string(&*settings)?;
+        fs::write(&self.path, contents)?;
+        Ok(())
+    }
+
+    pub fn open(path: impl AsRef<Path>) -> Result<SettingsStore> {
+        match File::open(&path) {
+            Ok(mut file) => {
+                info!("Loading settings from {:?}", path.as_ref());
+
+                let mut buffer = Vec::new();
+                file.read_to_end(&mut buffer)?;
+                let settings: Settings = toml::from_slice(&buffer)?;
+                let store = SettingsStore {
+                    path: path.as_ref().to_path_buf(),
+                    inner: Rc::new(RefCell::new(settings)),
+                };
+                Ok(store)
+            }
+            Err(err) => {
+                if err.kind() != io::ErrorKind::NotFound {
+                    return Err(err.into());
+                }
+
+                info!("Initialised settings at {:?}", path.as_ref());
+                let settings = Settings::default();
+                let contents = toml::to_string(&settings)?;
+                fs::write(&path, contents)?;
+                let store = SettingsStore {
+                    path: path.as_ref().to_path_buf(),
+                    inner: Rc::new(RefCell::new(settings)),
+                };
+                Ok(store)
+            }
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct Settings {
+    currency_code: String,
+}
+
+impl Default for Settings {
+    fn default() -> Settings {
+        Settings {
+            currency_code: String::from("USD"),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use tempfile::tempdir;
+
+    use crate::SettingsStore;
+    use std::fs;
+
+    #[test]
+    fn init_settings_if_not_found() -> crate::Result<()> {
+        let temp = tempdir()?;
+        let path = temp.path().join("settings.toml");
+        SettingsStore::open(&path)?;
+        assert!(fs::exists(path)?);
+        Ok(())
     }
 }
