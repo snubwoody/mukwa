@@ -56,7 +56,7 @@ fn main() {
         .with_ansi(false);
 
     let level = if cfg!(debug_assertions) {
-        "debug,mukwa=trace"
+        "info,i_slint_core=debug,mukwa=trace"
     } else {
         "info,mukwa=debug"
     };

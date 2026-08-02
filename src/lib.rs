@@ -26,6 +26,9 @@ pub use error::Result;
 pub use money::{Currency, Money};
 use slint::{DataTransfer, Global, ModelExt};
 use std::cell::{Ref, RefCell, RefMut};
+use std::fs::File;
+use std::io;
+use std::io::Read;
 
 use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
@@ -597,7 +600,7 @@ fn setup_settings(window: &ui::MainWindow) -> Result<()> {
         config_dir()
     };
 
-    let settings = SettingsStore::load(settings_dir.join("settings.toml"))?;
+    let settings = SettingsStore::open(settings_dir.join("settings.toml"))?;
     settings_state.set_currency_code(settings.currency_code().to_shared_string());
 
     settings_state.on_set_currency_code({
@@ -726,31 +729,43 @@ impl SettingsStore {
         Ok(())
     }
 
-    pub fn load(path: impl AsRef<Path>) -> Result<SettingsStore> {
-        info!("Loading settings from {:?}", path.as_ref());
-        let data = fs::read_to_string(&path)?;
-        let settings: Settings = toml::from_str(&data)?;
-        let store = SettingsStore {
-            path: path.as_ref().to_path_buf(),
-            inner: Rc::new(RefCell::new(settings)),
-        };
-        Ok(store)
+    pub fn open(path: impl AsRef<Path>) -> Result<SettingsStore> {
+        match File::open(&path) {
+            Ok(mut file) => {
+                info!("Loading settings from {:?}", path.as_ref());
+
+                let mut buffer = Vec::new();
+                file.read_to_end(&mut buffer)?;
+                let settings: Settings = toml::from_slice(&buffer)?;
+                let store = SettingsStore {
+                    path: path.as_ref().to_path_buf(),
+                    inner: Rc::new(RefCell::new(settings)),
+                };
+                return Ok(store);
+            }
+            Err(err) => {
+                if err.kind() != io::ErrorKind::NotFound {
+                    return Err(err.into());
+                }
+
+                info!("Initialised settings at {:?}", path.as_ref());
+                let settings = Settings::default();
+                let contents = toml::to_string(&settings)?;
+                fs::write(&path, contents)?;
+                let store = SettingsStore {
+                    path: path.as_ref().to_path_buf(),
+                    inner: Rc::new(RefCell::new(settings)),
+                };
+                return Ok(store);
+            }
+        }
     }
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct Settings {
-    // TODO: add under display or format group
     currency_code: String,
-}
-
-impl Settings {
-    pub fn load(path: impl AsRef<Path>) -> Result<Settings> {
-        let data = fs::read_to_string(path)?;
-        let settings: Settings = toml::from_str(&data)?;
-        Ok(settings)
-    }
 }
 
 impl Default for Settings {
@@ -763,13 +778,17 @@ impl Default for Settings {
 
 #[cfg(test)]
 mod test {
-    use crate::Settings;
+    use tempfile::tempdir;
+
+    use crate::SettingsStore;
     use std::fs;
 
     #[test]
-    fn settings() {
-        let settings = Settings::default();
-        let contents = toml::to_string(&settings).unwrap();
-        fs::write(".mukwa/settings.toml", contents).unwrap();
+    fn init_settings_if_not_found() -> crate::Result<()> {
+        let temp = tempdir()?;
+        let path = temp.path().join("settings.toml");
+        SettingsStore::open(&path)?;
+        assert!(fs::exists(path)?);
+        Ok(())
     }
 }
