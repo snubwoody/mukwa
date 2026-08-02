@@ -20,7 +20,6 @@ use std::{
     fmt::Display,
     ops::{Add, AddAssign, Sub, SubAssign},
     str::FromStr,
-    string::ToString,
 };
 
 /// `Money` represents a fixed point monetary value, with 6 digits after the decimal point.

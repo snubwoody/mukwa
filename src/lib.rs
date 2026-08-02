@@ -43,7 +43,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::FromStr;
-use std::sync::{Mutex, OnceLock};
 use tracing::{info, warn};
 
 /// Slint auto generated code.
@@ -741,7 +740,7 @@ impl SettingsStore {
                     path: path.as_ref().to_path_buf(),
                     inner: Rc::new(RefCell::new(settings)),
                 };
-                return Ok(store);
+                Ok(store)
             }
             Err(err) => {
                 if err.kind() != io::ErrorKind::NotFound {
@@ -756,7 +755,7 @@ impl SettingsStore {
                     path: path.as_ref().to_path_buf(),
                     inner: Rc::new(RefCell::new(settings)),
                 };
-                return Ok(store);
+                Ok(store)
             }
         }
     }

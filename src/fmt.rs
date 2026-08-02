@@ -64,6 +64,12 @@ impl CurrencyFormatter {
     }
 }
 
+impl Default for CurrencyFormatter {
+    fn default() -> Self {
+        CurrencyFormatter::new()
+    }
+}
+
 pub fn format_date(date: Date) -> crate::Result<String> {
     #[cfg(target_os = "windows")]
     return windows::format_date(date);
