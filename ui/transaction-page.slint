@@ -124,6 +124,28 @@ component PayeeCell inherits TableCell {
     }
 }
 
+component CategoryCell inherits TableCell {
+    in property <Transaction> transaction;
+    callback changed(string);
+
+    if !self.is-editing: Text {
+        text: State.get-category(transaction.category-id).title;
+        color: Colors.textBody;
+    }
+
+    if self.is-editing: ComboBox {
+        width: 100%;
+        options: State.category-options;
+        init => {
+            self.open();
+        }
+        changed(value) => {
+            parent.changed(value);
+            parent.is-editing = false;
+        }
+    }
+}
+
 component TransactionRow inherits TableRow {
     in property <Transaction> transaction;
     in property <int> length;
@@ -196,23 +218,11 @@ component TransactionRow inherits TableRow {
         }
     }
 
-    TableCell {
+    CategoryCell {
         width: parent.width / length;
-        if !self.is-editing: Text {
-            text: State.get-category(transaction.category-id).title;
-            color: Colors.textBody;
-        }
-
-        if self.is-editing: ComboBox {
-            width: 100%;
-            options: State.category-options;
-            init => {
-                self.open();
-            }
-            changed(value) => {
-                State.set-transaction-category(transaction.id,value);
-                parent.is-editing = false;
-            }
+        transaction: transaction;
+        changed(value) => {
+            State.set-transaction-category(transaction.id,value);
         }
     }
 
