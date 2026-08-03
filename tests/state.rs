@@ -18,20 +18,106 @@ use jiff::Zoned;
 use jiff::civil::date;
 use mukwa::service::{CreateBudgetOpts, Service};
 use mukwa::state::AppState;
+use mukwa::ui::CreateTransactionOpts;
 use mukwa::{Money, create_test_db};
-use slint::Model;
+use slint::{Model, SharedString, ToSharedString};
 
 #[test]
-fn create_transaction_creates_expense() -> mukwa::Result<()> {
+fn create_expense() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
+    let account = service.create_account("")?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
+
     let mut state = AppState::new(service)?;
-    state.create_account("")?;
-    state.create_transaction()?;
+    let opts = CreateTransactionOpts {
+        account_id: account.id.to_shared_string(),
+        outflow: "0.00".to_shared_string(),
+        category_id: category.id.to_shared_string(),
+        date: Zoned::now().date().to_shared_string(),
+        note: SharedString::from("Pick n Pay"),
+        ..Default::default()
+    };
+    state.create_transaction(opts)?;
 
     let transaction = state.transactions().remove(0);
+    assert_eq!(transaction.account_id, account.id.to_shared_string());
+    assert_eq!(transaction.category_id, category.id.to_shared_string());
+    assert_eq!(transaction.date, Zoned::now().date().to_shared_string());
+    assert_eq!(transaction.note.as_str(), "Pick n Pay");
     assert_eq!(transaction.inflow.as_str(), "");
+    assert_eq!(transaction.payee_id.as_str(), "");
     assert_eq!(transaction.outflow.as_str(), Money::ZERO.to_string());
+    Ok(())
+}
+
+#[test]
+fn create_income() -> mukwa::Result<()> {
+    let connection = create_test_db();
+    let service = Service::new(connection);
+    let account = service.create_account("")?;
+
+    let mut state = AppState::new(service)?;
+    let opts = CreateTransactionOpts {
+        account_id: account.id.to_shared_string(),
+        inflow: "0.00".to_shared_string(),
+        date: Zoned::now().date().to_shared_string(),
+        note: SharedString::from("Pick n Pay"),
+        ..Default::default()
+    };
+    state.create_transaction(opts)?;
+
+    let transaction = state.transactions().remove(0);
+    assert_eq!(transaction.account_id, account.id.to_shared_string());
+    assert_eq!(transaction.date, Zoned::now().date().to_shared_string());
+    assert_eq!(transaction.note.as_str(), "Pick n Pay");
+    assert_eq!(transaction.outflow.as_str(), "");
+    assert_eq!(transaction.payee_id.as_str(), "");
+    assert_eq!(transaction.inflow.as_str(), Money::ZERO.to_string());
+    Ok(())
+}
+
+#[test]
+fn create_expense_uses_account() -> mukwa::Result<()> {
+    let connection = create_test_db();
+    let service = Service::new(connection);
+    service.create_account("")?;
+    service.create_account("")?;
+    service.create_account("")?;
+    let account = service.create_account("")?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
+
+    let mut state = AppState::new(service)?;
+    let opts = CreateTransactionOpts {
+        account_id: account.id.to_shared_string(),
+        outflow: "0.00".to_shared_string(),
+        category_id: category.id.to_shared_string(),
+        date: Zoned::now().date().to_shared_string(),
+        note: SharedString::from("Pick n Pay"),
+        ..Default::default()
+    };
+    state.create_transaction(opts)?;
+
+    let transaction = state.transactions().remove(0);
+    assert_eq!(transaction.account_id, account.id.to_shared_string());
+    Ok(())
+}
+
+#[test]
+fn create_expense_empty_category() -> mukwa::Result<()> {
+    let connection = create_test_db();
+    let service = Service::new(connection);
+    service.create_account("")?;
+
+    let mut state = AppState::new(service)?;
+    let opts = CreateTransactionOpts {
+        outflow: "0.00".to_shared_string(),
+        date: Zoned::now().date().to_shared_string(),
+        ..Default::default()
+    };
+    state.create_transaction(opts)?;
     Ok(())
 }
 

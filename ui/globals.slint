@@ -60,12 +60,14 @@ export struct TransactionOption {
     text: string,
 }
 
-export struct UpdateTransactionOpts {
-    id: string,
+export struct CreateTransactionOpts {
     account-id: string,
+    category-id: string,
+    payee-id: string,
     outflow: string,
     inflow: string,
     date: string,
+    note: string,
 }
 
 export global Api {
@@ -75,12 +77,11 @@ export global Api {
     pure callback today() -> string;
 }
 
-// FIXME: use title-case for all methods
 export global State {
-    callback create_account(name: string);
-    callback create_transaction();
-    callback duplicate_transaction(id: string);
-    callback delete_transaction(id: string);
+    callback create-account(name: string);
+    callback create-transaction(CreateTransactionOpts);
+    callback duplicate-transaction(id: string);
+    callback delete-transaction(id: string);
     callback edit-budget(id: string, amount: string);
     callback set-current-budget-month(Date);
     callback set-transaction-date(id: string, date: string);

@@ -26,7 +26,6 @@ import {
     Account,
     Transaction,
     State,
-    UpdateTransactionOpts,
     Api,
 } from "globals.slint";
 import { Button, ComboBox, TextField, PrimaryButton } from "widgets.slint";
@@ -225,14 +224,14 @@ component TransactionRow inherits TableRow {
                     width: 100%;
                     text: @tr("Duplicate");
                     hover-background: Colors.neutral50;
-                    clicked => State.duplicate_transaction(transaction.id);
+                    clicked => State.duplicate-transaction(transaction.id);
                 }
 
                 Button {
                     width: 100%;
                     text: @tr("Delete");
                     hover-background: Colors.neutral50;
-                    clicked => State.delete_transaction(transaction.id);
+                    clicked => State.delete-transaction(transaction.id);
                 }
             }
         }
@@ -399,7 +398,15 @@ component NewTransactionRow inherits VerticalLayout {
         PrimaryButton {
             text: @tr("Save");
             clicked => {
-                State.create_transaction();
+                State.create_transaction({
+                    date: transaction.date,
+                    account-id: transaction.account-id,
+                    payee-id: transaction.payee-id,
+                    category-id: transaction.category-id,
+                    outflow: transaction.outflow,
+                    note: transaction.note,
+                    inflow: transaction.inflow,
+                });
                 root.close();
             }
         }
@@ -407,9 +414,15 @@ component NewTransactionRow inherits VerticalLayout {
         PrimaryButton {
             text: @tr("Save and add another");
             clicked => {
-                State.create_transaction();
-                //root.reset();
-                // TODO: reset or maybe not
+                State.create_transaction({
+                    date: transaction.date,
+                    account-id: transaction.account-id,
+                    payee-id: transaction.payee-id,
+                    category-id: transaction.category-id,
+                    outflow: transaction.outflow,
+                    note: transaction.note,
+                    inflow: transaction.inflow,
+                });
             }
         }
     }
@@ -454,7 +467,6 @@ export component TransactionPage inherits VerticalLayout {
             text: @tr("Add transaction");
             clicked => {
                 new-transaction-active = true;
-                //State.create_transaction();
             }
         }
     }

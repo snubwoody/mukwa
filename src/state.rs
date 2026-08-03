@@ -161,9 +161,59 @@ impl AppState {
         Ok(())
     }
 
-    /// Creates a new expense.
-    pub fn create_transaction(&mut self) -> crate::Result<()> {
-        let transaction = self.service.create_expense().submit()?;
+    /// Creates a new transaction.
+    pub fn create_transaction(&mut self, opts: ui::CreateTransactionOpts) -> crate::Result<()> {
+        let date = Date::strptime("%Y-%m-%d", &opts.date)?;
+
+        let transaction =
+            if !opts.outflow.is_empty() && opts.inflow.is_empty() && opts.payee_id.is_empty() {
+                let amount = Money::from_str(&opts.outflow)?;
+                let mut builder = self.service.create_expense().amount(amount).date(date);
+
+                if !opts.account_id.is_empty() {
+                    builder = builder.account(Uuid::parse_str(&opts.account_id)?);
+                }
+
+                if !opts.category_id.is_empty() {
+                    builder = builder.category(Uuid::parse_str(&opts.category_id)?);
+                }
+
+                if !opts.note.is_empty() {
+                    builder = builder.note(&opts.note);
+                }
+
+                builder.submit()?
+            } else if !opts.inflow.is_empty() {
+                let amount = Money::from_str(&opts.inflow)?;
+                let mut builder = self.service.create_income().amount(amount).date(date);
+
+                if !opts.account_id.is_empty() {
+                    builder = builder.account(Uuid::parse_str(&opts.account_id)?);
+                }
+
+                if !opts.note.is_empty() {
+                    builder = builder.note(&opts.note);
+                }
+
+                builder.submit()?
+            } else {
+                let amount = Money::from_str(&opts.outflow)?;
+                let account_id = Uuid::parse_str(&opts.account_id)?;
+                let payee_id = Uuid::parse_str(&opts.payee_id)?;
+                let mut builder = self
+                    .service
+                    .create_transfer()
+                    .accounts(account_id, payee_id)
+                    .amount(amount)
+                    .date(date);
+
+                if !opts.note.is_empty() {
+                    builder = builder.note(&opts.note);
+                }
+
+                builder.submit()?
+            };
+
         info!(id=?transaction.id,"Created new transaction");
         self.transactions.insert(0, transaction.into());
         Ok(())
