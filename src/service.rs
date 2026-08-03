@@ -140,7 +140,7 @@ impl<'a> TryFrom<&Row<'a>> for Budget {
 pub struct Category {
     pub id: Uuid,
     pub title: String,
-    pub group_id: Option<Uuid>,
+    pub group_id: Uuid,
 }
 
 #[derive(PartialOrd, PartialEq, Debug, Default, Clone)]
@@ -149,27 +149,12 @@ pub struct CategoryGroup {
     pub title: String,
 }
 
-impl Category {
-    pub fn new(title: &str) -> Category {
-        Category {
-            id: Uuid::now_v7(),
-            title: title.to_string(),
-            group_id: None,
-        }
-    }
-}
-
 impl From<Category> for ui::Category {
     fn from(value: Category) -> Self {
-        let group_id = match value.group_id {
-            Some(id) => id.to_shared_string(),
-            None => SharedString::new(),
-        };
-
         Self {
             id: value.id.to_shared_string(),
             title: value.title.to_shared_string(),
-            group_id,
+            group_id: value.group_id.to_shared_string(),
         }
     }
 }
@@ -194,15 +179,10 @@ impl From<&CategoryGroup> for ui::CategoryGroup {
 
 impl From<&Category> for ui::Category {
     fn from(value: &Category) -> Self {
-        let group_id = match value.group_id {
-            Some(id) => id.to_shared_string(),
-            None => SharedString::new(),
-        };
-
         Self {
             id: value.id.to_shared_string(),
             title: value.title.to_shared_string(),
-            group_id,
+            group_id: value.group_id.to_shared_string(),
         }
     }
 }
@@ -275,17 +255,12 @@ impl<'a> TryFrom<&Row<'a>> for Category {
     fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
         let id: String = value.get("id")?;
         let title: String = value.get("title")?;
-        let group_id: Option<String> = value.get("group_id")?;
-
-        let group_id = match group_id {
-            Some(id) => Some(Uuid::parse_str(&id)?),
-            None => None,
-        };
+        let group_id: String = value.get("group_id")?;
 
         Ok(Category {
             id: Uuid::parse_str(&id)?,
             title: title.to_string(),
-            group_id,
+            group_id: Uuid::parse_str(&group_id)?,
         })
     }
 }

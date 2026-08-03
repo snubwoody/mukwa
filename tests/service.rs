@@ -65,7 +65,7 @@ fn move_category() -> mukwa::Result<()> {
     let category = service.create_category("Groceries", group.id)?;
     let category = service.move_category(category.id, group2.id)?;
 
-    assert_eq!(category.group_id.unwrap(), group2.id);
+    assert_eq!(category.group_id, group2.id);
 
     service
         .connection()
