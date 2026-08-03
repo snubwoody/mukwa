@@ -168,6 +168,29 @@ component NoteCell inherits TableCell {
     }
 }
 
+component MoneyCell inherits TableCell {
+    in property <string> amount;
+    callback changed(string);
+
+    if !self.is-editing: Text {
+        text: State.format-money(amount,Settings.currency-code);
+        color: Colors.textBody;
+    }
+
+    if self.is-editing: TextField {
+        width: 100%;
+        text: amount;
+        input-type: decimal;
+        init => {
+            self.focus();
+        }
+        accepted => {
+            parent.changed(self.text);
+            parent.is-editing = false;
+        }
+    }
+}
+
 component TransactionRow inherits TableRow {
     in property <Transaction> transaction;
     in property <int> length;
@@ -256,45 +279,19 @@ component TransactionRow inherits TableRow {
         }
     }
 
-    TableCell {
+    MoneyCell {
         width: parent.width / length;
-        if !self.is-editing: Text {
-            text: State.format-money(transaction.outflow,Settings.currency-code);
-            color: Colors.textBody;
-        }
-
-        if self.is-editing: TextField {
-            width: 100%;
-            text: transaction.outflow;
-            input-type: decimal;
-            init => {
-                self.focus();
-            }
-            accepted => {
-                State.set-transaction-outflow(transaction.id, self.text);
-                parent.is-editing = false;
-            }
+        amount: transaction.outflow;
+        changed(value) => {
+            State.set-transaction-outflow(transaction.id, value);
         }
     }
 
-    TableCell {
+    MoneyCell {
         width: parent.width / length;
-        if !self.is-editing: Text {
-            text: State.format-money(transaction.inflow,Settings.currency-code);
-            color: Colors.textBody;
-        }
-
-        if self.is-editing: TextField {
-            width: 100%;
-            text: transaction.inflow;
-            input-type: decimal;
-            init => {
-                self.focus();
-            }
-            accepted => {
-                State.set-transaction-inflow(transaction.id, self.text);
-                parent.is-editing = false;
-            }
+        amount: transaction.inflow;
+        changed(value) => {
+            State.set-transaction-inflow(transaction.id, value);
         }
     }
 }
