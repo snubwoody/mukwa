@@ -44,7 +44,7 @@ component CategoryItem {
     }
 
     HorizontalLayout {
-        padding-left: 16px;
+        padding-left: 32px;
         padding-right: 16px;
         padding-top: 8px;
         padding-bottom: 8px;
@@ -131,6 +131,7 @@ component CategoryItem {
 component CategoryGroupItem {
     in property <Date> current-date;
     in property <CategoryGroup> category-group;
+    property <bool> open: true;
 
     drop-area := DropArea {
         can-drop(event) => event.proposed-action;
@@ -217,13 +218,28 @@ component CategoryGroupItem {
         Rectangle {
             background: Colors.neutral25;
             HorizontalLayout {
-                padding-left: 16px;
+                padding-left: 8px;
                 padding-right: 16px;
                 padding-top: 4px;
                 padding-bottom: 4px;
 
-                spacing: 4px;
                 cross-axis-alignment: center;
+
+                IconButton {
+                    icon: IconSet.ChevronDown;
+                    theme: ghost;
+                    states [
+                        closed when !root.open: {
+                            transform-rotation: -90deg;
+                            in-out {
+                                animate transform-rotation { duration: 150ms; }
+                            }
+                        }
+                    ]
+                    clicked => {
+                        root.open = !open;
+                    }
+                }
 
                 Rectangle {
                     property <bool> active: false;
@@ -289,9 +305,11 @@ component CategoryGroupItem {
             }
         }
 
-        for category in State.categories-in-group(category-group.id): CategoryItem {
-            current-date: current-date;
-            category: category;
+        if root.open: VerticalLayout {
+            for category in State.categories-in-group(category-group.id): CategoryItem {
+                current-date: current-date;
+                category: category;
+            }
         }
     }
 }
@@ -436,7 +454,6 @@ export component SpendingPage inherits VerticalLayout {
             content-height: content.preferred-height;
 
             content := VerticalLayout {
-                // TODO: add no group and don't have a plus button
                 for category-group in State.category-groups: CategoryGroupItem {
                     category-group: category-group;
                     current-date: current-date;
