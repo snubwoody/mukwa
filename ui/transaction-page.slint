@@ -146,6 +146,28 @@ component CategoryCell inherits TableCell {
     }
 }
 
+component NoteCell inherits TableCell {
+    in property <Transaction> transaction;
+    callback changed(string);
+
+    if !self.is-editing: Text {
+        text: transaction.note;
+        color: Colors.textBody;
+    }
+
+    if self.is-editing: TextField {
+        width: 100%;
+        text: transaction.note;
+        init => {
+            self.focus();
+        }
+        accepted => {
+            parent.changed(self.text);
+            parent.is-editing = false;
+        }
+    }
+}
+
 component TransactionRow inherits TableRow {
     in property <Transaction> transaction;
     in property <int> length;
@@ -226,23 +248,11 @@ component TransactionRow inherits TableRow {
         }
     }
 
-    TableCell {
+    NoteCell {
         width: parent.width / length;
-        if !self.is-editing: Text {
-            text: transaction.note;
-            color: Colors.textBody;
-        }
-
-        if self.is-editing: TextField {
-            width: 100%;
-            text: transaction.note;
-            init => {
-                self.focus();
-            }
-            accepted => {
-                State.set-transaction-note(transaction.id, self.text);
-                parent.is-editing = false;
-            }
+        transaction: transaction;
+        changed(value) => {
+            State.set-transaction-note(transaction.id, value);
         }
     }
 
