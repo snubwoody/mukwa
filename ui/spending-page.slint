@@ -33,7 +33,7 @@ import { Button, TextField, PrimaryButton, IconButton } from "widgets.slint";
 import { IconSet } from "@lucide";
 import { Settings } from "settings.slint";
 
-component CategoryItem {
+component CategoryItem inherits VerticalLayout{
     in property <Date> current-date;
     in property <Category> category;
     property <Budget> budget: State.get-budget(category.id, current-date);
@@ -125,6 +125,12 @@ component CategoryItem {
             color: Colors.textBody;
             horizontal-alignment: end;
         }
+    }
+
+    Rectangle {
+        width: 100%;
+        height: 1px;
+        background: Colors.neutral50;
     }
 }
 
@@ -457,32 +463,6 @@ export component SpendingPage inherits VerticalLayout {
                 for category-group in State.category-groups: CategoryGroupItem {
                     category-group: category-group;
                     current-date: current-date;
-                }
-
-                Rectangle {
-                    background: Colors.neutral25;
-                    HorizontalLayout {
-                        alignment: start;
-                        padding-left: 16px;
-                        padding-right: 16px;
-                        padding-top: 4px;
-                        padding-bottom: 4px;
-                        Text {
-                            text: "No group";
-                            color: Colors.textBody;
-                        }
-                    }
-                }
-
-                for category in State.categories: Rectangle {
-                    width: 100%;
-                    visible: category.group-id == "";
-                    height: self.visible ? category-item.preferred-height : 0;
-                    category-item := CategoryItem {
-                        width: 100%;
-                        current-date: current-date;
-                        category: category;
-                    }
                 }
             }
         }
