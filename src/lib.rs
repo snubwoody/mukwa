@@ -512,14 +512,6 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
-    global_state.on_get_account_name({
-        let state = state.clone();
-        move |id| match state.get_account(id) {
-            Some(account) => account.name,
-            None => SharedString::new(),
-        }
-    });
-
     global_state.on_format_money({
         move |value, currency_code| {
             // Empty strings represent null values

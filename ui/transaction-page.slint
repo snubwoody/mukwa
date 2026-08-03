@@ -82,7 +82,31 @@ component AccountCell inherits TableCell {
     callback changed(string);
 
     if !self.is-editing: Text {
-        text: State.get_account_name(transaction.account-id);
+        text: State.get-account(transaction.account-id).name;
+        color: Colors.textBody;
+    }
+
+    if self.is-editing: ComboBox {
+        width: 100%;
+        options: State.account-options;
+        current-value: transaction.account-id;
+        init => {
+            self.open();
+        }
+        changed(value) => {
+            root.changed(value);
+            parent.is-editing = false;
+        }
+    }
+}
+
+component PayeeCell inherits TableCell {
+    in property <Transaction> transaction;
+
+    callback changed(string);
+
+    if !self.is-editing: Text {
+        text: State.get-account(transaction.payee-id).name;
         color: Colors.textBody;
     }
 
@@ -164,25 +188,11 @@ component TransactionRow inherits TableRow {
     }
 
     // TODO: add icon showing direction or Transfer to and Transfer from
-    // TODO: add transaction type property
-    TableCell {
+    PayeeCell {
         width: parent.width / length;
-        if !self.is-editing: Text {
-            text: State.get-account(transaction.payee-id).name;
-            color: Colors.textBody;
-        }
-
-        // TODO: could add disabled property or disabled value/callback
-        if self.is-editing: ComboBox {
-            width: 100%;
-            options: State.account-options;
-            init => {
-                self.open();
-            }
-            changed(value) => {
-                State.set-transaction-payee(transaction.id,value);
-                parent.is-editing = false;
-            }
+        transaction: transaction;
+        changed(value) => {
+            State.set-transaction-payee(transaction.id,value);
         }
     }
 
@@ -290,7 +300,7 @@ export component TransactionPage inherits VerticalLayout {
         }
 
         Text {
-            text: State.format-money(State.total_balance(),Settings.currency-code);
+            text: State.format-money(State.total-balance(),Settings.currency-code);
             font-size: 1.25rem;
             color: Colors.textHeading;
         }

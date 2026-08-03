@@ -97,8 +97,7 @@ export global State {
 
     pure callback category-to-transfer(id: string) -> data-transfer;
     pure callback transfer-to-category(data-transfer) -> string;
-    pure callback get_account_name(id: string) -> string;
-    pure callback total_balance() -> string;
+    pure callback total-balance() -> string;
     pure callback get-category(id: string) -> Category;
     pure callback get-account(id: string) -> Account;
     pure callback get-budget(category-id: string, month: Date) -> Budget;
