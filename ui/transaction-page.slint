@@ -76,6 +76,30 @@ component DateCell inherits TableCell {
     }
 }
 
+component AccountCell inherits TableCell {
+    in property <Transaction> transaction;
+
+    callback changed(string);
+
+    if !self.is-editing: Text {
+        text: State.get_account_name(transaction.account-id);
+        color: Colors.textBody;
+    }
+
+    if self.is-editing: ComboBox {
+        width: 100%;
+        options: State.account-options;
+        current-value: transaction.account-id;
+        init => {
+            self.open();
+        }
+        changed(value) => {
+            root.changed(value);
+            parent.is-editing = false;
+        }
+    }
+}
+
 component TransactionRow inherits TableRow {
     in property <Transaction> transaction;
     in property <int> length;
@@ -124,35 +148,22 @@ component TransactionRow inherits TableRow {
     }
 
     DateCell {
+        width: parent.width / length;
         transaction: transaction;
         changed(value) => {
             State.set-transaction-date(transaction.id, value.year + "-" + value.month + "-" + value.day);
         }
     }
 
-    TableCell {
+    AccountCell {
         width: parent.width / length;
-        if !self.is-editing: Text {
-            text: State.get_account_name(transaction.account-id);
-            color: Colors.textBody;
-        }
-
-        if self.is-editing: ComboBox {
-            width: 100%;
-            options: State.account-options;
-            current-value: transaction.account-id;
-            init => {
-                self.open();
-            }
-            changed(value) => {
-                State.set-transaction-account(transaction.id,value);
-                parent.is-editing = false;
-            }
+        transaction: transaction;
+        changed(value) => {
+            State.set-transaction-account(transaction.id,value);
         }
     }
 
     // TODO: add icon showing direction or Transfer to and Transfer from
-    // TODO: test displayed accounts
     // TODO: add transaction type property
     TableCell {
         width: parent.width / length;
