@@ -296,10 +296,130 @@ component TransactionRow inherits TableRow {
     }
 }
 
+component NewTransactionRow inherits VerticalLayout {
+    property <Transaction> transaction: {
+        id: "placeholder-transaction",
+        date: Api.today(),
+        account-id: State.accounts[0].id,
+        payee-id: "",
+        category-id: "",
+        transaction-type: expense,
+        outflow: "0.00",
+        note: "",
+        inflow: "",
+    };
+    in property <int> length;
+
+    padding-left: 8px;
+    padding-right: 8px;
+
+    callback closed();
+    public function close() {
+        // TODO: reset
+        closed();
+    }
+    function reset() {
+        // TODO: reset
+        closed();
+    }
+
+    TableRow {
+        DateCell {
+            width: parent.width / length;
+            transaction: transaction;
+            changed(value) => {
+                transaction.date = value.year + "-" + value.month + "-" + value.day;
+            }
+        }
+
+        AccountCell {
+            width: parent.width / length;
+            transaction: transaction;
+            changed(value) => {
+                transaction.account-id = value;
+            }
+        }
+
+        // TODO: add icon showing direction or Transfer to and Transfer from
+        PayeeCell {
+            width: parent.width / length;
+            transaction: transaction;
+            changed(value) => {
+                transaction.payee-id = value;
+            }
+        }
+
+        CategoryCell {
+            width: parent.width / length;
+            transaction: transaction;
+            changed(value) => {
+                transaction.category-id = value;
+            }
+        }
+
+        NoteCell {
+            width: parent.width / length;
+            transaction: transaction;
+            changed(value) => {
+                transaction.note = value;
+            }
+        }
+
+        MoneyCell {
+            width: parent.width / length;
+            amount: transaction.outflow;
+            changed(value) => {
+                transaction.outflow = value;
+                transaction.inflow = "";
+                State.set-transaction-outflow(transaction.id, value);
+            }
+        }
+
+        MoneyCell {
+            width: parent.width / length;
+            amount: transaction.inflow;
+            changed(value) => {
+                transaction.inflow = value;
+                transaction.outflow = "";
+            }
+        }
+    }
+
+    HorizontalLayout {
+        alignment: end;
+        spacing: 8px;
+        padding-left: 8px;
+        padding-right: 8px;
+
+        PrimaryButton {
+            text: @tr("Cancel");
+            theme: ghost;
+        }
+
+        PrimaryButton {
+            text: @tr("Save");
+            clicked => {
+                State.create_transaction();
+                root.close();
+            }
+        }
+
+        PrimaryButton {
+            text: @tr("Save and add another");
+            clicked => {
+                State.create_transaction();
+                //root.reset();
+                // TODO: reset or maybe not
+            }
+        }
+    }
+}
+
 export component TransactionPage inherits VerticalLayout {
     in property <[string]> columns;
     in property <[Transaction]> transactions;
     property <int> active-row: -1;
+    property <bool> new-transaction-active: false;
 
     function select-row(index: int) {
         active-row = index;
@@ -332,7 +452,10 @@ export component TransactionPage inherits VerticalLayout {
 
         PrimaryButton {
             text: @tr("Add transaction");
-            clicked => State.create_transaction();
+            clicked => {
+                new-transaction-active = true;
+                //State.create_transaction();
+            }
         }
     }
 
@@ -349,6 +472,13 @@ export component TransactionPage inherits VerticalLayout {
                     text: column;
                     color: Colors.textBody;
                 }
+            }
+        }
+
+        if new-transaction-active: NewTransactionRow {
+            length: length;
+            closed => {
+                new-transaction-active = false;
             }
         }
 
