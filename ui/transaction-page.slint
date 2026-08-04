@@ -510,6 +510,9 @@ export component TransactionPage inherits VerticalLayout {
             transaction: transaction;
             active-account-id: active-account-id;
             length: length;
+            visible: active-account-id.is-empty ? true :
+                transaction.account-id == active-account-id;
+            height: self.visible ? self.preferred-height : 0;
         }
     }
 }
