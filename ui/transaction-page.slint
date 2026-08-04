@@ -454,14 +454,18 @@ export component TransactionPage inherits VerticalLayout {
         spacing: 12px;
 
         Text {
-            text: @tr("All accounts");
+            text: active-account-id == ""
+                ? @tr("All accounts")
+                : State.get-account(active-account-id).name;
             font-size: 1.5rem;
             font-weight: 500;
             color: Colors.textHeading;
         }
 
         Text {
-            text: State.format-money(State.total-balance(),Settings.currency-code);
+            text: active-account-id == ""
+                ? State.format-money(State.total-balance(),Settings.currency-code)
+                : State.format-money(State.account-balance(active-account-id), Settings.currency-code);
             font-size: 1.25rem;
             color: Colors.textHeading;
         }
