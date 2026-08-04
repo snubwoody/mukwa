@@ -235,8 +235,8 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     global_state.on_create_transaction({
         let mut state = state.clone();
-        move || {
-            if let Err(err) = state.create_transaction() {
+        move |opts| {
+            if let Err(err) = state.create_transaction(opts) {
                 warn!("Failed to create transaction: {err}")
             }
         }
@@ -512,14 +512,6 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
         }
     });
 
-    global_state.on_get_account_name({
-        let state = state.clone();
-        move |id| match state.get_account(id) {
-            Some(account) => account.name,
-            None => SharedString::new(),
-        }
-    });
-
     global_state.on_format_money({
         move |value, currency_code| {
             // Empty strings represent null values
@@ -589,6 +581,8 @@ fn setup_api(window: &ui::MainWindow) {
             day: date.day() as i32,
         }
     });
+
+    api.on_today(|| Zoned::now().date().to_shared_string());
 }
 
 fn setup_settings(window: &ui::MainWindow) -> Result<()> {

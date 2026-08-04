@@ -33,13 +33,14 @@ export {
     Account,
     Transaction,
     State,
+    CreateTransactionOpts,
     Category,
     Api,
     CategoryGroup,
 }from "globals.slint";
 export { Settings }from "settings.slint";
 import { Button, TextField } from "widgets.slint";
-import { TransactionPage } from "transaction.slint";
+import { TransactionPage } from "transaction-page.slint";
 import { SpendingPage } from "spending-page.slint";
 import { PrimaryButton } from "widgets/button.slint";
 import { ComboBoxItem } from "widgets/combobox.slint";
@@ -176,7 +177,7 @@ component Sidebar {
                     focus-scope := FocusScope {
                         key-pressed(event) => {
                             if (event.text == Key.Return) {
-                                State.create_account(text-field.text);
+                                State.create-account(text-field.text);
                                 popup.close();
                                 return accept;
                             }
@@ -218,7 +219,7 @@ component Sidebar {
                             text-field := TextField {
                                 placeholder-text: @tr("My account");
                                 accepted => {
-                                    State.create_account(text-field.text);
+                                    State.create-account(text-field.text);
                                     popup.close();
                                 }
                             }
@@ -237,7 +238,7 @@ component Sidebar {
                             PrimaryButton {
                                 text: @tr("Create");
                                 clicked => {
-                                    State.create_account(text-field.text);
+                                    State.create-account(text-field.text);
                                     popup.close();
                                 }
                             }

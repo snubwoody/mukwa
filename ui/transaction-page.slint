@@ -1,0 +1,503 @@
+// Mukwa - Personal finance
+// Copyright (C) 2026  Wakunguma Kalimukwa
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import {
+    StandardListView,
+    VerticalBox,
+    ListView,
+    Palette,
+    LineEdit,
+} from "std-widgets.slint";
+import { Colors } from "colors.slint";
+import {
+    Account,
+    Transaction,
+    State,
+    Api,
+} from "globals.slint";
+import { Button, ComboBox, TextField, PrimaryButton } from "widgets.slint";
+import { FocusBorder } from "widgets/focus-border.slint";
+import { Calendar, Date } from "widgets/calendar.slint";
+import { Table, TableRow, TableCell } from "tableview.slint";
+import { Settings } from "settings.slint";
+
+component DateCell inherits TableCell {
+    in property <Transaction> transaction;
+
+    callback changed(Date);
+
+    clicked => {
+        calendar-popup.show();
+    }
+
+    Text {
+        text: State.format-date(transaction.date);
+        color: Colors.textBody;
+    }
+
+    calendar-popup := PopupWindow {
+        x: 0;
+        y: popup-position-y();
+
+        width: calendar.preferred-width;
+        height: calendar.preferred-height;
+        close-policy: close-on-click-outside;
+
+        function popup-position-y() -> length {
+            if (root.absolute-position.y > Api.window-size().height * 0.5) {
+                return -100px;
+            }
+            return root.height;
+        }
+
+        calendar := Calendar {
+            x: parent.x;
+            y: parent.y;
+            date: Api.parse-date(transaction.date);
+            changed(value) => {
+                root.changed(value);
+                calendar-popup.close();
+            }
+        }
+    }
+}
+
+component AccountCell inherits TableCell {
+    in property <Transaction> transaction;
+
+    callback changed(string);
+
+    if !self.is-editing: Text {
+        text: State.get-account(transaction.account-id).name;
+        color: Colors.textBody;
+    }
+
+    if self.is-editing: ComboBox {
+        width: 100%;
+        options: State.account-options;
+        current-value: transaction.account-id;
+        init => {
+            self.open();
+        }
+        changed(value) => {
+            root.changed(value);
+            parent.is-editing = false;
+        }
+    }
+}
+
+component PayeeCell inherits TableCell {
+    in property <Transaction> transaction;
+
+    callback changed(string);
+
+    if !self.is-editing: Text {
+        text: State.get-account(transaction.payee-id).name;
+        color: Colors.textBody;
+    }
+
+    if self.is-editing: ComboBox {
+        width: 100%;
+        options: State.account-options;
+        current-value: transaction.account-id;
+        init => {
+            self.open();
+        }
+        changed(value) => {
+            root.changed(value);
+            parent.is-editing = false;
+        }
+    }
+}
+
+component CategoryCell inherits TableCell {
+    in property <Transaction> transaction;
+    callback changed(string);
+
+    if !self.is-editing: Text {
+        text: State.get-category(transaction.category-id).title;
+        color: Colors.textBody;
+    }
+
+    if self.is-editing: ComboBox {
+        width: 100%;
+        options: State.category-options;
+        init => {
+            self.open();
+        }
+        changed(value) => {
+            parent.changed(value);
+            parent.is-editing = false;
+        }
+    }
+}
+
+component NoteCell inherits TableCell {
+    in property <Transaction> transaction;
+    callback changed(string);
+
+    if !self.is-editing: Text {
+        text: transaction.note;
+        color: Colors.textBody;
+    }
+
+    if self.is-editing: TextField {
+        width: 100%;
+        text: transaction.note;
+        init => {
+            self.focus();
+        }
+        accepted => {
+            parent.changed(self.text);
+            parent.is-editing = false;
+        }
+    }
+}
+
+component MoneyCell inherits TableCell {
+    in property <string> amount;
+    callback changed(string);
+
+    if !self.is-editing: Text {
+        text: State.format-money(amount,Settings.currency-code);
+        color: Colors.textBody;
+    }
+
+    if self.is-editing: TextField {
+        width: 100%;
+        text: amount;
+        input-type: decimal;
+        init => {
+            self.focus();
+        }
+        accepted => {
+            parent.changed(self.text);
+            parent.is-editing = false;
+        }
+    }
+}
+
+component TransactionRow inherits TableRow {
+    in property <Transaction> transaction;
+    in property <int> length;
+    in property <int> index;
+
+    right-clicked => {
+        context-menu.show();
+    }
+
+    padding-left: 8px;
+    padding-right: 8px;
+
+    context-menu := PopupWindow {
+        width: parent.width;
+        height: parent.height;
+        close-policy: close-on-click-outside;
+
+        // FIXME: context menu passthrough
+        Rectangle {
+            width: context-menu-inner.preferred-width;
+            height: context-menu-inner.preferred-height;
+            background: white;
+            border-radius: 4px;
+            border-color: Colors.neutral50;
+            border-width: 1px;
+
+            context-menu-inner := VerticalLayout {
+                cross-axis-alignment: start;
+                padding: 4px;
+                spacing: 4px;
+                Button {
+                    width: 100%;
+                    text: @tr("Duplicate");
+                    hover-background: Colors.neutral50;
+                    clicked => State.duplicate-transaction(transaction.id);
+                }
+
+                Button {
+                    width: 100%;
+                    text: @tr("Delete");
+                    hover-background: Colors.neutral50;
+                    clicked => State.delete-transaction(transaction.id);
+                }
+            }
+        }
+    }
+
+    DateCell {
+        width: parent.width / length;
+        transaction: transaction;
+        changed(value) => {
+            State.set-transaction-date(transaction.id, value.year + "-" + value.month + "-" + value.day);
+        }
+    }
+
+    AccountCell {
+        width: parent.width / length;
+        transaction: transaction;
+        changed(value) => {
+            State.set-transaction-account(transaction.id,value);
+        }
+    }
+
+    // TODO: add icon showing direction or Transfer to and Transfer from
+    PayeeCell {
+        width: parent.width / length;
+        transaction: transaction;
+        changed(value) => {
+            State.set-transaction-payee(transaction.id,value);
+        }
+    }
+
+    CategoryCell {
+        width: parent.width / length;
+        transaction: transaction;
+        changed(value) => {
+            State.set-transaction-category(transaction.id,value);
+        }
+    }
+
+    NoteCell {
+        width: parent.width / length;
+        transaction: transaction;
+        changed(value) => {
+            State.set-transaction-note(transaction.id, value);
+        }
+    }
+
+    MoneyCell {
+        width: parent.width / length;
+        amount: transaction.outflow;
+        changed(value) => {
+            State.set-transaction-outflow(transaction.id, value);
+        }
+    }
+
+    MoneyCell {
+        width: parent.width / length;
+        amount: transaction.inflow;
+        changed(value) => {
+            State.set-transaction-inflow(transaction.id, value);
+        }
+    }
+}
+
+component NewTransactionRow inherits VerticalLayout {
+    property <Transaction> transaction: {
+        id: "placeholder-transaction",
+        date: Api.today(),
+        account-id: State.accounts[0].id,
+        payee-id: "",
+        category-id: "",
+        transaction-type: expense,
+        outflow: "0.00",
+        note: "",
+        inflow: "",
+    };
+    in property <int> length;
+
+    padding-left: 8px;
+    padding-right: 8px;
+
+    callback closed();
+    public function close() {
+        // TODO: reset
+        closed();
+    }
+    function reset() {
+        // TODO: reset
+        closed();
+    }
+
+    TableRow {
+        DateCell {
+            width: parent.width / length;
+            transaction: transaction;
+            changed(value) => {
+                transaction.date = value.year + "-" + value.month + "-" + value.day;
+            }
+        }
+
+        AccountCell {
+            width: parent.width / length;
+            transaction: transaction;
+            changed(value) => {
+                transaction.account-id = value;
+            }
+        }
+
+        // TODO: add icon showing direction or Transfer to and Transfer from
+        PayeeCell {
+            width: parent.width / length;
+            transaction: transaction;
+            changed(value) => {
+                transaction.payee-id = value;
+            }
+        }
+
+        CategoryCell {
+            width: parent.width / length;
+            transaction: transaction;
+            changed(value) => {
+                transaction.category-id = value;
+            }
+        }
+
+        NoteCell {
+            width: parent.width / length;
+            transaction: transaction;
+            changed(value) => {
+                transaction.note = value;
+            }
+        }
+
+        MoneyCell {
+            width: parent.width / length;
+            amount: transaction.outflow;
+            changed(value) => {
+                transaction.outflow = value;
+                transaction.inflow = "";
+                State.set-transaction-outflow(transaction.id, value);
+            }
+        }
+
+        MoneyCell {
+            width: parent.width / length;
+            amount: transaction.inflow;
+            changed(value) => {
+                transaction.inflow = value;
+                transaction.outflow = "";
+            }
+        }
+    }
+
+    HorizontalLayout {
+        alignment: end;
+        spacing: 8px;
+        padding-left: 8px;
+        padding-right: 8px;
+
+        PrimaryButton {
+            text: @tr("Cancel");
+            theme: ghost;
+        }
+
+        PrimaryButton {
+            text: @tr("Save");
+            clicked => {
+                State.create_transaction({
+                    date: transaction.date,
+                    account-id: transaction.account-id,
+                    payee-id: transaction.payee-id,
+                    category-id: transaction.category-id,
+                    outflow: transaction.outflow,
+                    note: transaction.note,
+                    inflow: transaction.inflow,
+                });
+                root.close();
+            }
+        }
+
+        PrimaryButton {
+            text: @tr("Save and add another");
+            clicked => {
+                State.create_transaction({
+                    date: transaction.date,
+                    account-id: transaction.account-id,
+                    payee-id: transaction.payee-id,
+                    category-id: transaction.category-id,
+                    outflow: transaction.outflow,
+                    note: transaction.note,
+                    inflow: transaction.inflow,
+                });
+            }
+        }
+    }
+}
+
+export component TransactionPage inherits VerticalLayout {
+    in property <[string]> columns;
+    in property <[Transaction]> transactions;
+    property <int> active-row: -1;
+    property <bool> new-transaction-active: false;
+
+    function select-row(index: int) {
+        active-row = index;
+    }
+
+    VerticalLayout {
+        padding: 12px;
+        spacing: 12px;
+
+        Text {
+            text: @tr("All accounts");
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: Colors.textHeading;
+        }
+
+        Text {
+            text: State.format-money(State.total-balance(),Settings.currency-code);
+            font-size: 1.25rem;
+            color: Colors.textHeading;
+        }
+    }
+
+    HorizontalLayout {
+        alignment: end;
+        padding-left: 16px;
+        padding-right: 16px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+
+        PrimaryButton {
+            text: @tr("Add transaction");
+            clicked => {
+                new-transaction-active = true;
+            }
+        }
+    }
+
+    Table {
+        width: 100%;
+        property <int> length: 7;
+
+        TableRow {
+            padding-left: 8px;
+            padding-right: 8px;
+            for column in columns: TableCell {
+                width: parent.width / length;
+                Text {
+                    text: column;
+                    color: Colors.textBody;
+                }
+            }
+        }
+
+        if new-transaction-active: NewTransactionRow {
+            length: length;
+            closed => {
+                new-transaction-active = false;
+            }
+        }
+
+        for transaction[index] in transactions: TransactionRow {
+            index: index;
+            transaction: transaction;
+            length: length;
+        }
+    }
+}
