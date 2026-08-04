@@ -429,14 +429,25 @@ component NewTransactionRow inherits VerticalLayout {
 }
 
 export component TransactionPage inherits VerticalLayout {
-    in property <[string]> columns;
+    in property <[string]> columns: active-account-id == "" ? [
+        @tr("Date"),
+        @tr("Account"),
+        @tr("Payee"),
+        @tr("Category"),
+        @tr("Note"),
+        @tr("Outflow"),
+        @tr("Inflow"),
+    ] : [
+        @tr("Date"),
+        @tr("Payee"),
+        @tr("Category"),
+        @tr("Note"),
+        @tr("Outflow"),
+        @tr("Inflow"),
+    ];
     in property <[Transaction]> transactions;
-    property <int> active-row: -1;
+    in property <string> active-account-id;
     property <bool> new-transaction-active: false;
-
-    function select-row(index: int) {
-        active-row = index;
-    }
 
     VerticalLayout {
         padding: 12px;
