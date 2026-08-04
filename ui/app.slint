@@ -68,11 +68,13 @@ component SidebarButton inherits Button {
 component AccountSection inherits VerticalLayout {
     in property <[Account]> accounts;
     in property <Page> current-page;
+    in property <string> active-account-id;
     callback select-page(Page);
+    callback select-account(string);
 
     SidebarButton {
         text: @tr("All accounts");
-        selected: current-page == Page.transactions;
+        selected: current-page == Page.transactions && active-account-id == "";
         clicked => select-page(Page.transactions);
 
         IconDisplay {
@@ -90,21 +92,23 @@ component AccountSection inherits VerticalLayout {
         content := VerticalLayout {
             padding-left: 16px;
 
-            for account in accounts: HorizontalLayout{
-                padding-top: 4px;
-                padding-bottom: 4px;
-                padding-left: 8px;
-                padding-right: 8px;
-                alignment: space-between;
+            for account in accounts: SidebarButton {
+                alignment: start;
+                selected: active-account-id == account.id;
+                clicked => select-account(account.id);
+                HorizontalLayout {
+                    alignment: space-between;
+                    width: 100%;
 
-                Text {
-                    text: account.name;
-                    color: Colors.textBody;
-                }
+                    Text {
+                        text: account.name;
+                        color: Colors.textBody;
+                    }
 
-                Text {
-                    text: State.format-money(State.account-balance(account.id), Settings.currency-code);
-                    color: Colors.textBody;
+                    Text {
+                        text: State.format-money(State.account-balance(account.id), Settings.currency-code);
+                        color: Colors.textBody;
+                    }
                 }
             }
         }
@@ -114,7 +118,9 @@ component AccountSection inherits VerticalLayout {
 component Sidebar {
     in-out property <[Account]> accounts;
     in property <Page> current-page;
+    in property <string> active-account-id;
     callback select-page(Page);
+    callback select-account(string);
     width: 350px;
 
     accessible-role: navigation;
@@ -137,7 +143,7 @@ component Sidebar {
 
                 SidebarButton {
                     text: @tr("Spending");
-                    selected: current-page == Page.spending;
+                    selected: current-page == Page.spending && active-account-id == "";
                     clicked => select-page(Page.spending);
                     IconDisplay {
                         icon: IconSet.Banknote;
@@ -150,9 +156,10 @@ component Sidebar {
                 AccountSection {
                     current-page: current-page;
                     select-page(page) => select-page(page);
+                    select-account(id) => select-account(id);
+                    active-account-id: active-account-id;
                     accounts: accounts;
                 }
-
             }
 
             VerticalLayout {
@@ -275,6 +282,8 @@ component Sidebar {
 
 export component MainWindow inherits Window {
     property <Page> active-page: Page.transactions;
+    property <string> active-account-id;
+
     preferred-width: 750px;
     preferred-height: 750px;
     background: white;
@@ -284,23 +293,21 @@ export component MainWindow inherits Window {
         Sidebar {
             accounts: State.accounts;
             current-page: active-page;
+            active-account-id: active-account-id;
             select-page(page) => {
                 active-page = page;
+                active-account-id = "";
+            }
+            select-account(id) => {
+                active-account-id = id;
+                active-page = Page.transactions;
             }
         }
 
         if active-page == Page.spending: SpendingPage { }
 
         if active-page == Page.transactions: TransactionPage {
-            columns: [
-                @tr("Date"),
-                @tr("Account"),
-                @tr("Payee"),
-                @tr("Category"),
-                @tr("Note"),
-                @tr("Outflow"),
-                @tr("Inflow"),
-            ];
+            active-account-id: active-account-id;
             transactions: State.transactions;
         }
     }

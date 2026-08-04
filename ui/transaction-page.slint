@@ -193,7 +193,7 @@ component MoneyCell inherits TableCell {
 component TransactionRow inherits TableRow {
     in property <Transaction> transaction;
     in property <int> length;
-    in property <int> index;
+    in property <string> active-account-id;
 
     right-clicked => {
         context-menu.show();
@@ -245,7 +245,7 @@ component TransactionRow inherits TableRow {
         }
     }
 
-    AccountCell {
+    if active-account-id == "": AccountCell {
         width: parent.width / length;
         transaction: transaction;
         changed(value) => {
@@ -295,11 +295,12 @@ component TransactionRow inherits TableRow {
     }
 }
 
+// TODO: remove the account option and set to active-account-id
 component NewTransactionRow inherits VerticalLayout {
     property <Transaction> transaction: {
         id: "placeholder-transaction",
         date: Api.today(),
-        account-id: State.accounts[0].id,
+        account-id: active-account-id.is-empty ? State.accounts[0].id : active-account-id,
         payee-id: "",
         category-id: "",
         transaction-type: expense,
@@ -307,20 +308,13 @@ component NewTransactionRow inherits VerticalLayout {
         note: "",
         inflow: "",
     };
+    in property <string> active-account-id;
     in property <int> length;
 
     padding-left: 8px;
     padding-right: 8px;
 
     callback closed();
-    public function close() {
-        // TODO: reset
-        closed();
-    }
-    function reset() {
-        // TODO: reset
-        closed();
-    }
 
     TableRow {
         DateCell {
@@ -331,7 +325,7 @@ component NewTransactionRow inherits VerticalLayout {
             }
         }
 
-        AccountCell {
+        if active-account-id.is-empty: AccountCell {
             width: parent.width / length;
             transaction: transaction;
             changed(value) => {
@@ -393,6 +387,7 @@ component NewTransactionRow inherits VerticalLayout {
         PrimaryButton {
             text: @tr("Cancel");
             theme: ghost;
+            clicked => closed();
         }
 
         PrimaryButton {
@@ -407,7 +402,7 @@ component NewTransactionRow inherits VerticalLayout {
                     note: transaction.note,
                     inflow: transaction.inflow,
                 });
-                root.close();
+                root.closed();
             }
         }
 
@@ -429,28 +424,43 @@ component NewTransactionRow inherits VerticalLayout {
 }
 
 export component TransactionPage inherits VerticalLayout {
-    in property <[string]> columns;
+    in property <[string]> columns: active-account-id.is-empty ? [
+        @tr("Date"),
+        @tr("Account"),
+        @tr("Payee"),
+        @tr("Category"),
+        @tr("Note"),
+        @tr("Outflow"),
+        @tr("Inflow"),
+    ] : [
+        @tr("Date"),
+        @tr("Payee"),
+        @tr("Category"),
+        @tr("Note"),
+        @tr("Outflow"),
+        @tr("Inflow"),
+    ];
     in property <[Transaction]> transactions;
-    property <int> active-row: -1;
+    in property <string> active-account-id;
     property <bool> new-transaction-active: false;
-
-    function select-row(index: int) {
-        active-row = index;
-    }
 
     VerticalLayout {
         padding: 12px;
         spacing: 12px;
 
         Text {
-            text: @tr("All accounts");
+            text: active-account-id.is-empty
+                ? @tr("All accounts")
+                : State.get-account(active-account-id).name;
             font-size: 1.5rem;
             font-weight: 500;
             color: Colors.textHeading;
         }
 
         Text {
-            text: State.format-money(State.total-balance(),Settings.currency-code);
+            text: active-account-id.is-empty
+                ? State.format-money(State.total-balance(),Settings.currency-code)
+                : State.format-money(State.account-balance(active-account-id), Settings.currency-code);
             font-size: 1.25rem;
             color: Colors.textHeading;
         }
@@ -473,7 +483,7 @@ export component TransactionPage inherits VerticalLayout {
 
     Table {
         width: 100%;
-        property <int> length: 7;
+        property <int> length: active-account-id.is-empty ? 7 : 6;
 
         TableRow {
             padding-left: 8px;
@@ -489,15 +499,20 @@ export component TransactionPage inherits VerticalLayout {
 
         if new-transaction-active: NewTransactionRow {
             length: length;
+            active-account-id: active-account-id;
             closed => {
                 new-transaction-active = false;
             }
         }
 
+        // TODO: maybe show payees as well
         for transaction[index] in transactions: TransactionRow {
-            index: index;
             transaction: transaction;
+            active-account-id: active-account-id;
             length: length;
+            visible: active-account-id.is-empty ? true :
+                transaction.account-id == active-account-id;
+            height: self.visible ? self.preferred-height : 0;
         }
     }
 }
