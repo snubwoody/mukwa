@@ -18,6 +18,7 @@ pub mod error;
 pub mod fmt;
 pub mod migrator;
 mod money;
+mod ofx;
 pub mod service;
 pub mod state;
 
