@@ -26,6 +26,7 @@ pub use error::Result;
 pub use money::{Currency, Money};
 use slint::{DataTransfer, Global, ModelExt};
 use std::cell::{Ref, RefCell, RefMut};
+use std::collections::HashSet;
 use std::fs::File;
 use std::io;
 use std::io::Read;
@@ -158,20 +159,24 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     let mut database = fontdb::Database::new();
     database.load_system_fonts();
 
-    // TODO: bench with length
     // TODO: try using ListView for combobox
-    // TODO: remove repeats
-    // TODO: below might not be valid after removing duplicates
-    let mut fonts = Vec::with_capacity(database.len());
+    let mut families = HashSet::new();
     for face in database.faces() {
         for (family, _) in &face.families {
-            let option = ui::ComboBoxItem {
-                value: family.to_shared_string(),
-                text: family.to_shared_string(),
-            };
-            fonts.push(option);
+            families.insert(family);
         }
     }
+
+    let mut families: Vec<_> = families.iter().collect();
+    families.sort_by(|a, b| a.cmp(b));
+
+    let fonts: Vec<_> = families
+        .iter()
+        .map(|family| ui::ComboBoxItem {
+            value: family.to_shared_string(),
+            text: family.to_shared_string(),
+        })
+        .collect();
     let elapsed = instant.elapsed().as_millis();
     tracing::trace!("Loaded system fonts in {elapsed}ms");
 
