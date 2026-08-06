@@ -73,15 +73,17 @@ export component ComboBox {
 
     background := Rectangle {
         background: white;
-        //border-color: Colors.accent;
+        border-color: Colors.neutral50;
         border-width: 1px;
-        border-radius: 4px;
-        vertical-stretch: 1;
+        border-radius: 8px;
         clip: true;
     }
 
     HorizontalLayout {
-        padding: 4px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+        padding-left: 8px;
+        padding-right: 8px;
         text := Text {
             text: options[current-index].text;
             color: Colors.textBody;
@@ -140,9 +142,7 @@ export component ComboBox {
                         hovered when inner-touch-area.has-hover: {
                             background: Colors.neutral50;
                             in {
-                                animate background{
-                                    duration: 150ms;
-                                }
+                                animate background { duration: 150ms; }
                             }
                         }
                     ]
