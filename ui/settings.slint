@@ -50,11 +50,9 @@ component Setting inherits HorizontalLayout {
 }
 
 component GeneralSettings inherits VerticalLayout {
-    // TODO: dividers
     padding: 12px;
     spacing: 12px;
     alignment: start;
-    // TODO: Section component
     Text {
         text: "General";
         font-size: 15px;
@@ -84,8 +82,6 @@ component AppearanceSettings inherits VerticalLayout {
         color: Colors.textBody;
     }
 
-    // TODO: add combobox border
-    // TODO: add helper text
     HorizontalLayout {
         alignment: space-between;
         cross-axis-alignment: center;
@@ -134,8 +130,6 @@ export component SettingsDialog inherits PopupWindow {
     height: Api.window-size().height * 0.85;
     close-policy: close-on-click-outside;
     property <Section> active-section: general;
-
-    // TODO: add X button and red on hover
 
     Rectangle {
         background: white;

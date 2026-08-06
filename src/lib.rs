@@ -153,7 +153,6 @@ fn setup_calendar_state(window: &ui::MainWindow) {
 }
 
 fn setup_global_state(state: AppState, window: &ui::MainWindow) {
-    // TODO: set OS specific defaults
     let instant = Instant::now();
     let mut database = fontdb::Database::new();
     database.load_system_fonts();
@@ -166,7 +165,7 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     }
 
     let mut families: Vec<_> = families.iter().collect();
-    families.sort_by(|a, b| a.cmp(b));
+    families.sort();
 
     let fonts: Vec<_> = families
         .iter()
