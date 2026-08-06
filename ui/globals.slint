@@ -74,6 +74,7 @@ export global Api {
     pure callback window-position() -> { x: length, y: length };
     pure callback window-size() -> { width: length, height: length };
     pure callback parse-date(string) -> Date;
+    pure callback money-to-float(string) -> float;
     pure callback today() -> string;
 }
 
