@@ -153,13 +153,11 @@ fn setup_calendar_state(window: &ui::MainWindow) {
 }
 
 fn setup_global_state(state: AppState, window: &ui::MainWindow) {
-    // TODO: maybe system font option?
     // TODO: set OS specific defaults
     let instant = Instant::now();
     let mut database = fontdb::Database::new();
     database.load_system_fonts();
 
-    // TODO: try using ListView for combobox
     let mut families = HashSet::new();
     for face in database.faces() {
         for (family, _) in &face.families {
@@ -827,8 +825,17 @@ pub struct Appearance {
 
 impl Default for Appearance {
     fn default() -> Self {
+        let default_font = if cfg!(target_os = "windows") {
+            "Segoe UI"
+        } else if cfg!(target_os = "macos") {
+            "SF Pro"
+        } else {
+            // Slint will use the default font
+            ""
+        };
+
         Self {
-            font_family: String::from("Arial"),
+            font_family: String::from(default_font),
         }
     }
 }
