@@ -15,54 +15,125 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import { Colors } from "colors.slint";
 import { Api, State } from "globals.slint";
-import { ComboBox } from "widgets.slint";
+import { ComboBox, Button } from "widgets.slint";
 
 export global Settings {
     callback set-currency-code(string);
+    callback set-font-family(string);
     in-out property <string> currency-code;
+    in-out property <string> font-family;
 }
 
-component GeneralSettings {
-    // TODO: dividers
-    // TODO: Section component
+component Setting inherits HorizontalLayout {
+    in property <string> text;
+    in property <string> helper-text;
+    alignment: space-between;
+    cross-axis-alignment: center;
+
     VerticalLayout {
-        padding: 12px;
         alignment: start;
-        spacing: 12px;
+        spacing: 4px;
         Text {
-            text: "General";
-            font-size: 15px;
+            text: text;
+            font-size: 13px;
             color: Colors.textBody;
         }
 
-        HorizontalLayout {
-            alignment: space-between;
-            cross-axis-alignment: center;
-            Text {
-                text: "Currency";
-                font-size: 14px;
-                color: Colors.textBody;
-            }
+        Text {
+            text: helper-text;
+            font-size: 11px;
+            color: Colors.textMuted;
+        }
+    }
 
-            ComboBox {
-                options: State.currency-options;
-                changed(value) => {
-                    Settings.set-currency-code(value);
-                }
+    @children
+}
+
+component GeneralSettings inherits VerticalLayout {
+    // TODO: dividers
+    padding: 12px;
+    spacing: 12px;
+    alignment: start;
+    // TODO: Section component
+    Text {
+        text: "General";
+        font-size: 15px;
+        color: Colors.textBody;
+    }
+
+    Setting {
+        text: @tr("Currency");
+        helper-text: @tr("The currency for all transactions");
+
+        ComboBox {
+            options: State.currency-options;
+            changed(value) => {
+                Settings.set-currency-code(value);
             }
         }
     }
 }
 
-// TODO: sections
-// - General
-// - Appearance
+component AppearanceSettings inherits VerticalLayout {
+    padding: 12px;
+    alignment: start;
+    spacing: 12px;
+    Text {
+        text: "Appearance";
+        font-size: 15px;
+        color: Colors.textBody;
+    }
+
+    // TODO: add combobox border
+    // TODO: add helper text
+    HorizontalLayout {
+        alignment: space-between;
+        cross-axis-alignment: center;
+
+        VerticalLayout {
+            alignment: start;
+            spacing: 4px;
+            Text {
+                text: @tr("Font family");
+                font-size: 13px;
+                color: Colors.textBody;
+            }
+
+            Text {
+                text: @tr("Font family for the entire app");
+                font-size: 11px;
+                color: Colors.textMuted;
+            }
+        }
+
+        ComboBox {
+            options: State.font-options;
+            changed(value) => {
+                Settings.set-font-family(value);
+            }
+        }
+    }
+}
+
+enum Section {
+    appearance,
+    general,
+}
+
+component SettingsButton inherits Button {
+    in property <bool> selected: false;
+    alignment: start;
+    background: selected ? Colors.neutral50 : transparent;
+    border-radius: 4px;
+}
+
 export component SettingsDialog inherits PopupWindow {
     x: Api.window-size().width * 0.5 - self.width * 0.5;
     y: Api.window-size().height * 0.5 - self.height * 0.5;
     width: Api.window-size().width * 0.80;
     height: Api.window-size().height * 0.85;
     close-policy: close-on-click-outside;
+    property <Section> active-section: general;
 
     // TODO: add X button and red on hover
 
@@ -79,16 +150,30 @@ export component SettingsDialog inherits PopupWindow {
                 background: Colors.neutral25;
                 border-top-left-radius: 20px;
                 VerticalLayout {
-                    padding: 16px;
+                    padding: 12px;
                     spacing: 8px;
-                    Text {
+                    alignment: start;
+
+                    SettingsButton {
                         text: "General";
-                        color: Colors.textBody;
+                        selected: active-section == general;
+                        clicked => {
+                            active-section = general;
+                        }
+                    }
+
+                    SettingsButton {
+                        text: "Appearance";
+                        selected: active-section == appearance;
+                        clicked => {
+                            active-section = appearance;
+                        }
                     }
                 }
             }
 
-            GeneralSettings { }
+            if active-section == general: GeneralSettings { }
+            if active-section == appearance: AppearanceSettings { }
         }
     }
 }
