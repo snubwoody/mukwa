@@ -16,6 +16,8 @@
 
 use std::str::FromStr;
 
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug)]
 pub enum ParseError {
     /// The `OFXHEADER` attribute had an invalid value.
@@ -43,7 +45,7 @@ impl std::fmt::Display for ParseError {
             ParseError::InvalidOfxHeader => write!(f, "Invalid OFX header"),
             ParseError::InvalidVersion => write!(f, "Invalid version"),
             ParseError::InvalidAttribute { attr, value } => {
-                write!(f, "The {attr }attribute has an invalid value: {value}")
+                write!(f, "The {attr} attribute has an invalid value: {value}")
             }
         }
     }
@@ -100,6 +102,21 @@ pub struct Header {
     compression: String,
     old_file_uid: String,
     new_file_uid: String,
+}
+
+pub struct Ofx {
+    header: Header,
+}
+
+pub struct Body {}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, PartialOrd)]
+pub struct SignOnResponse {
+    status: String,
+    /// The date and time of the server response
+    date_time: String,
+    /// The language used in text responses
+    language: String,
 }
 
 fn parse_header(input: &str) -> Result<Header, ParseError> {
