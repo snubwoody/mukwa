@@ -59,7 +59,7 @@ export component Button inherits Rectangle {
         alignment: alignment;
         cross-axis-alignment: center;
 
-        spacing: 8px;
+        spacing: 4px;
 
         @children
 
@@ -211,6 +211,44 @@ export component PrimaryButton {
         background-color: background-color(theme);
         hover-background-color: hover-background-color(theme);
         text-color: text-color(theme);
+
+        border-radius: 4px;
+        @children
+    }
+}
+
+export enum TextButtonTheme {
+    accent,
+    neutral,
+}
+
+export component TextButton {
+    in property <TextButtonTheme> theme: accent;
+    out property <color> text-color: text-color-impl(theme);
+    in property <string> text;
+    callback clicked <=> button.clicked;
+
+    function hover-background-color(button-theme: TextButtonTheme) -> color {
+        if (button-theme == TextButtonTheme.accent) {
+            return Colors.accent.transparentize(0.9);
+        }
+        if (button-theme == TextButtonTheme.neutral) {
+            return Colors.neutral100;
+        }
+        return transparent;
+    }
+
+    function text-color-impl(button-theme: TextButtonTheme) -> color {
+        if (button-theme == TextButtonTheme.accent) {
+            return Colors.accent;
+        }
+        return Colors.textBody;
+    }
+
+    button := Button {
+        text: text;
+        hover-background-color: hover-background-color(theme);
+        text-color: text-color-impl(theme);
 
         border-radius: 4px;
         @children
