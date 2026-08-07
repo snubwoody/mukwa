@@ -171,7 +171,7 @@ macro_rules! generate_currencies {
             fn from_str(s: &str) -> Result<Self, Self::Err> {
                 match s {
                     $(stringify!($code) => Ok(Currency::$code),)+
-                     _ => Err(Error::new("Unsupported currency: {s}"))
+                     _ => Err(Error::new(&format!("Unsupported currency: {s}")))
                 }
             }
         }

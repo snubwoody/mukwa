@@ -26,9 +26,11 @@ pub use error::Result;
 pub use money::{Currency, Money};
 use slint::{DataTransfer, Global, ModelExt};
 use std::cell::{Ref, RefCell, RefMut};
+use std::collections::HashSet;
 use std::fs::File;
 use std::io;
 use std::io::Read;
+use std::time::Instant;
 
 use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
@@ -151,6 +153,30 @@ fn setup_calendar_state(window: &ui::MainWindow) {
 }
 
 fn setup_global_state(state: AppState, window: &ui::MainWindow) {
+    let instant = Instant::now();
+    let mut database = fontdb::Database::new();
+    database.load_system_fonts();
+
+    let mut families = HashSet::new();
+    for face in database.faces() {
+        for (family, _) in &face.families {
+            families.insert(family);
+        }
+    }
+
+    let mut families: Vec<_> = families.iter().collect();
+    families.sort();
+
+    let fonts: Vec<_> = families
+        .iter()
+        .map(|family| ui::ComboBoxItem {
+            value: family.to_shared_string(),
+            text: family.to_shared_string(),
+        })
+        .collect();
+    let elapsed = instant.elapsed().as_millis();
+    tracing::trace!("Loaded system fonts in {elapsed}ms");
+
     let currencies: Vec<_> = Currency::ALL_CURRENCIES
         .iter()
         .map(|currency| ui::ComboBoxItem {
@@ -161,6 +187,8 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
 
     let currencies_model = Rc::new(VecModel::from(currencies));
     let currencies_model_rc = ModelRc::new(currencies_model);
+    let fonts_model = Rc::new(VecModel::from(fonts));
+    let fonts_model_rc = ModelRc::new(fonts_model);
     let transactions_model_rc = ModelRc::new(state.transactions());
     let accounts_model_rc = ModelRc::new(state.accounts());
     let categories_model_rc = ModelRc::new(state.categories());
@@ -171,6 +199,7 @@ fn setup_global_state(state: AppState, window: &ui::MainWindow) {
     let global_state = window.global::<ui::State>();
 
     global_state.set_currency_options(currencies_model_rc);
+    global_state.set_font_options(fonts_model_rc);
     global_state.set_transactions(transactions_model_rc);
     global_state.set_accounts(accounts_model_rc);
     global_state.set_categories(categories_model_rc);
@@ -595,6 +624,7 @@ fn setup_settings(window: &ui::MainWindow) -> Result<()> {
 
     let settings = SettingsStore::open(settings_dir.join("settings.toml"))?;
     settings_state.set_currency_code(settings.currency_code().to_shared_string());
+    settings_state.set_font_family(settings.font_family().to_shared_string());
 
     settings_state.on_set_currency_code({
         let settings_state = settings_state.as_weak();
@@ -605,6 +635,18 @@ fn setup_settings(window: &ui::MainWindow) -> Result<()> {
                 return;
             }
             settings_state.unwrap().set_currency_code(code);
+        }
+    });
+
+    settings_state.on_set_font_family({
+        let settings_state = settings_state.as_weak();
+        let store = settings.clone();
+        move |family| {
+            if let Err(err) = store.set_font_family(&family) {
+                warn!("Failed to set font family: {err}");
+                return;
+            }
+            settings_state.unwrap().set_font_family(family);
         }
     });
     Ok(())
@@ -703,8 +745,19 @@ impl SettingsStore {
         Ok(())
     }
 
+    fn set_font_family(&self, family: &str) -> Result<()> {
+        self.settings_mut().appearance.font_family = family.to_owned();
+        self.write()?;
+        info!("Updated font family to {family}");
+        Ok(())
+    }
+
     fn currency_code(&self) -> String {
         self.settings().currency_code.clone()
+    }
+
+    fn font_family(&self) -> String {
+        self.settings().appearance.font_family.clone()
     }
 
     fn settings(&self) -> Ref<'_, Settings> {
@@ -755,16 +808,42 @@ impl SettingsStore {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct Settings {
     currency_code: String,
+    #[serde(default)]
+    appearance: Appearance,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct Appearance {
+    font_family: String,
+}
+
+impl Default for Appearance {
+    fn default() -> Self {
+        let default_font = if cfg!(target_os = "windows") {
+            "Segoe UI"
+        } else if cfg!(target_os = "macos") {
+            "SF Pro"
+        } else {
+            // Slint will use the default font
+            ""
+        };
+
+        Self {
+            font_family: String::from(default_font),
+        }
+    }
 }
 
 impl Default for Settings {
     fn default() -> Settings {
         Settings {
             currency_code: String::from("USD"),
+            appearance: Appearance::default(),
         }
     }
 }
