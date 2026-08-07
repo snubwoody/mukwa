@@ -141,5 +141,6 @@ from_error! {
     toml::de::Error,
     rusqlite::Error,
     std::str::Utf8Error,
-    std::string::FromUtf16Error
+    std::string::FromUtf16Error,
+    slint::PlatformError
 }

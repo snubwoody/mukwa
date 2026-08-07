@@ -36,6 +36,7 @@ use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
 use crate::service::Service;
 use crate::state::AppState;
+use crate::ui::MainWindow;
 use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
 use rusqlite::Connection;
@@ -62,625 +63,655 @@ impl From<Date> for ui::Date {
     }
 }
 
-fn setup_calendar_state(window: &ui::MainWindow) {
-    let calendar_state = window.global::<ui::CalendarState>();
-    calendar_state.on_today(|| Zoned::now().date().into());
-
-    calendar_state.on_increment_month(|date| {
-        let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
-        if let Ok(date) = result {
-            let date = date.saturating_add(1.month());
-            return date.into();
-        }
-
-        Zoned::now().date().into()
-    });
-
-    calendar_state.on_increment_week(|date| {
-        let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
-        if let Ok(date) = result {
-            let date = date.saturating_add(1.week());
-            return date.into();
-        }
-
-        Zoned::now().date().into()
-    });
-
-    calendar_state.on_increment_day(|date| {
-        let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
-        if let Ok(date) = result {
-            let date = date.saturating_add(1.day());
-            return date.into();
-        }
-
-        Zoned::now().date().into()
-    });
-
-    calendar_state.on_decrement_month(|date| {
-        let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
-        if let Ok(date) = result {
-            let date = date.saturating_sub(1.month());
-            return date.into();
-        }
-
-        Zoned::now().date().into()
-    });
-
-    calendar_state.on_decrement_week(|date| {
-        let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
-        if let Ok(date) = result {
-            let date = date.saturating_sub(1.week());
-            return date.into();
-        }
-
-        Zoned::now().date().into()
-    });
-
-    calendar_state.on_decrement_day(|date| {
-        let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
-        if let Ok(date) = result {
-            let date = date.saturating_sub(1.day());
-            return date.into();
-        }
-
-        Zoned::now().date().into()
-    });
-
-    calendar_state.on_days_in_month(|date| {
-        let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
-        match result {
-            Ok(date) => {
-                // Pad with 0 for the out of month days to align the calendar grid
-                let offset = date.first_of_month().weekday().to_sunday_zero_offset();
-                let mut days: Vec<i32> = vec![0; offset as usize];
-
-                for d in 1..=date.days_in_month() {
-                    days.push(d as i32);
-                }
-
-                let weeks: Vec<_> = days
-                    .chunks(7)
-                    .map(|chunk| ModelRc::new(Rc::new(VecModel::from(chunk.to_vec()))))
-                    .collect();
-                ModelRc::new(Rc::new(VecModel::from(weeks)))
-            }
-            Err(_) => {
-                warn!("Invalid date: {:?}", date);
-                Default::default()
-            }
-        }
-    });
+pub struct App {
+    state: AppState,
+    main_window: MainWindow,
+    settings: SettingsStore,
 }
 
-fn setup_global_state(state: AppState, window: &ui::MainWindow) {
-    let instant = Instant::now();
-    let mut database = fontdb::Database::new();
-    database.load_system_fonts();
+impl App {
+    pub fn new() -> crate::Result<Self> {
+        let data_dir = if cfg!(debug_assertions) {
+            PathBuf::from(".mukwa")
+        } else {
+            data_dir()
+        };
 
-    let mut families = HashSet::new();
-    for face in database.faces() {
-        for (family, _) in &face.families {
-            families.insert(family);
-        }
+        fs::create_dir_all(&data_dir)?;
+
+        let path = data_dir.join("data.sqlite");
+        info!("Opening sqlite database at {:?}", &path);
+        let mut connection = Connection::open(&path)?;
+        let mut migrator = Migrator::new();
+        migrator.load_embedded()?;
+        migrator.migrate(&mut connection)?;
+
+        connection.pragma_update(None, "journal_mode", "WAL")?;
+        let service = Service::new(connection);
+        let main_window = ui::MainWindow::new()?;
+
+        let settings_dir = if cfg!(debug_assertions) {
+            PathBuf::from(".mukwa")
+        } else {
+            config_dir()
+        };
+
+        let settings = SettingsStore::open(settings_dir.join("settings.toml"))?;
+
+        let state = AppState::new(service)?;
+
+        let app = App {
+            state,
+            main_window,
+            settings,
+        };
+
+        app.init_settings();
+        app.init_api();
+        app.init_global_state();
+        app.init_calendar_state();
+
+        Ok(app)
     }
 
-    let mut families: Vec<_> = families.iter().collect();
-    families.sort();
+    fn init_calendar_state(&self) {
+        let window = &self.main_window;
+        let calendar_state = window.global::<ui::CalendarState>();
+        calendar_state.on_today(|| Zoned::now().date().into());
 
-    let fonts: Vec<_> = families
-        .iter()
-        .map(|family| ui::ComboBoxItem {
-            value: family.to_shared_string(),
-            text: family.to_shared_string(),
-        })
-        .collect();
-    let elapsed = instant.elapsed().as_millis();
-    tracing::trace!("Loaded system fonts in {elapsed}ms");
-
-    let currencies: Vec<_> = Currency::ALL_CURRENCIES
-        .iter()
-        .map(|currency| ui::ComboBoxItem {
-            value: currency.code().to_shared_string(),
-            text: currency.name().to_shared_string(),
-        })
-        .collect();
-
-    let currencies_model = Rc::new(VecModel::from(currencies));
-    let currencies_model_rc = ModelRc::new(currencies_model);
-    let fonts_model = Rc::new(VecModel::from(fonts));
-    let fonts_model_rc = ModelRc::new(fonts_model);
-    let transactions_model_rc = ModelRc::new(state.transactions());
-    let accounts_model_rc = ModelRc::new(state.accounts());
-    let categories_model_rc = ModelRc::new(state.categories());
-    let category_groups_model_rc = ModelRc::new(state.category_groups());
-    let budgets_model_rc = ModelRc::new(state.budgets());
-    let account_options_rc = ModelRc::new(state.account_options());
-
-    let global_state = window.global::<ui::State>();
-
-    global_state.set_currency_options(currencies_model_rc);
-    global_state.set_font_options(fonts_model_rc);
-    global_state.set_transactions(transactions_model_rc);
-    global_state.set_accounts(accounts_model_rc);
-    global_state.set_categories(categories_model_rc);
-    global_state.set_category_groups(category_groups_model_rc);
-    global_state.set_budgets(budgets_model_rc);
-
-    global_state.set_account_options(account_options_rc);
-    global_state.set_category_options(ModelRc::new(state.category_options()));
-
-    global_state.on_create_account({
-        let mut state = state.clone();
-        move |name| state.create_account(name.as_str()).unwrap()
-    });
-
-    global_state.on_get_category({
-        let state = state.clone();
-        move |id| {
-            state
-                .categories()
-                .iter()
-                .find(|c| c.id == id)
-                .unwrap_or_default()
-        }
-    });
-
-    global_state.on_categories_in_group({
-        let state = state.clone();
-        move |group_id| {
-            let filtered_categories = state
-                .categories()
-                .filter(move |category| category.group_id == group_id);
-
-            ModelRc::new(filtered_categories)
-        }
-    });
-
-    global_state.on_get_budget({
-        let state = state.clone();
-        move |category_id, date| {
-            state
-                .budgets()
-                .iter()
-                .find(|budget| {
-                    budget.category_id == category_id
-                        && budget.month == date.month
-                        && budget.year == date.year
-                })
-                .unwrap_or_default()
-        }
-    });
-
-    global_state.on_get_account({
-        let state = state.clone();
-        move |id| {
-            state
-                .accounts()
-                .iter()
-                .find(|a| a.id == id)
-                .unwrap_or_default()
-        }
-    });
-
-    global_state.on_create_transaction({
-        let mut state = state.clone();
-        move |opts| {
-            if let Err(err) = state.create_transaction(opts) {
-                warn!("Failed to create transaction: {err}")
-            }
-        }
-    });
-
-    global_state.on_create_category({
-        let mut state = state.clone();
-        move |title, group_id| {
-            if let Err(err) = state.create_category(&title, &group_id) {
-                warn!("Failed to create category: {err}")
-            }
-        }
-    });
-
-    global_state.on_create_category_group({
-        let mut state = state.clone();
-        move |title| {
-            if let Err(err) = state.create_category_group(&title) {
-                warn!("{err}")
-            }
-        }
-    });
-
-    global_state.on_set_current_budget_month({
-        let mut state = state.clone();
-        move |date| {
-            let date = Date::new(date.year as i16, date.month as i8, date.day as i8)
-                .unwrap_or(Zoned::now().date());
-            if let Err(err) = state.set_current_budget_month(date) {
-                warn!("{err}")
-            }
-        }
-    });
-
-    global_state.on_set_transaction_category({
-        let mut state = state.clone();
-        move |id, category_id| {
-            if let Err(err) = state.set_transaction_category(&id, &category_id) {
-                warn!("{err}");
-            }
-        }
-    });
-
-    global_state.on_set_transaction_date({
-        let mut state = state.clone();
-        move |id, date| {
-            if let Err(err) = state.set_transaction_date(&id, &date) {
-                warn!("{err}");
-            }
-        }
-    });
-
-    global_state.on_set_transaction_outflow({
-        let mut state = state.clone();
-        move |id, amount| {
-            if let Err(err) = state.set_transaction_outflow(&id, &amount) {
-                warn!("{err}");
-            }
-        }
-    });
-
-    global_state.on_set_transaction_inflow({
-        let mut state = state.clone();
-        move |id, amount| {
-            if let Err(err) = state.set_transaction_inflow(&id, &amount) {
-                warn!("{err}");
-            }
-        }
-    });
-
-    global_state.on_set_transaction_account({
-        let mut state = state.clone();
-        move |id, account_id| {
-            if let Err(err) = state.set_transaction_account(&id, &account_id) {
-                warn!("{err}");
-            }
-        }
-    });
-
-    global_state.on_set_transaction_payee({
-        let mut state = state.clone();
-        move |id, account_id| {
-            if let Err(err) = state.set_transaction_payee(&id, &account_id) {
-                warn!("{err}");
-            }
-        }
-    });
-
-    global_state.on_set_transaction_note({
-        let mut state = state.clone();
-        move |id, note| {
-            if let Err(err) = state.set_transaction_note(&id, &note) {
-                warn!("{err}");
-            }
-        }
-    });
-
-    global_state.on_total_balance({
-        let state = state.clone();
-        move || {
-            let mut total = Money::ZERO;
-            for transaction in state.transactions().iter() {
-                total -= Money::from_str(transaction.outflow.as_str()).unwrap_or_default();
-                total += Money::from_str(transaction.inflow.as_str()).unwrap_or_default();
-            }
-            total.to_shared_string()
-        }
-    });
-
-    global_state.on_account_balance({
-        let state = state.clone();
-        move |id| match state.account_balance(&id) {
-            Ok(balance) => balance.to_shared_string(),
-            Err(err) => {
-                warn!("Failed to calculate account balance: {err}");
-                Money::ZERO.to_shared_string()
-            }
-        }
-    });
-
-    global_state.on_total_spent({
-        let state = state.clone();
-        move |id| match state.total_spent(&id) {
-            Ok(total) => total.to_shared_string(),
-            Err(err) => {
-                warn!("Failed to calculate total spent: {err}");
-                Money::ZERO.to_shared_string()
-            }
-        }
-    });
-
-    global_state.on_total_spent_in_group({
-        let state = state.clone();
-        move |id, date| match state.total_spent_in_group(&id, date) {
-            Ok(total) => total.to_shared_string(),
-            Err(err) => {
-                warn!("Failed to calculate total spent: {err}");
-                Money::ZERO.to_shared_string()
-            }
-        }
-    });
-
-    global_state.on_delete_transaction({
-        let mut state = state.clone();
-        move |id| {
-            if let Err(err) = state.delete_transaction(&id) {
-                warn!("Failed to delete transaction: {err}");
-            }
-        }
-    });
-
-    global_state.on_edit_budget({
-        let mut state = state.clone();
-        move |id, amount| {
-            if let Err(err) = state.update_budget(&id, &amount) {
-                warn!("Failed to update budget: {err}");
-            }
-        }
-    });
-
-    global_state.on_format_dateym({
-        |date| match Date::new(date.year as i16, date.month as i8, date.day as i8) {
-            Ok(date) => date.strftime("%b %Y").to_shared_string(),
-            Err(err) => {
-                warn!("Invalid date: {err}");
-                SharedString::new()
-            }
-        }
-    });
-
-    global_state.on_format_date({
-        |date| match Date::strptime("%Y-%m-%d", date) {
-            Ok(date) => match fmt::format_date(date) {
-                Ok(value) => value.to_shared_string(),
-                Err(err) => {
-                    warn!("{err}");
-                    SharedString::new()
-                }
-            },
-            Err(err) => {
-                warn!("Invalid date: {err}");
-                SharedString::new()
-            }
-        }
-    });
-
-    global_state.on_update_category({
-        let mut state = state.clone();
-        move |id, title| {
-            if let Err(err) = state.update_category(&id, &title) {
-                warn!("Failed to update category: {err}");
-            }
-        }
-    });
-
-    global_state.on_update_category_group({
-        let mut state = state.clone();
-        move |id, title| {
-            if let Err(err) = state.update_category_group(&id, &title) {
-                warn!("{err}");
-            }
-        }
-    });
-
-    global_state.on_left_to_spend({
-        let state = state.clone();
-        move |id| match state.left_to_spend(&id) {
-            Ok(value) => value.to_shared_string(),
-            Err(err) => {
-                warn!("{err}");
-                Money::ZERO.to_shared_string()
-            }
-        }
-    });
-
-    global_state.on_category_to_transfer(DataTransfer::from);
-
-    global_state.on_transfer_to_category(|data| {
-        data.plain_text().unwrap_or_else(|err| {
-            warn!("{err}");
-            SharedString::new()
-        })
-    });
-
-    global_state.on_move_category({
-        let mut state = state.clone();
-        move |id, group_id| {
-            if let Err(err) = state.move_category(&id, &group_id) {
-                warn!("Failed to move category: {err}");
-            }
-        }
-    });
-
-    global_state.on_left_to_spend_in_group({
-        let state = state.clone();
-        move |id, date| match state.left_to_spend_in_group(&id, date) {
-            Ok(value) => value.to_shared_string(),
-            Err(err) => {
-                warn!("Failed to calculate the amount left to spend in group {id}: {err}");
-                Money::ZERO.to_shared_string()
-            }
-        }
-    });
-
-    global_state.on_total_assigned_in_group({
-        let state = state.clone();
-        move |id, date| match state.total_assigned_in_group(&id, date) {
-            Ok(value) => value.to_shared_string(),
-            Err(err) => {
-                warn!(group_id=?id,"Failed to calculate total assigned in group: {err}");
-                Money::ZERO.to_shared_string()
-            }
-        }
-    });
-
-    global_state.on_total_spent_in_group({
-        let state = state.clone();
-        move |id, date| match state.total_spent_in_group(&id, date) {
-            Ok(value) => value.to_shared_string(),
-            Err(err) => {
-                warn!(group_id=?id,"Failed to calculate total spent in group: {err}");
-                Money::ZERO.to_shared_string()
-            }
-        }
-    });
-
-    global_state.on_duplicate_transaction({
-        let mut state = state.clone();
-        move |id| {
-            if let Err(err) = state.duplicate_transaction(&id) {
-                warn!("Failed to duplicate transaction: {err}");
-            }
-        }
-    });
-
-    global_state.on_format_money({
-        move |value, currency_code| {
-            // Empty strings represent null values
-            if value.is_empty() {
-                return value;
+        calendar_state.on_increment_month(|date| {
+            let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
+            if let Ok(date) = result {
+                let date = date.saturating_add(1.month());
+                return date.into();
             }
 
-            match Money::from_str(&value) {
-                Ok(value) => {
-                    let mut formatter = CurrencyFormatter::new();
-                    let currency = Currency::from_str(&currency_code).unwrap();
-                    formatter.set_currency(currency);
-                    match formatter.format_money(value) {
-                        Ok(result) => result.to_shared_string(),
-                        Err(err) => {
-                            warn!("Error occurred while formatting Money: {err}");
-                            Money::ZERO.to_shared_string()
-                        }
+            Zoned::now().date().into()
+        });
+
+        calendar_state.on_increment_week(|date| {
+            let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
+            if let Ok(date) = result {
+                let date = date.saturating_add(1.week());
+                return date.into();
+            }
+
+            Zoned::now().date().into()
+        });
+
+        calendar_state.on_increment_day(|date| {
+            let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
+            if let Ok(date) = result {
+                let date = date.saturating_add(1.day());
+                return date.into();
+            }
+
+            Zoned::now().date().into()
+        });
+
+        calendar_state.on_decrement_month(|date| {
+            let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
+            if let Ok(date) = result {
+                let date = date.saturating_sub(1.month());
+                return date.into();
+            }
+
+            Zoned::now().date().into()
+        });
+
+        calendar_state.on_decrement_week(|date| {
+            let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
+            if let Ok(date) = result {
+                let date = date.saturating_sub(1.week());
+                return date.into();
+            }
+
+            Zoned::now().date().into()
+        });
+
+        calendar_state.on_decrement_day(|date| {
+            let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
+            if let Ok(date) = result {
+                let date = date.saturating_sub(1.day());
+                return date.into();
+            }
+
+            Zoned::now().date().into()
+        });
+
+        calendar_state.on_days_in_month(|date| {
+            let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
+            match result {
+                Ok(date) => {
+                    // Pad with 0 for the out of month days to align the calendar grid
+                    let offset = date.first_of_month().weekday().to_sunday_zero_offset();
+                    let mut days: Vec<i32> = vec![0; offset as usize];
+
+                    for d in 1..=date.days_in_month() {
+                        days.push(d as i32);
                     }
+
+                    let weeks: Vec<_> = days
+                        .chunks(7)
+                        .map(|chunk| ModelRc::new(Rc::new(VecModel::from(chunk.to_vec()))))
+                        .collect();
+                    ModelRc::new(Rc::new(VecModel::from(weeks)))
                 }
+                Err(_) => {
+                    warn!("Invalid date: {:?}", date);
+                    Default::default()
+                }
+            }
+        });
+    }
+
+    fn init_settings(&self) {
+        let window = &self.main_window;
+        let settings_state = window.global::<ui::Settings>();
+
+        let settings = &self.settings;
+        settings_state.set_currency_code(settings.currency_code().to_shared_string());
+        settings_state.set_font_family(settings.font_family().to_shared_string());
+
+        settings_state.on_set_currency_code({
+            let settings_state = settings_state.as_weak();
+            let store = settings.clone();
+            move |code| {
+                if let Err(err) = store.set_currency_code(&code) {
+                    warn!("Failed to set currency code: {err}");
+                    return;
+                }
+                settings_state.unwrap().set_currency_code(code);
+            }
+        });
+
+        settings_state.on_set_font_family({
+            let settings_state = settings_state.as_weak();
+            let store = settings.clone();
+            move |family| {
+                if let Err(err) = store.set_font_family(&family) {
+                    warn!("Failed to set font family: {err}");
+                    return;
+                }
+                settings_state.unwrap().set_font_family(family);
+            }
+        });
+    }
+
+    fn init_api(&self) {
+        let window = &self.main_window;
+        let api = window.global::<ui::Api>();
+
+        api.on_window_size({
+            let window = window.as_weak();
+            move || {
+                if let Some(window) = window.upgrade() {
+                    let window = window.window();
+                    let size = window.size().to_logical(window.scale_factor());
+                    return (size.height, size.width);
+                }
+                warn!("Empty window");
+                (0.0, 0.0)
+            }
+        });
+
+        api.on_window_position({
+            let window = window.as_weak();
+            move || {
+                if let Some(window) = window.upgrade() {
+                    let window = window.window();
+                    let pos = window.position().to_logical(window.scale_factor());
+                    return (pos.x, pos.y);
+                }
+                warn!("Empty window");
+                (0.0, 0.0)
+            }
+        });
+
+        api.on_parse_date(|date| {
+            let date = Date::strptime("%Y-%m-%d", &date)
+                .inspect_err(|err| warn!("{err}"))
+                .unwrap_or(Zoned::now().date());
+
+            ui::Date {
+                year: date.year() as i32,
+                month: date.month() as i32,
+                day: date.day() as i32,
+            }
+        });
+
+        api.on_today(|| Zoned::now().date().to_shared_string());
+    }
+
+    fn init_global_state(&self) {
+        let instant = Instant::now();
+        let mut database = fontdb::Database::new();
+        database.load_system_fonts();
+
+        let mut families = HashSet::new();
+        for face in database.faces() {
+            for (family, _) in &face.families {
+                families.insert(family);
+            }
+        }
+
+        let mut families: Vec<_> = families.iter().collect();
+        families.sort();
+
+        let fonts: Vec<_> = families
+            .iter()
+            .map(|family| ui::ComboBoxItem {
+                value: family.to_shared_string(),
+                text: family.to_shared_string(),
+            })
+            .collect();
+        let elapsed = instant.elapsed().as_millis();
+        tracing::trace!("Loaded system fonts in {elapsed}ms");
+
+        let currencies: Vec<_> = Currency::ALL_CURRENCIES
+            .iter()
+            .map(|currency| ui::ComboBoxItem {
+                value: currency.code().to_shared_string(),
+                text: currency.name().to_shared_string(),
+            })
+            .collect();
+
+        let window = &self.main_window;
+        let state = &self.state;
+        let currencies_model = Rc::new(VecModel::from(currencies));
+        let currencies_model_rc = ModelRc::new(currencies_model);
+        let fonts_model = Rc::new(VecModel::from(fonts));
+        let fonts_model_rc = ModelRc::new(fonts_model);
+        let transactions_model_rc = ModelRc::new(state.transactions());
+        let accounts_model_rc = ModelRc::new(state.accounts());
+        let categories_model_rc = ModelRc::new(state.categories());
+        let category_groups_model_rc = ModelRc::new(state.category_groups());
+        let budgets_model_rc = ModelRc::new(state.budgets());
+        let account_options_rc = ModelRc::new(state.account_options());
+
+        let global_state = window.global::<ui::State>();
+
+        global_state.set_currency_options(currencies_model_rc);
+        global_state.set_font_options(fonts_model_rc);
+        global_state.set_transactions(transactions_model_rc);
+        global_state.set_accounts(accounts_model_rc);
+        global_state.set_categories(categories_model_rc);
+        global_state.set_category_groups(category_groups_model_rc);
+        global_state.set_budgets(budgets_model_rc);
+
+        global_state.set_account_options(account_options_rc);
+        global_state.set_category_options(ModelRc::new(state.category_options()));
+
+        global_state.on_create_account({
+            let mut state = state.clone();
+            move |name| state.create_account(name.as_str()).unwrap()
+        });
+
+        global_state.on_get_category({
+            let state = state.clone();
+            move |id| {
+                state
+                    .categories()
+                    .iter()
+                    .find(|c| c.id == id)
+                    .unwrap_or_default()
+            }
+        });
+
+        global_state.on_categories_in_group({
+            let state = state.clone();
+            move |group_id| {
+                let filtered_categories = state
+                    .categories()
+                    .filter(move |category| category.group_id == group_id);
+
+                ModelRc::new(filtered_categories)
+            }
+        });
+
+        global_state.on_get_budget({
+            let state = state.clone();
+            move |category_id, date| {
+                state
+                    .budgets()
+                    .iter()
+                    .find(|budget| {
+                        budget.category_id == category_id
+                            && budget.month == date.month
+                            && budget.year == date.year
+                    })
+                    .unwrap_or_default()
+            }
+        });
+
+        global_state.on_get_account({
+            let state = state.clone();
+            move |id| {
+                state
+                    .accounts()
+                    .iter()
+                    .find(|a| a.id == id)
+                    .unwrap_or_default()
+            }
+        });
+
+        global_state.on_create_transaction({
+            let mut state = state.clone();
+            move |opts| {
+                if let Err(err) = state.create_transaction(opts) {
+                    warn!("Failed to create transaction: {err}")
+                }
+            }
+        });
+
+        global_state.on_create_category({
+            let mut state = state.clone();
+            move |title, group_id| {
+                if let Err(err) = state.create_category(&title, &group_id) {
+                    warn!("Failed to create category: {err}")
+                }
+            }
+        });
+
+        global_state.on_create_category_group({
+            let mut state = state.clone();
+            move |title| {
+                if let Err(err) = state.create_category_group(&title) {
+                    warn!("{err}")
+                }
+            }
+        });
+
+        global_state.on_set_current_budget_month({
+            let mut state = state.clone();
+            move |date| {
+                let date = Date::new(date.year as i16, date.month as i8, date.day as i8)
+                    .unwrap_or(Zoned::now().date());
+                if let Err(err) = state.set_current_budget_month(date) {
+                    warn!("{err}")
+                }
+            }
+        });
+
+        global_state.on_set_transaction_category({
+            let mut state = state.clone();
+            move |id, category_id| {
+                if let Err(err) = state.set_transaction_category(&id, &category_id) {
+                    warn!("{err}");
+                }
+            }
+        });
+
+        global_state.on_set_transaction_date({
+            let mut state = state.clone();
+            move |id, date| {
+                if let Err(err) = state.set_transaction_date(&id, &date) {
+                    warn!("{err}");
+                }
+            }
+        });
+
+        global_state.on_set_transaction_outflow({
+            let mut state = state.clone();
+            move |id, amount| {
+                if let Err(err) = state.set_transaction_outflow(&id, &amount) {
+                    warn!("{err}");
+                }
+            }
+        });
+
+        global_state.on_set_transaction_inflow({
+            let mut state = state.clone();
+            move |id, amount| {
+                if let Err(err) = state.set_transaction_inflow(&id, &amount) {
+                    warn!("{err}");
+                }
+            }
+        });
+
+        global_state.on_set_transaction_account({
+            let mut state = state.clone();
+            move |id, account_id| {
+                if let Err(err) = state.set_transaction_account(&id, &account_id) {
+                    warn!("{err}");
+                }
+            }
+        });
+
+        global_state.on_set_transaction_payee({
+            let mut state = state.clone();
+            move |id, account_id| {
+                if let Err(err) = state.set_transaction_payee(&id, &account_id) {
+                    warn!("{err}");
+                }
+            }
+        });
+
+        global_state.on_set_transaction_note({
+            let mut state = state.clone();
+            move |id, note| {
+                if let Err(err) = state.set_transaction_note(&id, &note) {
+                    warn!("{err}");
+                }
+            }
+        });
+
+        global_state.on_total_balance({
+            let state = state.clone();
+            move || {
+                let mut total = Money::ZERO;
+                for transaction in state.transactions().iter() {
+                    total -= Money::from_str(transaction.outflow.as_str()).unwrap_or_default();
+                    total += Money::from_str(transaction.inflow.as_str()).unwrap_or_default();
+                }
+                total.to_shared_string()
+            }
+        });
+
+        global_state.on_account_balance({
+            let state = state.clone();
+            move |id| match state.account_balance(&id) {
+                Ok(balance) => balance.to_shared_string(),
                 Err(err) => {
-                    warn!("Error parsing Money: {err}");
+                    warn!("Failed to calculate account balance: {err}");
                     Money::ZERO.to_shared_string()
                 }
             }
-        }
-    })
-}
+        });
 
-fn setup_api(window: &ui::MainWindow) {
-    let api = window.global::<ui::Api>();
-
-    api.on_window_size({
-        let window = window.as_weak();
-        move || {
-            if let Some(window) = window.upgrade() {
-                let window = window.window();
-                let size = window.size().to_logical(window.scale_factor());
-                return (size.height, size.width);
+        global_state.on_total_spent({
+            let state = state.clone();
+            move |id| match state.total_spent(&id) {
+                Ok(total) => total.to_shared_string(),
+                Err(err) => {
+                    warn!("Failed to calculate total spent: {err}");
+                    Money::ZERO.to_shared_string()
+                }
             }
-            warn!("Empty window");
-            (0.0, 0.0)
-        }
-    });
+        });
 
-    api.on_window_position({
-        let window = window.as_weak();
-        move || {
-            if let Some(window) = window.upgrade() {
-                let window = window.window();
-                let pos = window.position().to_logical(window.scale_factor());
-                return (pos.x, pos.y);
+        global_state.on_total_spent_in_group({
+            let state = state.clone();
+            move |id, date| match state.total_spent_in_group(&id, date) {
+                Ok(total) => total.to_shared_string(),
+                Err(err) => {
+                    warn!("Failed to calculate total spent: {err}");
+                    Money::ZERO.to_shared_string()
+                }
             }
-            warn!("Empty window");
-            (0.0, 0.0)
-        }
-    });
+        });
 
-    api.on_parse_date(|date| {
-        let date = Date::strptime("%Y-%m-%d", &date)
-            .inspect_err(|err| warn!("{err}"))
-            .unwrap_or(Zoned::now().date());
-
-        ui::Date {
-            year: date.year() as i32,
-            month: date.month() as i32,
-            day: date.day() as i32,
-        }
-    });
-
-    api.on_today(|| Zoned::now().date().to_shared_string());
-}
-
-fn setup_settings(window: &ui::MainWindow) -> Result<()> {
-    let settings_state = window.global::<ui::Settings>();
-    let settings_dir = if cfg!(debug_assertions) {
-        PathBuf::from(".mukwa")
-    } else {
-        config_dir()
-    };
-
-    let settings = SettingsStore::open(settings_dir.join("settings.toml"))?;
-    settings_state.set_currency_code(settings.currency_code().to_shared_string());
-    settings_state.set_font_family(settings.font_family().to_shared_string());
-
-    settings_state.on_set_currency_code({
-        let settings_state = settings_state.as_weak();
-        let store = settings.clone();
-        move |code| {
-            if let Err(err) = store.set_currency_code(&code) {
-                warn!("Failed to set currency code: {err}");
-                return;
+        global_state.on_delete_transaction({
+            let mut state = state.clone();
+            move |id| {
+                if let Err(err) = state.delete_transaction(&id) {
+                    warn!("Failed to delete transaction: {err}");
+                }
             }
-            settings_state.unwrap().set_currency_code(code);
-        }
-    });
+        });
 
-    settings_state.on_set_font_family({
-        let settings_state = settings_state.as_weak();
-        let store = settings.clone();
-        move |family| {
-            if let Err(err) = store.set_font_family(&family) {
-                warn!("Failed to set font family: {err}");
-                return;
+        global_state.on_edit_budget({
+            let mut state = state.clone();
+            move |id, amount| {
+                if let Err(err) = state.update_budget(&id, &amount) {
+                    warn!("Failed to update budget: {err}");
+                }
             }
-            settings_state.unwrap().set_font_family(family);
-        }
-    });
-    Ok(())
+        });
+
+        global_state.on_format_dateym({
+            |date| match Date::new(date.year as i16, date.month as i8, date.day as i8) {
+                Ok(date) => date.strftime("%b %Y").to_shared_string(),
+                Err(err) => {
+                    warn!("Invalid date: {err}");
+                    SharedString::new()
+                }
+            }
+        });
+
+        global_state.on_format_date({
+            |date| match Date::strptime("%Y-%m-%d", date) {
+                Ok(date) => match fmt::format_date(date) {
+                    Ok(value) => value.to_shared_string(),
+                    Err(err) => {
+                        warn!("{err}");
+                        SharedString::new()
+                    }
+                },
+                Err(err) => {
+                    warn!("Invalid date: {err}");
+                    SharedString::new()
+                }
+            }
+        });
+
+        global_state.on_update_category({
+            let mut state = state.clone();
+            move |id, title| {
+                if let Err(err) = state.update_category(&id, &title) {
+                    warn!("Failed to update category: {err}");
+                }
+            }
+        });
+
+        global_state.on_update_category_group({
+            let mut state = state.clone();
+            move |id, title| {
+                if let Err(err) = state.update_category_group(&id, &title) {
+                    warn!("{err}");
+                }
+            }
+        });
+
+        global_state.on_left_to_spend({
+            let state = state.clone();
+            move |id| match state.left_to_spend(&id) {
+                Ok(value) => value.to_shared_string(),
+                Err(err) => {
+                    warn!("{err}");
+                    Money::ZERO.to_shared_string()
+                }
+            }
+        });
+
+        global_state.on_category_to_transfer(DataTransfer::from);
+
+        global_state.on_transfer_to_category(|data| {
+            data.plain_text().unwrap_or_else(|err| {
+                warn!("{err}");
+                SharedString::new()
+            })
+        });
+
+        global_state.on_move_category({
+            let mut state = state.clone();
+            move |id, group_id| {
+                if let Err(err) = state.move_category(&id, &group_id) {
+                    warn!("Failed to move category: {err}");
+                }
+            }
+        });
+
+        global_state.on_left_to_spend_in_group({
+            let state = state.clone();
+            move |id, date| match state.left_to_spend_in_group(&id, date) {
+                Ok(value) => value.to_shared_string(),
+                Err(err) => {
+                    warn!("Failed to calculate the amount left to spend in group {id}: {err}");
+                    Money::ZERO.to_shared_string()
+                }
+            }
+        });
+
+        global_state.on_total_assigned_in_group({
+            let state = state.clone();
+            move |id, date| match state.total_assigned_in_group(&id, date) {
+                Ok(value) => value.to_shared_string(),
+                Err(err) => {
+                    warn!(group_id=?id,"Failed to calculate total assigned in group: {err}");
+                    Money::ZERO.to_shared_string()
+                }
+            }
+        });
+
+        global_state.on_total_spent_in_group({
+            let state = state.clone();
+            move |id, date| match state.total_spent_in_group(&id, date) {
+                Ok(value) => value.to_shared_string(),
+                Err(err) => {
+                    warn!(group_id=?id,"Failed to calculate total spent in group: {err}");
+                    Money::ZERO.to_shared_string()
+                }
+            }
+        });
+
+        global_state.on_duplicate_transaction({
+            let mut state = state.clone();
+            move |id| {
+                if let Err(err) = state.duplicate_transaction(&id) {
+                    warn!("Failed to duplicate transaction: {err}");
+                }
+            }
+        });
+
+        global_state.on_format_money({
+            move |value, currency_code| {
+                // Empty strings represent null values
+                if value.is_empty() {
+                    return value;
+                }
+
+                match Money::from_str(&value) {
+                    Ok(value) => {
+                        let mut formatter = CurrencyFormatter::new();
+                        let currency = Currency::from_str(&currency_code).unwrap();
+                        formatter.set_currency(currency);
+                        match formatter.format_money(value) {
+                            Ok(result) => result.to_shared_string(),
+                            Err(err) => {
+                                warn!("Error occurred while formatting Money: {err}");
+                                Money::ZERO.to_shared_string()
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        warn!("Error parsing Money: {err}");
+                        Money::ZERO.to_shared_string()
+                    }
+                }
+            }
+        })
+    }
+
+    pub fn run(&self) -> Result<()> {
+        self.main_window.run()?;
+        Ok(())
+    }
 }
 
 pub fn run() -> Result<()> {
-    let data_dir = if cfg!(debug_assertions) {
-        PathBuf::from(".mukwa")
-    } else {
-        data_dir()
-    };
-
-    fs::create_dir_all(&data_dir)?;
-
-    let database_path = data_dir.join("data.sqlite");
-    info!("Opening sqlite database at {:?}", database_path);
-    let mut connection = Connection::open(&database_path)?;
-    let mut migrator = Migrator::new();
-    migrator.load_embedded()?;
-    migrator.migrate(&mut connection)?;
-
-    connection.pragma_update(None, "journal_mode", "WAL")?;
-    let service = Service::new(connection);
-
-    let main_window = ui::MainWindow::new().unwrap();
-
-    let state = AppState::new(service)?;
-
-    setup_global_state(state, &main_window);
-    setup_calendar_state(&main_window);
-    setup_api(&main_window);
-    setup_settings(&main_window)?;
-
-    main_window.run().unwrap();
+    let app = App::new()?;
+    app.run()?;
     Ok(())
 }
 
