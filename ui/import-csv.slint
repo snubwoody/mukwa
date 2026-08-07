@@ -1,0 +1,76 @@
+// Mukwa - Personal finance
+// Copyright (C) 2026  Wakunguma Kalimukwa
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import { Api, State } from "globals.slint";
+import { Table, TableRow, TableCell } from "tableview.slint";
+import { Colors } from "colors.slint";
+
+// TODO: merge with existing transactions
+export component ImportCsvDialog inherits PopupWindow {
+    // FIXME: absolute position not working, based on parent
+    x: Api.window-size().width * 0.5 - self.width * 0.5;
+    y: Api.window-size().height * 0.5 - self.height * 0.5;
+    width: Api.window-size().width * 0.80;
+    height: Api.window-size().height * 0.85;
+    close-policy: close-on-click-outside;
+
+    Rectangle {
+        background: white;
+        border-radius: 20px;
+        border-color: Colors.neutral50;
+        border-width: 1px;
+    }
+
+    Table {
+        width: 100%;
+        property <int> length: 4;
+
+        TableRow {
+            TableCell {
+                width: parent.width / length;
+                Text {
+                    text: "Date";
+                    color: Colors.textBody;
+                }
+            }
+
+            TableCell {
+                width: parent.width / length;
+                Text {
+                    text: "Payee";
+                    color: Colors.textBody;
+                }
+            }
+
+            TableCell {
+                width: parent.width / length;
+                Text {
+                    text: "Note";
+                    color: Colors.textBody;
+                }
+            }
+
+            // TODO: allow split inflow and outflow columns
+            TableCell {
+                width: parent.width / length;
+                Text {
+                    text: "Amount";
+                    color: Colors.textBody;
+                }
+            }
+        }
+    }
+}

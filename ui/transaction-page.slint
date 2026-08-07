@@ -35,6 +35,7 @@ import { Table, TableRow, TableCell } from "tableview.slint";
 import { Settings } from "settings.slint";
 import { TextButton } from "widgets/button.slint";
 import { IconDisplay, IconSet } from "@lucide";
+import { ImportCsvDialog } from "import-csv.slint";
 
 component DateCell inherits TableCell {
     in property <Transaction> transaction;
@@ -512,6 +513,8 @@ export component TransactionPage inherits VerticalLayout {
         if !active-account-id.is-empty: TextButton {
             text: @tr("Import");
 
+            clicked => import-csv-dialog.show();
+
             IconDisplay {
                 icon: IconSet.FileDown;
                 size: 13px;
@@ -554,4 +557,6 @@ export component TransactionPage inherits VerticalLayout {
             height: self.visible ? self.preferred-height : 0;
         }
     }
+
+    import-csv-dialog := ImportCsvDialog { }
 }
