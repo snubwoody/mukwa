@@ -223,14 +223,14 @@ component TransactionRow inherits TableRow {
                 Button {
                     width: 100%;
                     text: @tr("Duplicate");
-                    hover-background: Colors.neutral50;
+                    hover-background-color: Colors.neutral50;
                     clicked => State.duplicate-transaction(transaction.id);
                 }
 
                 Button {
                     width: 100%;
                     text: @tr("Delete");
-                    hover-background: Colors.neutral50;
+                    hover-background-color: Colors.neutral50;
                     clicked => State.delete-transaction(transaction.id);
                 }
             }

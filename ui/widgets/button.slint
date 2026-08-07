@@ -20,11 +20,13 @@ import { IconDisplay, IconSet, Icon } from "@lucide";
 
 export component Button inherits Rectangle {
     in property <string> text;
+    in property <color> background-color;
     in property <color> text-color: Colors.textBody;
-    in property <color> hover-background;
-    in property <bool> enabled <=> touch-area.enabled;
+    in property <color> hover-background-color;
+    in property <bool> enabled: true;
     out property <bool> has-focus: focus-scope.has-focus;
     in property <LayoutAlignment> alignment: center;
+    background: touch-area.has-hover ? hover-background-color : background-color;
 
     padding-right: 12px;
     padding-left: 12px;
@@ -34,17 +36,10 @@ export component Button inherits Rectangle {
     callback clicked <=> touch-area.clicked;
 
     accessible-label: text;
-    accessible-enabled: true;
+    accessible-enabled: enabled;
     accessible-role: button;
 
-    states [
-        hovered when touch-area.has-hover: {
-            background: hover-background;
-            in {
-                animate background { duration: 150ms; }
-            }
-        }
-    ]
+    animate background { duration: 150ms; }
 
     accessible-action-default() => {
         clicked();
@@ -52,13 +47,16 @@ export component Button inherits Rectangle {
 
     forward-focus: focus-scope;
 
+    touch-area := TouchArea {
+        enabled: enabled;
+    }
+
     HorizontalLayout {
         padding-right: root.padding-right;
         padding-left: root.padding-left;
         padding-top: root.padding-top;
         padding-bottom: root.padding-bottom;
         alignment: alignment;
-        vertical-stretch: 0;
         cross-axis-alignment: center;
 
         spacing: 8px;
@@ -71,17 +69,12 @@ export component Button inherits Rectangle {
         }
     }
 
-    touch-area := TouchArea {
-        width: parent.width;
-        height: parent.height;
-    }
-
     focus-scope := FocusScope {
         x: 0;
         width: 0; // Do not react on clicks
 
         key-pressed(event) => {
-            if (event.text == " " || event.text == "\n") {
+            if (event.text == Key.Space || event.text == Key.Return) {
                 clicked();
                 return accept;
             }
@@ -97,7 +90,7 @@ export component Button inherits Rectangle {
 export enum IconButtonTheme {
     accent,
     neutral,
-    ghost
+    ghost,
 }
 
 export component IconButton {
@@ -178,7 +171,7 @@ export component IconButton {
 export enum PrimaryButtonTheme {
     accent,
     neutral,
-    ghost
+    ghost,
 }
 
 export component PrimaryButton {
@@ -206,7 +199,6 @@ export component PrimaryButton {
         return transparent;
     }
 
-
     function text-color(button-theme: PrimaryButtonTheme) -> color {
         if (button-theme == PrimaryButtonTheme.accent) {
             return white;
@@ -216,8 +208,8 @@ export component PrimaryButton {
 
     button := Button {
         text: text;
-        background: background-color(theme);
-        hover-background: hover-background-color(theme);
+        background-color: background-color(theme);
+        hover-background-color: hover-background-color(theme);
         text-color: text-color(theme);
 
         border-radius: 4px;

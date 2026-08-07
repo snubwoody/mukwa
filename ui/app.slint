@@ -59,8 +59,9 @@ component SidebarButton inherits Button {
     padding-left: 16px;
     padding-right: 16px;
 
-    background: selected ? Colors.neutral50 : transparent;
+    background-color: selected ? Colors.neutral50 : transparent;
     border-radius: 4px;
+    hover-background-color: Colors.neutral50;
 
     @children
 }
