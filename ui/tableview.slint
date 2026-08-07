@@ -89,16 +89,17 @@ export component TableRow {
     }
 
     layout := VerticalLayout {
-        padding-left: root.padding-left;
-        padding-right: root.padding-right;
-
         HorizontalLayout {
+            padding-left: root.padding-left;
+            padding-right: root.padding-right;
             padding-top: 8px;
             padding-bottom: 8px;
             @children
         }
 
         if is-editing: HorizontalLayout {
+            padding-right: root.padding-right;
+            padding-left: root.padding-left;
             alignment: end;
             padding-bottom: 4px;
             spacing: 8px;
@@ -117,7 +118,7 @@ export component TableRow {
 
         Rectangle {
             width: 100%;
-            height: 2px;
+            height: 1px;
             background: Colors.neutral50;
         }
     }

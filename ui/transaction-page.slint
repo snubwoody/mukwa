@@ -33,6 +33,8 @@ import { FocusBorder } from "widgets/focus-border.slint";
 import { Calendar, Date } from "widgets/calendar.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
 import { Settings } from "settings.slint";
+import { TextButton } from "widgets/button.slint";
+import { IconDisplay, IconSet } from "@lucide";
 
 component DateCell inherits TableCell {
     in property <Transaction> transaction;
@@ -423,6 +425,31 @@ component NewTransactionRow inherits VerticalLayout {
     }
 }
 
+component Toolbar inherits VerticalLayout {
+    Rectangle {
+        width: 100%;
+        height: 1px;
+        background: Colors.borderNeutral;
+    }
+
+    HorizontalLayout {
+        alignment: start;
+        padding-left: 8px;
+        padding-right: 8px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        spacing: 4px;
+
+        @children
+    }
+
+    Rectangle {
+        width: 100%;
+        height: 1px;
+        background: Colors.borderNeutral;
+    }
+}
+
 export component TransactionPage inherits VerticalLayout {
     in property <[string]> columns: active-account-id.is-empty ? [
         @tr("Date"),
@@ -466,23 +493,35 @@ export component TransactionPage inherits VerticalLayout {
         }
     }
 
-    HorizontalLayout {
-        alignment: end;
-        padding-left: 16px;
-        padding-right: 16px;
-        padding-top: 8px;
-        padding-bottom: 8px;
-
-        PrimaryButton {
+    Toolbar {
+        TextButton {
             text: @tr("Add transaction");
+
             clicked => {
                 new-transaction-active = true;
+            }
+
+            IconDisplay {
+                icon: IconSet.Plus;
+                size: 13px;
+                stroke-width: 2;
+                stroke: parent.text-color;
+            }
+        }
+
+        if !active-account-id.is-empty: TextButton {
+            text: @tr("Import");
+
+            IconDisplay {
+                icon: IconSet.FileDown;
+                size: 13px;
+                stroke-width: 2;
+                stroke: parent.text-color;
             }
         }
     }
 
     Table {
-        width: 100%;
         property <int> length: active-account-id.is-empty ? 7 : 6;
 
         TableRow {
