@@ -9,19 +9,22 @@ fn pie_chart() {
 
     let x = 50.0;
     let width = 200.0;
-    let height = 20.0;
+    let height = 50.0;
     let y = 250.0;
+
+    let radius = 100.0;
+    let cx = x + width * 0.5;
+    let cy = y - radius;
 
     let mut pb = PathBuilder::new();
     pb.move_to(x, y);
-    pb.quad_to(x + width * 0.5, 0.0, x + width, y);
+    pb.quad_to(cx, cy, x + width, y);
     pb.line_to(x + width - 20.0, y + height);
-    pb.quad_to(x + width * 0.5, 0.0, x + 20.0, y + height);
+    pb.quad_to(cx, cy + height, x + 20.0, y + height);
     pb.line_to(x, y);
     pb.close();
     let path = pb.finish().unwrap();
 
-    let stroke = Stroke::default();
     let mut paint = Paint::default();
     paint.set_color(tiny_skia::Color::BLACK);
 
@@ -32,7 +35,6 @@ fn pie_chart() {
         Transform::identity(),
         None,
     );
-    // pixmap.stroke_path(&path, &paint, &stroke, Transform::identity(), None);
     pixmap.save_png("image.png").unwrap();
 }
 
