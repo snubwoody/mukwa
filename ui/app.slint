@@ -30,6 +30,7 @@ export { Settings }from "settings.slint";
 import { Button, TextField, ComboBox, PrimaryButton } from "widgets.slint";
 import { TransactionPage } from "transaction-page.slint";
 import { SpendingPage } from "spending-page.slint";
+import { AnalyticsPage } from "analytics-page.slint";
 import { ComboBoxItem } from "widgets/combobox.slint";
 export { ComboBoxApi }from "widgets/combobox.slint";
 export { Date, CalendarState }from "widgets/calendar.slint";
@@ -38,7 +39,11 @@ import { IconDisplay, IconSet, Icon } from "@lucide";
 import { SettingsDialog, Settings } from "settings.slint";
 import { FontSize } from "theme.slint";
 
-enum Page { spending, transactions }
+enum Page {
+    spending,
+    transactions,
+    analytics,
+}
 
 component SidebarButton inherits Button {
     in property <bool> selected;
@@ -207,6 +212,18 @@ component Sidebar {
                 spacing: 4px;
 
                 SidebarButton {
+                    text: @tr("Analytics");
+                    selected: current-page == Page.analytics && active-account-id == "";
+                    clicked => select-page(Page.analytics);
+                    IconDisplay {
+                        icon: IconSet.ChartPie;
+                        size: 14px;
+                        stroke-width: 2;
+                        stroke: Colors.textBody;
+                    }
+                }
+
+                SidebarButton {
                     text: @tr("Spending");
                     selected: current-page == Page.spending && active-account-id == "";
                     clicked => select-page(Page.spending);
@@ -291,6 +308,7 @@ export component MainWindow inherits Window {
             }
         }
 
+        if active-page == Page.analytics: AnalyticsPage { }
         if active-page == Page.spending: SpendingPage { }
 
         if active-page == Page.transactions: TransactionPage {
