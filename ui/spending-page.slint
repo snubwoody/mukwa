@@ -38,7 +38,17 @@ component CategoryItem inherits VerticalLayout {
     in property <Category> category;
     property <Budget> budget: State.get-budget(category.id, current-date);
 
-    // TODO: display $xxx spent of $yyy
+    function budget-progress() -> float {
+        if Api.money-to-float(budget.amount) <= 0 && Api.money-to-float(State.total-spent(budget.id)) > 0 {
+            return 1;
+        }
+        if Api.money-to-float(budget.amount) <= 0 {
+            return 0;
+        }
+        return Math.max(Api.money-to-float(State.total-spent(budget.id)))
+            / Api.money-to-float(budget.amount);
+    }
+
     // FIXME: category text field not working
 
     DragArea {
@@ -46,7 +56,6 @@ component CategoryItem inherits VerticalLayout {
         allow-move: true;
 
         HorizontalLayout {
-            //alignment: start;
             padding-left: 32px;
             padding-right: 16px;
             padding-top: 12px;
@@ -54,49 +63,52 @@ component CategoryItem inherits VerticalLayout {
 
             VerticalLayout {
                 max-width: 500px;
-                spacing: 16px;
-                Rectangle {
-                    width: 100px;
-                    property <bool> active: false;
+                spacing: 12px;
 
-                    TouchArea {
-                        clicked => {
-                            if (!active) {
-                                active = true;
+                HorizontalLayout {
+                    alignment: space-between;
+                    cross-axis-alignment: center;
+
+                    Rectangle {
+                        width: 100px;
+                        property <bool> active: false;
+
+                        TouchArea {
+                            clicked => {
+                                if (!active) {
+                                    active = true;
+                                }
                             }
                         }
-                    }
 
-                    if active: TextField {
-                        width: 100%;
-                        text: category.title;
+                        if active: TextField {
+                            width: 100%;
+                            text: category.title;
 
-                        accepted => {
-                            State.update-category(category.id, self.text);
-                            active = false;
+                            accepted => {
+                                State.update-category(category.id, self.text);
+                                active = false;
+                            }
+                        }
+
+                        if !active: Text {
+                            width: 100%;
+                            text: category.title;
+                            color: Colors.textBody;
                         }
                     }
 
-                    if !active: Text {
-                        width: 100%;
-                        text: category.title;
+                    Text {
+                        text: "Spent "
+                            + State.format-money(State.total-spent(budget.id),Settings.currency-code)
+                            + " of "
+                            + State.format-money(budget.amount,Settings.currency-code);
                         color: Colors.textBody;
                     }
                 }
 
                 ProgressBar {
-                    progress: progress-impl();
-
-                    function progress-impl() -> float {
-                        if Api.money-to-float(budget.amount) <= 0 && Api.money-to-float(State.total-spent(budget.id)) > 0 {
-                            return 1;
-                        }
-                        if Api.money-to-float(budget.amount) <= 0 {
-                            return 0;
-                        }
-                        return Math.max(Api.money-to-float(State.total-spent(budget.id)))
-                            / Api.money-to-float(budget.amount);
-                    }
+                    progress: budget-progress();
                 }
             }
 
