@@ -14,15 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import {
-    ScrollView,
-    ListView,
-} from "std-widgets.slint";
 import { Colors } from "colors.slint";
 import { Date, CalendarState } from "widgets/calendar.slint";
 import {
-    Account,
-    Transaction,
     State,
     Category,
     CategoryGroup,
@@ -44,6 +38,7 @@ component CategoryItem inherits VerticalLayout {
     in property <Category> category;
     property <Budget> budget: State.get-budget(category.id, current-date);
 
+    // TODO: display $xxx spent of $yyy
     // FIXME: category text field not working
 
     DragArea {
@@ -51,15 +46,15 @@ component CategoryItem inherits VerticalLayout {
         allow-move: true;
 
         HorizontalLayout {
-            alignment: start;
+            //alignment: start;
             padding-left: 32px;
             padding-right: 16px;
             padding-top: 12px;
             padding-bottom: 12px;
 
             VerticalLayout {
+                max-width: 500px;
                 spacing: 16px;
-                horizontal-stretch: 1;
                 Rectangle {
                     width: 100px;
                     property <bool> active: false;
@@ -105,9 +100,9 @@ component CategoryItem inherits VerticalLayout {
                 }
             }
 
-            // Rectangle {
-                // horizontal-stretch: 1;
-            // }
+            Rectangle {
+                horizontal-stretch: 1;
+            }
 
             // TODO: InlineTextField component
             Rectangle {
