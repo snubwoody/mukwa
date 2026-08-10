@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use tiny_skia::{FillRule, Paint, Path, PathBuilder, Pixmap, Transform};
+use std::f32::consts::PI;
+use tiny_skia::{FillRule, Paint, Path, PathBuilder, Pixmap, Stroke, Transform};
+
+const KAPPA: f32 = 0.55228474983079;
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Default)]
 struct Segment {
@@ -40,6 +43,9 @@ impl Segment {
         let cx = x + width * 0.5;
         let cy = y - radius;
 
+        let circ_radius = 50.0;
+        let arc_length = 100.0;
+
         let mut pb = PathBuilder::new();
         pb.move_to(x, y);
         pb.quad_to(cx, cy, x + width, y);
@@ -67,11 +73,112 @@ impl Segment {
     }
 }
 
+pub struct PieChart {
+    x: f32,
+    y: f32,
+    series: Vec<f32>,
+    total: f32,
+    radius: f32,
+}
+
+impl PieChart {
+    fn new() -> Self {
+        let series: Vec<f32> = vec![20.0, 24.0, 100.0];
+        let total = series.iter().sum();
+
+        Self {
+            series,
+            total,
+            x: 250.0,
+            y: 250.0,
+            radius: 50.0,
+        }
+    }
+
+    /// Draws an arc approximated using quadratic beziers, starting at `start_angle` and
+    /// sweeping by `sweep_angle`.
+    fn draw_arc(
+        &self,
+        pb: &mut PathBuilder,
+        radius: f32,
+        start_angle: f32,
+        sweep_angle: f32,
+        center: (f32, f32),
+    ) {
+        let max_step = std::f32::consts::FRAC_PI_4;
+        let steps = (sweep_angle.abs() / max_step).ceil() as usize;
+        let step_angle = sweep_angle / steps as f32;
+
+        let mut current_angle = start_angle;
+
+        for _ in 0..steps {
+            let half_step = step_angle / 2.0;
+            let mid_angle = current_angle + half_step;
+            let end_angle = current_angle + step_angle;
+
+            let control_radius = radius / half_step.cos();
+            let start = theta_to_ordinal_coord(radius, current_angle, center);
+            let control = theta_to_ordinal_coord(control_radius, mid_angle, center);
+            let end = theta_to_ordinal_coord(radius, end_angle, center);
+            pb.move_to(start.0, start.1);
+            pb.quad_to(control.0, control.1, end.0, end.1);
+
+            current_angle = end_angle;
+        }
+    }
+
+    fn draw(&self) {
+        let mut pixmap = Pixmap::new(500, 500).unwrap();
+        pixmap.fill(tiny_skia::Color::WHITE);
+
+        // This would be the start radian
+        let mut offset_theta = 0.0;
+
+        let stroke = Stroke::default();
+        let mut paint = Paint::default();
+        paint.set_color(tiny_skia::Color::BLACK);
+
+        for slice in &self.series {
+            let ratio = slice / self.total;
+            let end_theta = 2.0 * PI * ratio;
+
+            let mut pb = PathBuilder::new();
+            self.draw_arc(
+                &mut pb,
+                self.radius,
+                offset_theta,
+                end_theta,
+                (self.x, self.y),
+            );
+            pb.line_to(self.x, self.y);
+            let path = pb.finish().unwrap();
+
+            pixmap.stroke_path(&path, &paint, &stroke, Transform::identity(), None);
+            offset_theta += end_theta;
+        }
+
+        pixmap.save_png("temp/image-2.png").unwrap();
+    }
+}
+
+fn theta_to_ordinal_coord(radius: f32, theta: f32, ordinal_offset: (f32, f32)) -> (f32, f32) {
+    // polar coordinates are (r, theta)
+    // convert to (x, y) coord, with center as offset
+
+    let (sin, cos) = theta.sin_cos();
+    (
+        radius * cos + ordinal_offset.0, // x
+        radius * sin + ordinal_offset.1, // y
+    )
+}
+
 fn pie_chart() {
     let mut pixmap = Pixmap::new(500, 500).unwrap();
     pixmap.fill(tiny_skia::Color::WHITE);
 
     let segment = Segment::xywh(50.0, 250.0, 200.0, 50.0).radius(100.0);
+    segment.draw(&mut pixmap);
+    let segment = Segment::xywh(250.0, 250.0, 200.0, 50.0).radius(100.0);
     segment.draw(&mut pixmap);
     pixmap.save_png("image.png").unwrap();
 }
@@ -82,6 +189,7 @@ mod test {
 
     #[test]
     fn draw_pie_chart() {
-        pie_chart();
+        let pie = PieChart::new();
+        pie.draw();
     }
 }

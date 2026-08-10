@@ -60,8 +60,6 @@ fn create_migrations_table(conn: &Connection) -> crate::Result<()> {
 #[folder = "migrations"]
 struct Migrations;
 
-// TODO: Run migrations in a transaction
-
 /// Sql migrator.
 pub struct Migrator {
     migrations: Vec<Migration>,

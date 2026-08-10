@@ -35,6 +35,7 @@ toml = "1.1.4"
 serde = { version = "1.0.229", features = ["derive"] }
 fontdb = "0.24.0"
 tiny-skia = "0.12.0"
+raqote = "0.8.5"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.189"
@@ -43,14 +44,14 @@ libc = "0.2.189"
 core-foundation-sys = "0.8.7"
 core-foundation = "0.10.1"
 
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Globalization"] }
+
 [dependencies.slint]
 git = "https://github.com/snubwoody/slint.git"
 branch = "mukwa"
 version = "1.17.0"
 features = ["backend-winit", "renderer-skia", "log"]
-
-[target.'cfg(target_os = "windows")'.dependencies]
-windows-sys = { version = "0.61.2", features = ["Win32_Globalization"] }
 
 [build-dependencies]
 slint-build = { version = "1.16.0", git = "https://github.com/snubwoody/slint.git", branch = "mukwa" }

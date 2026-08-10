@@ -1,5 +1,6 @@
 .env
 .mukwa/
+temp/
 /bin/
 
 # IDE settings
