@@ -29,7 +29,13 @@ import {
     Budget,
     Api,
 } from "globals.slint";
-import { Button, TextField, PrimaryButton, IconButton } from "widgets.slint";
+import {
+    Button,
+    TextField,
+    PrimaryButton,
+    IconButton,
+    ProgressBar,
+} from "widgets.slint";
 import { IconSet } from "@lucide";
 import { Settings } from "settings.slint";
 
@@ -83,31 +89,18 @@ component CategoryItem inherits VerticalLayout {
                     }
                 }
 
-                Rectangle {
-                    width: 100%;
-                    height: 5px;
-                    border-radius: 999px;
-                    background: Colors.neutral50;
-                    clip: true;
+                ProgressBar {
+                    progress: progress-impl();
 
-                    Rectangle {
-                        x: parent.x;
-                        //y: parent.y;
-                        width: parent.width * Math.min(bar-width(),1);
-                        height: 100%;
-                        border-radius: 999px;
-                        background: green;
-
-                        function bar-width() -> float {
-                            if Api.money-to-float(budget.amount) <= 0 && Api.money-to-float(State.total-spent(budget.id)) > 0 {
-                                return 1;
-                            }
-                            if Api.money-to-float(budget.amount) <= 0 {
-                                return 0;
-                            }
-                            return Math.max(Api.money-to-float(State.total-spent(budget.id)))
-                                / Api.money-to-float(budget.amount);
+                    function progress-impl() -> float {
+                        if Api.money-to-float(budget.amount) <= 0 && Api.money-to-float(State.total-spent(budget.id)) > 0 {
+                            return 1;
                         }
+                        if Api.money-to-float(budget.amount) <= 0 {
+                            return 0;
+                        }
+                        return Math.max(Api.money-to-float(State.total-spent(budget.id)))
+                            / Api.money-to-float(budget.amount);
                     }
                 }
             }
