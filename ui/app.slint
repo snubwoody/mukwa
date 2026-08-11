@@ -147,11 +147,11 @@ component Sidebar {
                 spacing: 4px;
 
                 SidebarButton {
-                    text: @tr("Analytics");
-                    selected: current-page == Page.analytics && active-account-id == "";
-                    clicked => select-page(Page.analytics);
+                    text: @tr("Spending");
+                    selected: current-page == Page.spending && active-account-id == "";
+                    clicked => select-page(Page.spending);
                     IconDisplay {
-                        icon: IconSet.ChartPie;
+                        icon: IconSet.Banknote;
                         size: 14px;
                         stroke-width: 2;
                         stroke: Colors.textBody;
@@ -159,11 +159,11 @@ component Sidebar {
                 }
 
                 SidebarButton {
-                    text: @tr("Spending");
-                    selected: current-page == Page.spending && active-account-id == "";
-                    clicked => select-page(Page.spending);
+                    text: @tr("Analytics");
+                    selected: current-page == Page.analytics && active-account-id == "";
+                    clicked => select-page(Page.analytics);
                     IconDisplay {
-                        icon: IconSet.Banknote;
+                        icon: IconSet.ChartPie;
                         size: 14px;
                         stroke-width: 2;
                         stroke: Colors.textBody;
