@@ -260,35 +260,6 @@ component CategoryGroupItem {
                     }
                 }
 
-                Rectangle {
-                    property <bool> active: false;
-
-                    TouchArea {
-                        clicked => {
-                            if (!active) {
-                                active = true;
-                            }
-                        }
-                    }
-
-                    Text {
-                        visible: !active;
-                        text: category-group.title;
-                        color: Colors.textBody;
-                    }
-
-                    if active: TextField {
-                        text: category-group.title;
-                        init => {
-                            self.focus();
-                        }
-                        accepted => {
-                            State.update-category-group(category-group.id, self.text);
-                            parent.active = false;
-                        }
-                    }
-                }
-
                 InlineTextField {
                     text: category-group.title;
                     accepted(value) => State.update-category-group(category-group.id, value);
