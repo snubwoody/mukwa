@@ -121,11 +121,50 @@ component Bar {
 export component AnalyticsPage inherits VerticalLayout {
     width: 100%;
     height: 100%;
+    property <[bool]> days: [
+        false,
+        true,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        false,
+        false,
+        true,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        true,
+    ];
 
     Rectangle {
         width: 50px;
         height: 50px;
         background: Colors.blue100;
+    }
+
+    GridLayout {
+        spacing: 8px;
+        for day in days: Rectangle {
+            width: 20px;
+            height: 20px;
+            background: Colors.neutral50;
+            border-radius: 4px;
+        }
     }
 
     VerticalLayout {

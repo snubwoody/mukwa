@@ -3,9 +3,7 @@
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
+// the Free Software Foundation, either version 3 ofuse slint :: private_unstable_api :: re_exports as sp;//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -887,10 +885,29 @@ impl Default for Settings {
 
 #[cfg(test)]
 mod test {
+    use jiff::{Zoned, civil::Weekday};
     use tempfile::tempdir;
 
     use crate::SettingsStore;
     use std::fs;
+
+    #[test]
+    fn sundays() {
+        let first_day = Zoned::now().date().first_of_year();
+        // TODO: check if its already Sunday (and test)
+        let mut dates = vec![];
+        let mut date = first_day.nth_weekday(-1, Weekday::Sunday).unwrap();
+        dates.push(date);
+        loop {
+            if date.year() > first_day.year() {
+                break;
+            }
+            date = date.nth_weekday(1, Weekday::Sunday).unwrap();
+            dates.push(date);
+            dbg!(date);
+            dbg!(date.weekday());
+        }
+    }
 
     #[test]
     fn init_settings_if_not_found() -> crate::Result<()> {
