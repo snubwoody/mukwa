@@ -29,6 +29,7 @@ import {
     PrimaryButton,
     IconButton,
     ProgressBar,
+    InlineTextField
 } from "widgets.slint";
 import { IconSet } from "@lucide";
 import { Settings } from "settings.slint";
@@ -311,6 +312,11 @@ component CategoryGroupItem {
                             parent.active = false;
                         }
                     }
+                }
+
+                InlineTextField {
+                    text: category-group.title;
+                    accepted(value) => State.update-category-group(category-group.id, value);
                 }
 
                 category-button := IconButton {
