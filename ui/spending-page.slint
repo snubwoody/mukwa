@@ -117,36 +117,11 @@ component CategoryItem inherits VerticalLayout {
                 horizontal-stretch: 1;
             }
 
-            // TODO: InlineTextField component
-            Rectangle {
-                width: 100px;
-                property <bool> active: false;
-
-                TouchArea {
-                    clicked => {
-                        if (!active) {
-                            active = true;
-                        }
-                    }
-                }
-
-                if active: TextField {
-                    width: 100%;
-                    text: budget.amount;
-                    horizontal-alignment: end;
-
-                    accepted => {
-                        State.edit-budget(budget.id, self.text);
-                        active = false;
-                    }
-                }
-
-                if !active: Text {
-                    width: 100%;
-                    text: State.format-money(budget.amount,Settings.currency-code);
-                    color: Colors.textBody;
-                    horizontal-alignment: end;
-                }
+            InlineTextField {
+                text: State.format-money(budget.amount,Settings.currency-code);
+                field-text: budget.amount;
+                input-type: decimal;
+                accepted(value) => State.edit-budget(budget.id, value);
             }
 
             Text {
