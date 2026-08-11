@@ -14,116 +14,129 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import {
-    ScrollView,
-    ListView,
-} from "std-widgets.slint";
 import { Colors } from "colors.slint";
 import { Date, CalendarState } from "widgets/calendar.slint";
 import {
-    Account,
-    Transaction,
     State,
     Category,
     CategoryGroup,
     Budget,
     Api,
 } from "globals.slint";
-import { Button, TextField, PrimaryButton, IconButton } from "widgets.slint";
+import {
+    Button,
+    TextField,
+    PrimaryButton,
+    IconButton,
+    ProgressBar,
+    InlineTextField,
+} from "widgets.slint";
 import { IconSet } from "@lucide";
 import { Settings } from "settings.slint";
 
-component CategoryItem inherits VerticalLayout{
+component CategoryItem inherits VerticalLayout {
     in property <Date> current-date;
     in property <Category> category;
     property <Budget> budget: State.get-budget(category.id, current-date);
 
+    function budget-progress() -> float {
+        if Api.money-to-float(budget.amount) <= 0 && Api.money-to-float(State.total-spent(budget.id)) > 0 {
+            return 1;
+        }
+        if Api.money-to-float(budget.amount) <= 0 {
+            return 0;
+        }
+        return Math.max(Api.money-to-float(State.total-spent(budget.id)))
+            / Api.money-to-float(budget.amount);
+    }
+
+    // FIXME: category text field not working
+
     DragArea {
         data: State.category-to-transfer(category.id);
         allow-move: true;
-    }
 
-    HorizontalLayout {
-        padding-left: 32px;
-        padding-right: 16px;
-        padding-top: 8px;
-        padding-bottom: 8px;
-        Rectangle {
-            width: 100px;
-            property <bool> active: false;
+        HorizontalLayout {
+            padding-left: 32px;
+            padding-right: 16px;
+            padding-top: 12px;
+            padding-bottom: 12px;
 
-            TouchArea {
-                clicked => {
-                    if (!active) {
-                        active = true;
+            VerticalLayout {
+                max-width: 500px;
+                spacing: 12px;
+
+                HorizontalLayout {
+                    alignment: space-between;
+                    cross-axis-alignment: center;
+
+                    Rectangle {
+                        width: 100px;
+                        property <bool> active: false;
+
+                        TouchArea {
+                            clicked => {
+                                if (!active) {
+                                    active = true;
+                                }
+                            }
+                        }
+
+                        if active: TextField {
+                            width: 100%;
+                            text: category.title;
+
+                            accepted => {
+                                State.update-category(category.id, self.text);
+                                active = false;
+                            }
+                        }
+
+                        if !active: Text {
+                            width: 100%;
+                            text: category.title;
+                            color: Colors.textBody;
+                        }
+                    }
+
+                    Text {
+                        text: "Spent "
+                            + State.format-money(State.total-spent(budget.id),Settings.currency-code)
+                            + " of "
+                            + State.format-money(budget.amount,Settings.currency-code);
+                        color: Colors.textBody;
                     }
                 }
-            }
 
-            if active: TextField {
-                width: 100%;
-                text: category.title;
-
-                accepted => {
-                    State.update-category(category.id, self.text);
-                    active = false;
+                ProgressBar {
+                    progress: budget-progress();
                 }
             }
 
-            if !active: Text {
-                width: 100%;
-                text: category.title;
-                color: Colors.textBody;
-            }
-        }
-
-        Rectangle {
-            horizontal-stretch: 1;
-        }
-
-        Rectangle {
-            width: 100px;
-            property <bool> active: false;
-
-            TouchArea {
-                clicked => {
-                    if (!active) {
-                        active = true;
-                    }
-                }
+            Rectangle {
+                horizontal-stretch: 1;
             }
 
-            if active: TextField {
-                width: 100%;
-                text: budget.amount;
-                horizontal-alignment: end;
-
-                accepted => {
-                    State.edit-budget(budget.id, self.text);
-                    active = false;
-                }
-            }
-
-            if !active: Text {
-                width: 100%;
+            InlineTextField {
                 text: State.format-money(budget.amount,Settings.currency-code);
+                field-text: budget.amount;
+                input-type: decimal;
+                accepted(value) => State.edit-budget(budget.id, value);
+            }
+
+            Text {
+                width: 100px;
+                text: State.format-money(State.total-spent(budget.id),Settings.currency-code);
                 color: Colors.textBody;
                 horizontal-alignment: end;
             }
-        }
 
-        Text {
-            width: 100px;
-            text: State.format-money(State.total-spent(budget.id),Settings.currency-code);
-            color: Colors.textBody;
-            horizontal-alignment: end;
-        }
-
-        Text {
-            width: 100px;
-            text: State.format-money(State.left-to-spend(budget.id),Settings.currency-code);
-            color: Colors.textBody;
-            horizontal-alignment: end;
+            Text {
+                width: 100px;
+                text: State.format-money(State.left-to-spend(budget.id),Settings.currency-code);
+                color: Colors.textBody;
+                horizontal-alignment: end;
+            }
         }
     }
 
@@ -274,6 +287,11 @@ component CategoryGroupItem {
                             parent.active = false;
                         }
                     }
+                }
+
+                InlineTextField {
+                    text: category-group.title;
+                    accepted(value) => State.update-category-group(category-group.id, value);
                 }
 
                 category-button := IconButton {

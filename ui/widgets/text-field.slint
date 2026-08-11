@@ -26,7 +26,6 @@ export component TextField {
 
     forward-focus: text-input;
 
-
     Rectangle {
         background: white;
         border-color: text-input.has-focus ? Colors.accent : Colors.neutral50;
@@ -44,6 +43,42 @@ export component TextField {
     //        accessible-placeholder-text: placeholder-text;
             color: Colors.textBody;
             text: placeholder-text;
+        }
+    }
+}
+
+export component InlineTextField {
+    in property <string> text;
+    in property <string> field-text: text;
+    property <bool> active: false;
+    in property <InputType> input-type: InputType.text;
+    callback accepted(string);
+
+    Rectangle {
+        TouchArea {
+            clicked => {
+                if (!active) {
+                    active = true;
+                }
+            }
+        }
+
+        Text {
+            visible: !active;
+            text: text;
+            color: Colors.textBody;
+        }
+
+        if active: TextField {
+            text: field-text;
+            input-type: input-type;
+            init => {
+                self.focus();
+            }
+            accepted => {
+                accepted(self.text);
+                active = false;
+            }
         }
     }
 }

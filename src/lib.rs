@@ -281,6 +281,12 @@ impl App {
         });
 
         api.on_today(|| Zoned::now().date().to_shared_string());
+        api.on_money_to_float(|money| {
+            Money::from_str(&money)
+                .inspect_err(|err| warn!("{err}"))
+                .unwrap_or_default()
+                .inner() as f32
+        });
     }
 
     fn init_global_state(&self) {
