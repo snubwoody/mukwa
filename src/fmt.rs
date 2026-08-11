@@ -82,3 +82,28 @@ pub fn format_date(date: Date) -> crate::Result<String> {
     #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
     Ok(date.strftime("%d/%m/%Y").to_string())
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use icu::datetime::DateTimeFormatter;
+    use icu::datetime::fieldsets::YMD;
+    use icu::locale::locale;
+
+    #[test]
+    fn fmt_date() {
+        let locale = sys_locale::get_locale().unwrap_or(String::from("en-CA"));
+        let locale: icu::locale::Locale = "en-CA".parse().unwrap_or(locale!("en-CA"));
+
+        dbg!(&locale.to_string());
+        let formatter: DateTimeFormatter<YMD> = DateTimeFormatter::try_new(
+            locale.into(),
+            icu::datetime::options::Length::Medium.into(),
+        )
+        .unwrap();
+        let date = icu::datetime::input::Date::try_new_iso(2026, 1, 1).unwrap();
+
+        let formatted_date = formatter.format(&date).to_string();
+        dbg!(formatted_date);
+    }
+}
