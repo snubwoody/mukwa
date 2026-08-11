@@ -3,7 +3,7 @@
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 ofuse slint :: private_unstable_api :: re_exports as sp;//
+// the Free Software Foundation, either version 3 ofuse slint :: private_unstable_api :: re_exports as sp;/
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -437,6 +437,24 @@ impl App {
             move |title, group_id| {
                 if let Err(err) = state.create_category(&title, &group_id) {
                     warn!("Failed to create category: {err}")
+                }
+            }
+        });
+
+        global_state.on_delete_category({
+            let mut state = state.clone();
+            move |id| {
+                if let Err(err) = state.delete_category(&id) {
+                    warn!("Failed to delete category: {err}")
+                }
+            }
+        });
+
+        global_state.on_delete_category_group({
+            let mut state = state.clone();
+            move |id| {
+                if let Err(err) = state.delete_category_group(&id) {
+                    warn!("Failed to delete category group: {err}")
                 }
             }
         });

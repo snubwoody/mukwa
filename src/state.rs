@@ -232,6 +232,27 @@ impl AppState {
         Ok(())
     }
 
+    pub fn delete_category(&mut self, id: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        self.service.delete_category(id)?;
+        info!("Deleted category {id}");
+        self.reset_budgets(self.current_budget_month)?;
+        self.reset_categories()?;
+        self.reset_transactions()?;
+        Ok(())
+    }
+
+    pub fn delete_category_group(&mut self, id: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        self.service.delete_category_group(id)?;
+        info!("Deleted category group {id}");
+        self.reset_budgets(self.current_budget_month)?;
+        self.reset_category_groups()?;
+        self.reset_categories()?;
+        self.reset_transactions()?;
+        Ok(())
+    }
+
     pub fn duplicate_transaction(&mut self, id: &str) -> crate::Result<()> {
         let id = Uuid::parse_str(id)?;
         let transaction = self.service.duplicate_transaction(id)?;
@@ -438,9 +459,20 @@ impl AppState {
             .service
             .fetch_categories()?
             .iter()
-            .map(|b| b.into())
+            .map(|c| c.into())
             .collect();
         self.categories.set_vec(categories);
+        Ok(())
+    }
+
+    fn reset_transactions(&mut self) -> crate::Result<()> {
+        let transactions: Vec<ui::Transaction> = self
+            .service
+            .fetch_transactions()?
+            .iter()
+            .map(|t| t.into())
+            .collect();
+        self.transactions.set_vec(transactions);
         Ok(())
     }
 

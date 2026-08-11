@@ -761,6 +761,24 @@ impl Service {
         self.fetch_budgets_by_month(date)
     }
 
+    /// Deletes a category from the database
+    pub fn delete_category(&self, id: Uuid) -> crate::Result<()> {
+        let connection = self.connection();
+        let sql = "DELETE FROM categories WHERE id = ?";
+        let mut stmt = connection.prepare_cached(sql)?;
+        stmt.execute([id.to_string()])?;
+        Ok(())
+    }
+
+    /// Deletes a category group from the database
+    pub fn delete_category_group(&self, id: Uuid) -> crate::Result<()> {
+        let connection = self.connection();
+        let sql = "DELETE FROM category_groups WHERE id = ?";
+        let mut stmt = connection.prepare_cached(sql)?;
+        stmt.execute([id.to_string()])?;
+        Ok(())
+    }
+
     /// Fetches all transactions from the database.
     pub fn fetch_transactions(&self) -> crate::Result<Vec<Transaction>> {
         let mut transactions = vec![];
