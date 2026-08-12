@@ -86,15 +86,15 @@ pub fn format_date(date: Date) -> crate::Result<String> {
     Ok(date.strftime("%d/%m/%Y").to_string())
 }
 
-#[cfg(all(unix,not(target_os = "macos")))]
-mod linux_like{
+#[cfg(all(unix, not(target_os = "macos")))]
+mod linux_like {
+    use super::*;
     use std::ffi::CString;
     use std::ops::Sub;
-    use super::*;
 
     /// Formats the `Date` using libc's `strftime` function.
     pub fn format_date(date: Date) -> crate::Result<String> {
-        let time = libc::tm{
+        let time = libc::tm {
             tm_sec: 0,
             tm_min: 0,
             tm_hour: 0,
@@ -102,27 +102,33 @@ mod linux_like{
             tm_mon: date.month().sub(1).into(),
             tm_year: date.year().sub(1900).into(),
             tm_wday: date.weekday().to_sunday_zero_offset().into(),
-            tm_yday:0,
+            tm_yday: 0,
             tm_isdst: -1,
             tm_gmtoff: 0,
             tm_zone: std::ptr::null(),
         };
         let formatted_string = unsafe {
             let locale = CString::new("").unwrap();
-            let locale = libc::newlocale(libc::LC_TIME_MASK,locale.as_ptr(),std::ptr::null_mut());
+            let locale = libc::newlocale(libc::LC_TIME_MASK, locale.as_ptr(), std::ptr::null_mut());
 
             if locale.is_null() {
                 return Ok(date.strftime("%d/%m/%Y").to_string());
             }
 
-            let format = libc::nl_langinfo_l(libc::D_FMT,locale);
+            let format = libc::nl_langinfo_l(libc::D_FMT, locale);
 
             // TODO: maybe stack allocated string
             let formatted_date = CString::default().into_raw();
-            let length = libc::strftime_l(formatted_date,256,format,std::ptr::from_ref(&time),locale);
+            let length = libc::strftime_l(
+                formatted_date,
+                256,
+                format,
+                std::ptr::from_ref(&time),
+                locale,
+            );
             libc::freelocale(locale);
 
-            if length == 0{
+            if length == 0 {
                 return Ok(date.strftime("%d/%m/%Y").to_string());
             }
             let output = CString::from_raw(formatted_date);
@@ -133,7 +139,7 @@ mod linux_like{
 
     #[cfg(test)]
     #[test]
-    fn test_format_date(){
+    fn test_format_date() {
         use jiff::Zoned;
 
         let date = Zoned::now().date();
@@ -143,14 +149,13 @@ mod linux_like{
 
     #[cfg(test)]
     #[test]
-    fn format_date_invalid_locale_fallback(){
+    fn format_date_invalid_locale_fallback() {
         use jiff::Zoned;
         unsafe {
-            std::env::set_var("LC_TIME","invalid-locale");
+            std::env::set_var("LC_TIME", "invalid-locale");
         }
         let date = Zoned::now().date();
         let result = format_date(date);
-        assert_eq!(result.unwrap(),date.strftime("%d/%m/%Y").to_string());
+        assert_eq!(result.unwrap(), date.strftime("%d/%m/%Y").to_string());
     }
 }
-
