@@ -1,12 +1,35 @@
 name: Release
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
 concurrency:
   cancel-in-progress: true
   group: release-mukwa
 env:
   CARGO_TERM_COLOR: always
 jobs:
+  bundle-linux:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/cache@v6
+        with: # TODO: hash by architecture
+          key: ${{runner.os}}-Rust-${{hashFiles('**/Cargo.toml')}}-${{hashFiles('**/Cargo.lock')}}
+          restore-keys: |
+            ${{runner.os}}-Rust-${{hashFiles('Cargo.toml')}}-
+            ${{runner.os}}-Rust-
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+      - name: Bundle app
+        run: sh scripts/bundle-appimage
   release:
     runs-on: windows-latest
     permissions:
@@ -27,10 +50,10 @@ jobs:
             target/
       - name: Bundle app
         run: scripts/bundle-windows.ps1
-      - name: Create draft release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: Mukwa vx.x.x
-          files: build/*-Setup.exe
-          draft: true
+#      - name: Create draft release
+#        uses: softprops/action-gh-release@v2
+#        with:
+#          name: Mukwa vx.x.x
+#          files: build/*-Setup.exe
+#          draft: true
 

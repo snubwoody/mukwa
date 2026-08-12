@@ -1,9 +1,14 @@
-build/
-.build/
+.env
+.mukwa/
+bin/
+
+# IDE settings
 .idea/
 .vs/
 .vscode/
 .zed/
-.env
-/target
-.mukwa/
+
+# Build output
+.build/
+build/
+target/

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Mukwa
+Categories=Finance;Office
+GenericName=Finance app
+Icon=app-icon
+Exec=mukwa
+Terminal=false
+Keywords=Budget;Finance
