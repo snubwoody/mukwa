@@ -1,8 +1,7 @@
 # Contributing to Mukwa
 
 This document describes the process of contributing to Mukwa. It is intended for anyone considering opening an issue,
-discussion or pull request. For people who are interested in developing Mukwa and technical details behind it, please
-check out our "Developing Mukwa" document as well.
+discussion or pull request.
 
 ## Bug reports
 

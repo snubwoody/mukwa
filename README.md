@@ -1,18 +1,19 @@
 # Mukwa
 
 Mukwa is a free and open source personal finance app. It is designed to be simple to use and get out of your way. Mukwa
-is local-first, meaning all your sensitive financial data is stored locally on your device, no internet connections, no
-data sent to the cloud.
+is "local first", meaning all your sensitive financial data is stored locally on your device, no internet connections,
+no data sent to the cloud.
+
+This application is available on Windows, with a Linux and macOS version coming soon.
 
 ## Installation
 
-The application binaries can be installed from the GitHub [releases](https://github.com/snubwoody/mukwa/releases) page
+The application binaries can be installed from the GitHub [releases](https://github.com/snubwoody/mukwa/releases) page.
 
 ## Contributing and Developing
 
 If you have any ideas, issues, etc. regarding Mukwa, or would like to contribute to Mukwa through pull requests, please
-check out our ["Contributing to Mukwa"](./CONTRIBUTING.md) document. Those who would like to get involved with Mukwa's
-development as well should also read the ["Developing Mukwa"](./DEVELOPMENT.md) document for more technical details.
+check out our ["Contributing to Mukwa"](./CONTRIBUTING.md) document.
 
 ## License
 
