@@ -31,6 +31,7 @@ mkdir $ResourceDir
 
 Copy-Item -Path "${CargoBuildDir}/mukwa.exe" -Destination "$ResourceDir"
 Copy-Item -Path "LICENSE" -Destination "$ResourceDir"
+Copy-Item -Path "resources/icons/app-icon.ico" -Destination "$ResourceDir"
 
 iscc resources/Mukwa.iss /DAppVersion=$AppVersion /DResourceDir=$ResourceDir /Obuild /FMukwa-$Architecture-Setup
 

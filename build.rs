@@ -10,6 +10,7 @@ fn main() {
         use winresource::WindowsResource;
 
         let mut rc = WindowsResource::new();
+        rc.set_icon("resources/icons/app-icon.ico");
         rc.set("ProductName", "Mukwa");
         rc.set("FileDescription", "Mukwa");
         rc.set("LegalCopyright", "Copyright © 2026 Wakunguma Kalimuwka");
