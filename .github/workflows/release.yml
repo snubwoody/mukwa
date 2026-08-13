@@ -28,8 +28,21 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
+      - uses: hustcer/setup-nu@v3
+        with:
+          version: 0.114.1
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install libx11-xcb-dev \
+          xinput \
+          libxcursor-dev \
+          libxkbcommon-x11-dev \
+          libfontconfig1-dev \
+          pkg-config \
+          libx11-dev
       - name: Bundle app
-        run: sh scripts/bundle-appimage
+        run: nu scripts/bundle-appimage.nu
   release:
     runs-on: windows-latest
     permissions:
