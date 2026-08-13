@@ -1,5 +1,7 @@
 # Mukwa
 
+![App screenshot](./assets/screenshot.png)
+
 Mukwa is a free and open source personal finance app. It is designed to be simple to use and get out of your way. Mukwa
 is "local first", meaning all your sensitive financial data is stored locally on your device, no internet connections,
 no data sent to the cloud.
