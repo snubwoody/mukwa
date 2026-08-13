@@ -17,7 +17,31 @@
 import { Api, State } from "globals.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
 import { Colors } from "colors.slint";
+import { TextSize } from "theme.slint";
+import { ComboBox, ComboBoxItem } from "widgets.slint";
 
+component Dropdown {
+    in property <string> label;
+    in property <[ComboBoxItem]> options;
+
+    VerticalLayout {
+        spacing: 4px;
+        alignment: start;
+
+        Text {
+            text: label;
+            color: Colors.textBody;
+            font-size: TextSize.body-large;
+        }
+
+        ComboBox {
+            options: options;
+        }
+    }
+}
+
+// TODO: header vs no header
+// TODO: split amount into inflow and outflow
 // TODO: merge with existing transactions
 export component ImportCsvDialog inherits PopupWindow {
     // FIXME: absolute position not working, based on parent
@@ -35,11 +59,34 @@ export component ImportCsvDialog inherits PopupWindow {
     }
 
     VerticalLayout {
+        padding: 24px;
 
         HorizontalLayout {
-            Text {
-                text: @tr("Date");
+            spacing: 8px;
 
+            Dropdown {
+                label: @tr("Date");
+                options: [{ value: "date", text: "Date" }];
+            }
+
+            Dropdown {
+                label: @tr("Payee");
+                options: [{ value: "date", text: "Date" }];
+            }
+
+            Dropdown {
+                label: @tr("Note");
+                options: [{ value: "date", text: "Date" }];
+            }
+
+            Dropdown {
+                label: @tr("Category");
+                options: [{ value: "date", text: "Date" }];
+            }
+
+            Dropdown {
+                label: @tr("Amount");
+                options: [{ value: "date", text: "Date" }];
             }
         }
 
