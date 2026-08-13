@@ -34,41 +34,51 @@ export component ImportCsvDialog inherits PopupWindow {
         border-width: 1px;
     }
 
-    Table {
-        width: 100%;
-        property <int> length: 4;
+    VerticalLayout {
 
-        TableRow {
-            TableCell {
-                width: parent.width / length;
-                Text {
-                    text: "Date";
-                    color: Colors.textBody;
-                }
+        HorizontalLayout {
+            Text {
+                text: @tr("Date");
+
             }
+        }
 
-            TableCell {
-                width: parent.width / length;
-                Text {
-                    text: "Payee";
-                    color: Colors.textBody;
+        Table {
+            width: 100%;
+            property <int> length: 4;
+
+            TableRow {
+                TableCell {
+                    width: parent.width / length;
+                    Text {
+                        text: "Date";
+                        color: Colors.textBody;
+                    }
                 }
-            }
 
-            TableCell {
-                width: parent.width / length;
-                Text {
-                    text: "Note";
-                    color: Colors.textBody;
+                TableCell {
+                    width: parent.width / length;
+                    Text {
+                        text: "Payee";
+                        color: Colors.textBody;
+                    }
                 }
-            }
 
-            // TODO: allow split inflow and outflow columns
-            TableCell {
-                width: parent.width / length;
-                Text {
-                    text: "Amount";
-                    color: Colors.textBody;
+                TableCell {
+                    width: parent.width / length;
+                    Text {
+                        text: "Note";
+                        color: Colors.textBody;
+                    }
+                }
+
+                // TODO: allow split inflow and outflow columns
+                    TableCell {
+                    width: parent.width / length;
+                    Text {
+                        text: "Amount";
+                        color: Colors.textBody;
+                    }
                 }
             }
         }
