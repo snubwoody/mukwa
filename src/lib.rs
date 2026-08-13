@@ -892,9 +892,9 @@ impl Default for Settings {
 mod test {
     use tempfile::tempdir;
 
+    use super::*;
     use crate::SettingsStore;
     use std::fs;
-    use super::*;
 
     #[test]
     fn init_settings_if_not_found() -> Result<()> {
