@@ -70,7 +70,7 @@ pub struct App {
 }
 
 impl App {
-    pub fn new() -> crate::Result<Self> {
+    pub fn new() -> Result<Self> {
         let data_dir = if cfg!(debug_assertions) {
             PathBuf::from(".mukwa")
         } else {
@@ -95,6 +95,8 @@ impl App {
         } else {
             config_dir()
         };
+
+        fs::create_dir_all(&settings_dir)?;
 
         let settings = SettingsStore::open(settings_dir.join("settings.toml"))?;
 
@@ -831,10 +833,11 @@ impl SettingsStore {
                     return Err(err.into());
                 }
 
-                info!("Initialised settings at {:?}", path.as_ref());
                 let settings = Settings::default();
                 let contents = toml::to_string(&settings)?;
                 fs::write(&path, contents)?;
+
+                info!("Initialised settings at {:?}", path.as_ref());
                 let store = SettingsStore {
                     path: path.as_ref().to_path_buf(),
                     inner: Rc::new(RefCell::new(settings)),
@@ -891,9 +894,10 @@ mod test {
 
     use crate::SettingsStore;
     use std::fs;
+    use super::*;
 
     #[test]
-    fn init_settings_if_not_found() -> crate::Result<()> {
+    fn init_settings_if_not_found() -> Result<()> {
         let temp = tempdir()?;
         let path = temp.path().join("settings.toml");
         SettingsStore::open(&path)?;
