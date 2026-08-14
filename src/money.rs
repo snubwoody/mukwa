@@ -125,11 +125,11 @@ impl Display for Money {
         let whole = abs / Money::FACTOR as i64;
         let mut frac = abs % Money::FACTOR as i64;
 
-        let scale = f.precision().unwrap_or_else(|| Self::SCALE as usize);
+        let scale = f.precision().unwrap_or(Self::SCALE as usize);
 
         // TODO: instead of looping maybe multiply
 
-        if frac > 0 {
+        if frac > 0 && scale > 0 {
             while frac.ilog10() + 1 > scale as u32 {
                 let rem = frac % 10;
                 frac /= 10;
@@ -142,7 +142,14 @@ impl Display for Money {
         if self.0 < 0 {
             write!(f, "-")?;
         }
-        write!(f, "{}.{:0scale$}", whole, frac, scale = scale)
+
+        // fmt does not round the decimal values for 0 precision currencies (like JPY)
+        // these currencies don't have the concept of decimals so rounding is not useful
+        if scale == 0 {
+            write!(f, "{}", whole)
+        } else {
+            write!(f, "{}.{:0scale$}", whole, frac, scale = scale)
+        }
     }
 }
 
@@ -550,6 +557,11 @@ mod test {
         assert_eq!(format!("{}", Money::from_f64(50.5)), "50.500000");
         assert_eq!(format!("{:.2}", Money::from_f64(50.5)), "50.50");
         assert_eq!(format!("{:.1}", Money::from_f64(24.2222)), "24.2");
+    }
+
+    #[test]
+    fn format_money_with_0_precision() {
+        assert_eq!(format!("{:.0}", Money::from_f64(50.2)), "50");
     }
 
     #[test]

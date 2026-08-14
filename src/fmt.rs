@@ -49,9 +49,7 @@ impl CurrencyFormatter {
 
     /// Formats [`Money`] as a currency string.
     pub fn format_money(&self, value: Money) -> crate::Result<String> {
-        let precision = self.currency.precision().unwrap_or(2) as usize;
         let symbol = self.currency.symbol().to_owned();
-        return Ok(format!("{}{1:.2$}", symbol, value, precision));
 
         #[cfg(target_os = "windows")]
         {
@@ -64,7 +62,7 @@ impl CurrencyFormatter {
         #[cfg(not(target_os = "windows"))]
         {
             let precision = self.currency.precision().unwrap_or(2) as usize;
-            Ok(format!("{}{:0precision$}", symbol, value))
+            Ok(format!("{}{1:.2$}", symbol, value, precision))
         }
     }
 }
@@ -163,7 +161,7 @@ mod linux_like {
     }
 }
 
-//#[cfg(not(windows))]
+#[cfg(not(windows))]
 #[cfg(test)]
 mod test {
     use super::*;
@@ -176,9 +174,9 @@ mod test {
             formatter.set_currency(currency);
             assert_eq!(formatter.format_money(amount).unwrap(), expected);
         };
-        // FIXME: bug for 0 precision currencies
         test_fmt(Currency::CAD, Money::from_f64(10.5), "$10.50");
         test_fmt(Currency::LYD, Money::from_f64(242.2424), "ل.د242.242");
+        test_fmt(Currency::JPY, Money::from_f64(500.2), "¥500");
         Ok(())
     }
 }
