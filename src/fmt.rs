@@ -50,6 +50,7 @@ impl CurrencyFormatter {
     /// Formats [`Money`] as a currency string.
     pub fn format_money(&self, value: Money) -> crate::Result<String> {
         let symbol = self.currency.symbol().to_owned();
+
         #[cfg(target_os = "windows")]
         {
             use windows::CurrencyFormatOptions;
@@ -61,7 +62,7 @@ impl CurrencyFormatter {
         #[cfg(not(target_os = "windows"))]
         {
             let precision = self.currency.precision().unwrap_or(2) as usize;
-            Ok(format!("{}{:0precision$}", symbol, value))
+            Ok(format!("{}{1:.2$}", symbol, value, precision))
         }
     }
 }
@@ -157,5 +158,25 @@ mod linux_like {
         let date = Zoned::now().date();
         let result = format_date(date);
         assert_eq!(result.unwrap(), date.strftime("%d/%m/%Y").to_string());
+    }
+}
+
+#[cfg(not(windows))]
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::{Currency, Money};
+
+    #[test]
+    fn format_money_uses_currency_precision() -> crate::Result<()> {
+        let test_fmt = |currency: Currency, amount: Money, expected: &str| {
+            let mut formatter = CurrencyFormatter::new();
+            formatter.set_currency(currency);
+            assert_eq!(formatter.format_money(amount).unwrap(), expected);
+        };
+        test_fmt(Currency::CAD, Money::from_f64(10.5), "$10.50");
+        test_fmt(Currency::LYD, Money::from_f64(242.2424), "ل.د242.242");
+        test_fmt(Currency::JPY, Money::from_f64(500.2), "¥500");
+        Ok(())
     }
 }
