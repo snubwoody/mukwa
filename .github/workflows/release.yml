@@ -1,9 +1,6 @@
 name: Release
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
 concurrency:
   cancel-in-progress: true
   group: release-mukwa
@@ -76,7 +73,6 @@ jobs:
           name: mukwa-upload-${{ runner.os }}
           path: build/*-Setup.exe
   release:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: write
     needs:
@@ -95,8 +91,6 @@ jobs:
         with:
           name: Mukwa vx.x.x
           files: |
-            CHANGELOG.md
             artifacts/**/*
-          body_path: CHANGELOG.md
           draft: true
 
