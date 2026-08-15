@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+    <id>com.wakunguma.Mukwa</id>
+    <metadata_license>CC0-1.0</metadata_license>
+    <project_license>GPL-3.0-or-later</project_license>
+    <name>Mukwa</name>
+    <summary>Personal finance app</summary>
+    <description>
+        <p>
+            Mukwa a free, privacy focused personal finance app, designed to help you track your spending and
+            manage your budgets.
+        </p>
+    </description>
+    <developer id="com.wakunguma">
+        <name>Wakunguma Kalimukwa</name>
+    </developer>
+    <categories>
+        <category>Finance</category>
+        <category>Office</category>
+    </categories>
+    <launchable type="desktop-id">com.wakunguma.Mukwa.desktop</launchable>
+    <url type="homepage">https://github.com/snubwoody/mukwa</url>
+    <url type="bugtracker">https://github.com/snubwoody/mukwa/issues</url>
+    <url type="contribute">https://github.com/snubwoody/mukwa/blob/main/CONTRIBUTING.md</url>
+    <supports>
+        <internet>offline-only</internet>
+    </supports>
+    <content_rating type="oars-1.1" />
+</component>

@@ -70,7 +70,7 @@ pub struct App {
 }
 
 impl App {
-    pub fn new() -> crate::Result<Self> {
+    pub fn new() -> Result<Self> {
         let data_dir = if cfg!(debug_assertions) {
             PathBuf::from(".mukwa")
         } else {
@@ -96,9 +96,12 @@ impl App {
             config_dir()
         };
 
+        fs::create_dir_all(&settings_dir)?;
         let settings = SettingsStore::open(settings_dir.join("settings.toml"))?;
-
         let state = AppState::new(service)?;
+
+        #[cfg(target_os = "linux")]
+        slint::set_xdg_app_id("com.wakunguma.Mukwa")?;
 
         let app = App {
             state,
@@ -110,7 +113,6 @@ impl App {
         app.init_api();
         app.init_global_state();
         app.init_calendar_state();
-
         Ok(app)
     }
 
@@ -831,10 +833,11 @@ impl SettingsStore {
                     return Err(err.into());
                 }
 
-                info!("Initialised settings at {:?}", path.as_ref());
                 let settings = Settings::default();
                 let contents = toml::to_string(&settings)?;
                 fs::write(&path, contents)?;
+
+                info!("Initialised settings at {:?}", path.as_ref());
                 let store = SettingsStore {
                     path: path.as_ref().to_path_buf(),
                     inner: Rc::new(RefCell::new(settings)),
@@ -889,11 +892,12 @@ impl Default for Settings {
 mod test {
     use tempfile::tempdir;
 
+    use super::*;
     use crate::SettingsStore;
     use std::fs;
 
     #[test]
-    fn init_settings_if_not_found() -> crate::Result<()> {
+    fn init_settings_if_not_found() -> Result<()> {
         let temp = tempdir()?;
         let path = temp.path().join("settings.toml");
         SettingsStore::open(&path)?;
