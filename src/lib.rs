@@ -97,10 +97,11 @@ impl App {
         };
 
         fs::create_dir_all(&settings_dir)?;
-
         let settings = SettingsStore::open(settings_dir.join("settings.toml"))?;
-
         let state = AppState::new(service)?;
+
+        #[cfg(target_os = "linux")]
+        slint::set_xdg_app_id("com.wakunguma.Mukwa")?;
 
         let app = App {
             state,
@@ -112,7 +113,6 @@ impl App {
         app.init_api();
         app.init_global_state();
         app.init_calendar_state();
-
         Ok(app)
     }
 
