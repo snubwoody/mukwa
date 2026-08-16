@@ -28,7 +28,14 @@ import {
     State,
     Api,
 } from "globals.slint";
-import { Button, ComboBox, TextField, PrimaryButton } from "widgets.slint";
+import {
+    Button,
+    ComboBox,
+    TextField,
+    PrimaryButton,
+    ContextMenu,
+    ContextMenuItem,
+} from "widgets.slint";
 import { FocusBorder } from "widgets/focus-border.slint";
 import { Calendar, Date } from "widgets/calendar.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
@@ -195,6 +202,8 @@ component TransactionRow inherits TableRow {
     in property <int> length;
     in property <string> active-account-id;
 
+    // FIXME: wrap the whole transaction row in a TouchArea
+
     right-clicked => {
         context-menu.show();
     }
@@ -202,37 +211,21 @@ component TransactionRow inherits TableRow {
     padding-left: 8px;
     padding-right: 8px;
 
-    context-menu := PopupWindow {
-        width: parent.width;
-        height: parent.height;
-        close-policy: close-on-click-outside;
+    context-menu := ContextMenu {
+        min-width: 250px;
+        ContextMenuItem {
+            text: @tr("Duplicate");
+            clicked => {
+                State.duplicate-transaction(transaction.id);
+                parent.close();
+            }
+        }
 
-        // FIXME: context menu passthrough
-        Rectangle {
-            width: context-menu-inner.preferred-width;
-            height: context-menu-inner.preferred-height;
-            background: white;
-            border-radius: 4px;
-            border-color: Colors.neutral50;
-            border-width: 1px;
-
-            context-menu-inner := VerticalLayout {
-                cross-axis-alignment: start;
-                padding: 4px;
-                spacing: 4px;
-                Button {
-                    width: 100%;
-                    text: @tr("Duplicate");
-                    hover-background: Colors.neutral50;
-                    clicked => State.duplicate-transaction(transaction.id);
-                }
-
-                Button {
-                    width: 100%;
-                    text: @tr("Delete");
-                    hover-background: Colors.neutral50;
-                    clicked => State.delete-transaction(transaction.id);
-                }
+        ContextMenuItem {
+            text: @tr("Delete");
+            clicked => {
+                State.delete-transaction(transaction.id);
+                parent.close();
             }
         }
     }

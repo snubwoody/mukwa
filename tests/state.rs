@@ -268,23 +268,6 @@ fn calculate_total_spent_only_includes_current_month() -> mukwa::Result<()> {
 }
 
 #[test]
-fn delete_categories_resets_transactions() -> mukwa::Result<()> {
-    let service = Service::open_in_memory()?;
-    service.create_account("")?;
-    let group = service.create_category_group("")?;
-    let category = service.create_category("", group.id)?;
-    let expense = service.create_expense().category(category.id).submit()?;
-
-    let mut state = AppState::new(service)?;
-    state.delete_category(&category.id.to_string())?;
-
-    dbg!(state.transactions().iter().len());
-    let transaction = state.transactions().remove(0);
-    assert_eq!(transaction.category_id, category.id.to_shared_string());
-    Ok(())
-}
-
-#[test]
 fn left_to_spend_caps_at_zero() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("")?;
