@@ -14,15 +14,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-export {
-    Button,
-    PrimaryButton,
-    PrimaryButtonTheme,
-    IconButton,
-    IconButtonTheme,
-}from "widgets/button.slint";
-export { ComboBox }from "widgets/combobox.slint";
-export { TextField, InlineTextField }from "widgets/text-field.slint";
-export { FocusBorder }from "widgets/focus-border.slint";
-export { ProgressBar }from "widgets/progress-bar.slint";
-export { ContextMenu }from "widgets/context-menu.slint";
+import { Colors } from "../colors.slint";
+
+export component ContextMenu inherits PopupWindow {
+    close-policy: close-on-click-outside;
+
+    Rectangle {
+        width: context-menu-inner.preferred-width;
+        height: context-menu-inner.preferred-height;
+        background: white;
+        border-radius: 4px;
+        border-color: Colors.neutral50;
+        border-width: 1px;
+
+        context-menu-inner := VerticalLayout {
+            cross-axis-alignment: start;
+            padding: 4px;
+            spacing: 4px;
+
+            @children
+        }
+    }
+}
