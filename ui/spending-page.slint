@@ -31,6 +31,7 @@ import {
     ProgressBar,
     InlineTextField,
     ContextMenu,
+    ContextMenuItem,
 } from "widgets.slint";
 import { IconSet } from "@lucide";
 import { Settings } from "settings.slint";
@@ -54,9 +55,9 @@ component CategoryItem inherits VerticalLayout {
     // FIXME: category text field not working
 
     context-menu := ContextMenu {
-        // TODO: rename
-        PrimaryButton {
-            theme: neutral;
+        min-width: 250px;
+        min-height: 50px;
+        ContextMenuItem {
             text: @tr("Delete");
             clicked => {
                 State.delete-category(category.id);
@@ -182,8 +183,9 @@ component CategoryGroupItem {
     }
 
     context-menu := ContextMenu {
-        PrimaryButton {
-            theme: neutral;
+        min-width: 250px;
+        min-height: 50px;
+        ContextMenuItem {
             text: @tr("Delete");
             clicked => {
                 State.delete-category-group(category-group.id);

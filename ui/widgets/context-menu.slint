@@ -15,13 +15,29 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { Colors } from "../colors.slint";
+import { Button } from "button.slint";
+
+export component ContextMenuItem {
+    in property <string> text;
+    callback clicked <=> button.clicked;
+    width: 100%;
+
+    button := Button {
+        width: 100%;
+        text: text;
+        hover-background: Colors.neutral50;
+        border-radius: 4px;
+        alignment: start;
+        @children
+    }
+}
 
 export component ContextMenu inherits PopupWindow {
     close-policy: close-on-click-outside;
 
     Rectangle {
-        width: context-menu-inner.preferred-width;
-        height: context-menu-inner.preferred-height;
+        width: max(context-menu-inner.preferred-width,parent.width);
+        height: max(context-menu-inner.preferred-height,parent.height);
         background: white;
         border-radius: 4px;
         border-color: Colors.neutral50;
@@ -29,7 +45,8 @@ export component ContextMenu inherits PopupWindow {
 
         context-menu-inner := VerticalLayout {
             cross-axis-alignment: start;
-            padding: 4px;
+            alignment: start;
+            padding: 8px;
             spacing: 4px;
 
             @children
