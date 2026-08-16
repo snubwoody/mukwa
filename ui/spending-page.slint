@@ -181,6 +181,25 @@ component CategoryGroupItem {
         }
     }
 
+    context-menu := ContextMenu {
+        PrimaryButton {
+            theme: neutral;
+            text: @tr("Delete");
+            clicked => {
+                State.delete-category-group(category-group.id);
+                parent.close();
+            }
+        }
+    }
+
+    TouchArea {
+        pointer-event(event) => {
+            if (event.button == PointerEventButton.right) {
+                context-menu.show();
+            }
+        }
+    }
+
     Rectangle {
         states [
             drag-over when drop-area.has-drag: {
