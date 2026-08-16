@@ -84,6 +84,8 @@ export global State {
     callback create-transaction(CreateTransactionOpts);
     callback duplicate-transaction(id: string);
     callback delete-transaction(id: string);
+    callback delete-category(id: string);
+    callback delete-category-group(id: string);
     callback edit-budget(id: string, amount: string);
     callback set-current-budget-month(Date);
     callback set-transaction-date(id: string, date: string);

@@ -16,8 +16,9 @@
 
 use jiff::Zoned;
 use jiff::civil::date;
-use mukwa::service::{CreateBudgetOpts, Service, TransactionType};
+use mukwa::service::{Category, CategoryGroup, CreateBudgetOpts, Service, TransactionType};
 use mukwa::{Money, create_test_db};
+use rusqlite::OptionalExtension;
 use uuid::Uuid;
 
 #[test]
@@ -47,9 +48,7 @@ fn create_category() -> mukwa::Result<()> {
     service
         .connection()
         .query_one("SELECT * FROM categories", [], |row| {
-            let deleted_at: Option<i64> = row.get("deleted_at")?;
             let title: String = row.get("title")?;
-            assert!(deleted_at.is_none());
             assert_eq!(title, "Groceries");
             Ok(())
         })?;
@@ -792,5 +791,88 @@ fn set_payee_sets_category_to_null() -> mukwa::Result<()> {
             assert!(category_id.is_none());
             Ok(())
         })?;
+    Ok(())
+}
+
+#[test]
+fn delete_category() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
+    service.delete_category(category.id)?;
+    let row = service
+        .connection()
+        .query_row("SELECT * FROM categories", [], |row| {
+            Ok(Category::try_from(row).unwrap())
+        })
+        .optional()?;
+    assert!(row.is_none());
+    Ok(())
+}
+
+#[test]
+fn delete_category_group() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let group = service.create_category_group("")?;
+    service.delete_category_group(group.id)?;
+    let row = service
+        .connection()
+        .query_row("SELECT * FROM category_groups", [], |row| {
+            Ok(CategoryGroup::try_from(row).unwrap())
+        })
+        .optional()?;
+    assert!(row.is_none());
+    Ok(())
+}
+
+#[test]
+fn delete_category_group_deletes_categories_in_group() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    let group = service.create_category_group("")?;
+    service.create_category("", group.id)?;
+    service.create_category("", group.id)?;
+    service.create_category("", group.id)?;
+    service.delete_category_group(group.id)?;
+
+    let categories = service.fetch_categories()?;
+    assert!(categories.is_empty());
+    Ok(())
+}
+
+#[test]
+fn delete_category_with_dependants() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    service.create_account("")?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
+    service.create_expense().category(category.id).submit()?;
+    service.delete_category(category.id)?;
+
+    let row = service
+        .connection()
+        .query_row("SELECT * FROM categories", [], |row| {
+            Ok(Category::try_from(row).unwrap())
+        })
+        .optional()?;
+    assert!(row.is_none());
+
+    let transactions = service.fetch_transactions()?;
+    assert!(transactions[0].category_id.is_none());
+    Ok(())
+}
+#[test]
+fn delete_category_deletes_budget() -> mukwa::Result<()> {
+    let service = Service::open_in_memory()?;
+    service.create_account("")?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
+    service.create_budget(CreateBudgetOpts {
+        category_id: category.id,
+        month: Some(date(2020, 1, 1)),
+        ..Default::default()
+    })?;
+    service.delete_category(category.id)?;
+    let budgets = service.fetch_budgets_by_month(date(2020, 1, 1))?;
+    assert!(budgets.is_empty());
     Ok(())
 }

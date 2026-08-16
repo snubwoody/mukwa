@@ -30,6 +30,8 @@ import {
     IconButton,
     ProgressBar,
     InlineTextField,
+    ContextMenu,
+    ContextMenuItem,
 } from "widgets.slint";
 import { IconSet } from "@lucide";
 import { Settings } from "settings.slint";
@@ -52,9 +54,29 @@ component CategoryItem inherits VerticalLayout {
 
     // FIXME: category text field not working
 
+    context-menu := ContextMenu {
+        min-width: 250px;
+        min-height: 50px;
+        ContextMenuItem {
+            text: @tr("Delete");
+            clicked => {
+                State.delete-category(category.id);
+                parent.close();
+            }
+        }
+    }
+
     DragArea {
         data: State.category-to-transfer(category.id);
         allow-move: true;
+
+        TouchArea {
+            pointer-event(event) => {
+                if (event.button == PointerEventButton.right) {
+                    context-menu.show();
+                }
+            }
+        }
 
         HorizontalLayout {
             padding-left: 32px;
@@ -157,6 +179,26 @@ component CategoryGroupItem {
         dropped(event) => {
             State.move-category(State.transfer-to-category(event.data), category-group.id);
             return event.proposed-action;
+        }
+    }
+
+    context-menu := ContextMenu {
+        min-width: 250px;
+        min-height: 50px;
+        ContextMenuItem {
+            text: @tr("Delete");
+            clicked => {
+                State.delete-category-group(category-group.id);
+                parent.close();
+            }
+        }
+    }
+
+    TouchArea {
+        pointer-event(event) => {
+            if (event.button == PointerEventButton.right) {
+                context-menu.show();
+            }
         }
     }
 
