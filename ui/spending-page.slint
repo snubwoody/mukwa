@@ -119,7 +119,7 @@ component CategoryItem inherits VerticalLayout {
 
             InlineTextField {
                 text: State.format-money(budget.amount,Settings.currency-code);
-                field-text: budget.amount;
+                field-text: Api.format-money-without-symbol(budget.amount);
                 input-type: decimal;
                 accepted(value) => State.edit-budget(budget.id, value);
             }

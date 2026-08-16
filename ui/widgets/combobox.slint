@@ -25,7 +25,7 @@ export struct ComboBoxItem {
 
 export component ComboBox {
     in property <[ComboBoxItem]> options;
-    in-out property <int> current-index: 0;
+    out property <int> current-index: 0;
     in-out property <string> current-value: options[current-index].value;
     in property <bool> enabled;
 

@@ -3,9 +3,7 @@
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
+// the Free Software Foundation, either version 3 ofuse slint :: private_unstable_api :: re_exports as sp;//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -243,6 +241,28 @@ impl App {
     fn init_api(&self) {
         let window = &self.main_window;
         let api = window.global::<ui::Api>();
+
+        api.on_format_money_without_symbol({
+            move |value| {
+                // Empty strings represent null values
+                if value.is_empty() {
+                    return value;
+                }
+
+                let formatter = CurrencyFormatter::new();
+                match Money::from_str(&value) {
+                    Ok(value) => formatter
+                        .format_money_without_symbol(value)
+                        .to_shared_string(),
+                    Err(err) => {
+                        warn!("Error parsing Money: {err}");
+                        formatter
+                            .format_money_without_symbol(Money::ZERO)
+                            .to_shared_string()
+                    }
+                }
+            }
+        });
 
         api.on_window_size({
             let window = window.as_weak();

@@ -178,7 +178,7 @@ component MoneyCell inherits TableCell {
 
     if self.is-editing: TextField {
         width: 100%;
-        text: amount;
+        text: Api.format-money-without-symbol(amount);
         input-type: decimal;
         init => {
             self.focus();

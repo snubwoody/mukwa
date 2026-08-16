@@ -51,6 +51,8 @@ impl CurrencyFormatter {
     pub fn format_money(&self, value: Money) -> crate::Result<String> {
         let symbol = self.currency.symbol().to_owned();
 
+        // We aim to use the system APIs here so that it follows the user's
+        // currency format system settings.
         #[cfg(target_os = "windows")]
         {
             use windows::CurrencyFormatOptions;
@@ -65,6 +67,11 @@ impl CurrencyFormatter {
             Ok(format!("{}{1:.2$}", symbol, value, precision))
         }
     }
+
+    pub fn format_money_without_symbol(&self, value: Money) -> String {
+        let precision = self.currency.precision().unwrap_or(2) as usize;
+        format!("{0:.1$}", value, precision)
+    }
 }
 
 impl Default for CurrencyFormatter {
@@ -74,6 +81,9 @@ impl Default for CurrencyFormatter {
 }
 
 pub fn format_date(date: Date) -> crate::Result<String> {
+    // We aim to use the system APIs here so that it follows the user's
+    // date format system settings.
+
     #[cfg(target_os = "windows")]
     return windows::format_date(date);
 
