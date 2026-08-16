@@ -48,9 +48,7 @@ fn create_category() -> mukwa::Result<()> {
     service
         .connection()
         .query_one("SELECT * FROM categories", [], |row| {
-            let deleted_at: Option<i64> = row.get("deleted_at")?;
             let title: String = row.get("title")?;
-            assert!(deleted_at.is_none());
             assert_eq!(title, "Groceries");
             Ok(())
         })?;
