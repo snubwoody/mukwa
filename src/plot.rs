@@ -79,6 +79,7 @@ pub struct PieChart {
     series: Vec<f32>,
     total: f32,
     radius: f32,
+    hole_radius: f32,
 }
 
 impl PieChart {
@@ -92,6 +93,7 @@ impl PieChart {
             x: 250.0,
             y: 250.0,
             radius: 50.0,
+            hole_radius: 10.0,
         }
     }
 
@@ -127,12 +129,35 @@ impl PieChart {
         }
     }
 
+    fn draw_slice(&self, start_angle: f32, slice: f32) -> Path {
+        let ratio = slice / self.total;
+        let end_theta = 2.0 * PI * ratio;
+
+        let mut pb = PathBuilder::new();
+        self.draw_arc(
+            &mut pb,
+            self.radius,
+            start_angle,
+            end_theta,
+            (self.x, self.y),
+        );
+        //pb.line_to(self.x + self.hole_radius, self.y + self.hole_radius);
+        self.draw_arc(
+            &mut pb,
+            self.hole_radius,
+            start_angle,
+            end_theta,
+            (self.x, self.y),
+        );
+        pb.finish().unwrap()
+    }
+
     fn draw(&self) {
         let mut pixmap = Pixmap::new(500, 500).unwrap();
         pixmap.fill(tiny_skia::Color::WHITE);
 
         // This would be the start radian
-        let mut offset_theta = 0.0;
+        let mut start_angle = 0.0;
 
         let stroke = Stroke::default();
         let mut paint = Paint::default();
@@ -142,19 +167,10 @@ impl PieChart {
             let ratio = slice / self.total;
             let end_theta = 2.0 * PI * ratio;
 
-            let mut pb = PathBuilder::new();
-            self.draw_arc(
-                &mut pb,
-                self.radius,
-                offset_theta,
-                end_theta,
-                (self.x, self.y),
-            );
-            pb.line_to(self.x, self.y);
-            let path = pb.finish().unwrap();
-
+            // TODO: maybe pass start angle as mutable
+            let path = self.draw_slice(start_angle, *slice);
             pixmap.stroke_path(&path, &paint, &stroke, Transform::identity(), None);
-            offset_theta += end_theta;
+            start_angle += end_theta;
         }
 
         pixmap.save_png("temp/image-2.png").unwrap();
