@@ -12,9 +12,9 @@ pub mod state;
 pub use error::Error;
 pub use error::Result;
 pub use money::{Currency, Money};
-use slint::{DataTransfer, Global, ModelExt};
+use slint::{DataTransfer, Global, Image, ModelExt, SharedPixelBuffer};
 use std::cell::{Ref, RefCell, RefMut};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io;
 use std::io::Read;
@@ -22,6 +22,7 @@ use std::time::Instant;
 
 use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
+use crate::plot::PieChart;
 use crate::service::Service;
 use crate::state::AppState;
 use crate::ui::MainWindow;
@@ -34,6 +35,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::FromStr;
+use tiny_skia::Pixmap;
 use tracing::{info, warn};
 
 /// Slint auto generated code.
@@ -102,7 +104,47 @@ impl App {
         app.init_combobox_api();
         app.init_global_state();
         app.init_calendar_state();
+        app.init_analytics();
+
         Ok(app)
+    }
+
+    fn init_analytics(&self) {
+        let window = &self.main_window;
+        let analytics = window.global::<ui::Analytics>();
+
+        analytics.on_draw_pie_chart({
+            let state = self.state.clone();
+
+            move |width, height| {
+                // TODO: make sure colors are in in a consistent order
+                // TODO: collect transactions below a threshold into "other"
+                // FIXME dont unwrap
+                let transactions = state.service().fetch_transactions().unwrap();
+                let mut map = HashMap::new();
+                for transaction in transactions {
+                    if let Some(category_id) = transaction.category_id {
+                        match map.get(&category_id) {
+                            Some(value) => {
+                                map.insert(category_id, transaction.amount.inner() as f32 + value);
+                            }
+                            None => {
+                                map.insert(category_id, transaction.amount.inner() as f32);
+                            }
+                        }
+                    }
+                }
+                let series: Vec<f32> = map.values().copied().collect();
+                let mut pixmap = Pixmap::new(width as u32, height as u32).unwrap();
+                let chart =
+                    PieChart::new(width / 2.0, height / 2.0, series, width.min(height) / 2.0);
+                chart.draw(&mut pixmap);
+
+                let buffer =
+                    SharedPixelBuffer::clone_from_slice(pixmap.data(), width as u32, height as u32);
+                Image::from_rgba8(buffer)
+            }
+        });
     }
 
     fn init_calendar_state(&self) {

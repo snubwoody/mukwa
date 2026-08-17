@@ -18,17 +18,17 @@ import { Colors } from "colors.slint";
 import { State, Transaction } from "globals.slint";
 
 export global Analytics {
-    in-out property <image> pie-chart;
-
-    callback draw-pie-chart([Transaction]) -> image;
+    pure callback draw-pie-chart(width: length, height: length) -> image;
 }
 
 export component AnalyticsPage {
-    init => {
-        debug("Analytics page init");
+    Rectangle {
+        width: 500px;
+        height: 500px;
+        Image {
+            width: 100%;
+            height: 100%;
+            source: Analytics.draw-pie-chart(self.width,self.height);
+        }
     }
-
-//    Image {
-//        //source: @image-url("image.png");
-//    }
 }

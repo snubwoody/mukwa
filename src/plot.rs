@@ -14,6 +14,7 @@ pub struct PieChart {
 }
 
 impl PieChart {
+    /// Creates a new pie chart centered at `x`,`y`.
     pub fn new(x: f32, y: f32, series: Vec<f32>, radius: f32) -> Self {
         // TODO: test radius 0
         let total = series.iter().sum();

@@ -75,6 +75,10 @@ impl AppState {
         })
     }
 
+    pub fn service(&self) -> &Service {
+        &self.service
+    }
+
     pub fn transactions(&self) -> Rc<VecModel<ui::Transaction>> {
         self.transactions.clone()
     }
