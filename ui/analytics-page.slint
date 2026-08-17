@@ -15,9 +15,20 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { Colors } from "colors.slint";
+import { State, Transaction } from "globals.slint";
+
+export global Analytics {
+    in-out property <image> pie-chart;
+
+    callback draw-pie-chart([Transaction]) -> image;
+}
 
 export component AnalyticsPage {
-    Image {
-        //source: @image-url("image.png");
+    init => {
+        debug("Analytics page init");
     }
+
+//    Image {
+//        //source: @image-url("image.png");
+//    }
 }
