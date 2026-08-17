@@ -135,11 +135,17 @@ impl PieChart {
 
         let inner_start = theta_to_ordinal_coord(self.hole_radius, start_angle, (self.x, self.y));
         let outer_start = theta_to_ordinal_coord(self.radius, start_angle, (self.x, self.y));
+        let inner_end =
+            theta_to_ordinal_coord(self.hole_radius, start_angle + end_theta, (self.x, self.y));
+        let outer_end =
+            theta_to_ordinal_coord(self.radius, start_angle + end_theta, (self.x, self.y));
 
         let mut pb = PathBuilder::new();
-        // TODO: need to draw end line and close the path
         pb.move_to(inner_start.0, inner_start.1);
         pb.line_to(outer_start.0, outer_start.1);
+
+        pb.move_to(inner_end.0, inner_end.1);
+        pb.line_to(outer_end.0, outer_end.1);
 
         self.draw_arc(
             &mut pb,
@@ -155,6 +161,7 @@ impl PieChart {
             end_theta,
             (self.x, self.y),
         );
+        pb.close();
         pb.finish().unwrap()
     }
 
@@ -175,6 +182,13 @@ impl PieChart {
 
             // TODO: maybe pass start angle as mutable
             let path = self.draw_slice(start_angle, *slice);
+            pixmap.fill_path(
+                &path,
+                &paint,
+                FillRule::EvenOdd,
+                Transform::identity(),
+                None,
+            );
             pixmap.stroke_path(&path, &paint, &stroke, Transform::identity(), None);
             start_angle += end_theta;
         }
