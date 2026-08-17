@@ -133,7 +133,14 @@ impl PieChart {
         let ratio = slice / self.total;
         let end_theta = 2.0 * PI * ratio;
 
+        let inner_start = theta_to_ordinal_coord(self.hole_radius, start_angle, (self.x, self.y));
+        let outer_start = theta_to_ordinal_coord(self.radius, start_angle, (self.x, self.y));
+
         let mut pb = PathBuilder::new();
+        // TODO: need to draw end line and close the path
+        pb.move_to(inner_start.0, inner_start.1);
+        pb.line_to(outer_start.0, outer_start.1);
+
         self.draw_arc(
             &mut pb,
             self.radius,
@@ -141,7 +148,6 @@ impl PieChart {
             end_theta,
             (self.x, self.y),
         );
-        //pb.line_to(self.x + self.hole_radius, self.y + self.hole_radius);
         self.draw_arc(
             &mut pb,
             self.hole_radius,
