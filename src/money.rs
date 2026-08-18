@@ -3,6 +3,7 @@
 
 use crate::Error;
 use serde::{Deserialize, Serialize};
+use std::iter::Sum;
 use std::{
     fmt::Display,
     ops::{Add, AddAssign, Sub, SubAssign},
@@ -151,6 +152,12 @@ impl FromStr for Money {
         // This is lossy but the loss of precision is acceptable for now
         let value: f64 = s.parse()?;
         Ok(Self::from_f64(value))
+    }
+}
+
+impl Sum for Money {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Money::ZERO, |acc, x| acc + x)
     }
 }
 

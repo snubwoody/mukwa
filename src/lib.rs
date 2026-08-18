@@ -136,8 +136,10 @@ impl App {
                 }
                 let series: Vec<f32> = map.values().copied().collect();
                 let mut pixmap = Pixmap::new(width as u32, height as u32).unwrap();
-                let chart =
-                    PieChart::new(width / 2.0, height / 2.0, series, width.min(height) / 2.0);
+                let radius = width.min(height) / 2.0;
+                let mut chart = PieChart::new(width / 2.0, height / 2.0, series, radius);
+                // FIXME: artifacts
+                //chart.set_hole_radius(radius - 50.0);
                 chart.draw(&mut pixmap);
 
                 let buffer =
@@ -479,6 +481,20 @@ impl App {
             move |opts| {
                 if let Err(err) = state.create_transaction(opts) {
                     warn!("Failed to create transaction: {err}")
+                }
+            }
+        });
+
+        global_state.on_total_spent_all({
+            let state = state.clone();
+            move || match state.service().fetch_transactions() {
+                Ok(transactions) => {
+                    let total: Money = transactions.iter().map(|t| t.amount).sum();
+                    total.to_shared_string()
+                }
+                Err(err) => {
+                    warn!("Error while calculating total spent: {err}");
+                    Money::ZERO.to_shared_string()
                 }
             }
         });
