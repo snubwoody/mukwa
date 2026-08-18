@@ -28,6 +28,7 @@ import {
     State,
     Api,
 } from "globals.slint";
+import { FontSize } from "theme.slint";
 import {
     Button,
     ComboBox,
@@ -439,23 +440,23 @@ export component TransactionPage inherits VerticalLayout {
 
     VerticalLayout {
         padding: 12px;
-        spacing: 12px;
+        spacing: 4px;
 
         Text {
             text: active-account-id.is-empty
                 ? @tr("All accounts")
                 : State.get-account(active-account-id).name;
-            font-size: 1.5rem;
-            font-weight: 500;
-            color: Colors.textHeading;
+            color: Colors.textBody;
+            font-weight: FontWeight.semi-bold;
         }
 
         Text {
             text: active-account-id.is-empty
                 ? State.format-money(State.total-balance(),Settings.currency-code)
                 : State.format-money(State.account-balance(active-account-id), Settings.currency-code);
-            font-size: 1.25rem;
+            font-size: FontSize.heading-sm;
             color: Colors.textHeading;
+            font-weight: FontWeight.semi-bold;
         }
     }
 

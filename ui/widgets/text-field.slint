@@ -19,6 +19,7 @@ import { Colors } from "../colors.slint";
 export component TextField {
     in property <string> placeholder-text;
     in-out property <string> text <=> text-input.text;
+    in property <int> font-weight: FontWeight.normal;
     in-out property <InputType> input-type <=> text-input.input-type;
     in-out property <TextHorizontalAlignment> horizontal-alignment <=> text-input.horizontal-alignment;
     callback edited <=> text-input.edited;
@@ -40,7 +41,8 @@ export component TextField {
         padding-left: 8px;
         padding-right: 8px;
         text-input := TextInput {
-    //        accessible-placeholder-text: placeholder-text;
+            font-weight: font-weight;
+            //accessible-placeholder-text: placeholder-text;
             color: Colors.textBody;
             text: placeholder-text;
         }
@@ -49,6 +51,7 @@ export component TextField {
 
 export component InlineTextField {
     in property <string> text;
+    in property <int> font-weight: FontWeight.normal;
     in property <string> field-text: text;
     property <bool> active: false;
     in property <InputType> input-type: InputType.text;
@@ -66,12 +69,14 @@ export component InlineTextField {
         Text {
             visible: !active;
             text: text;
+            font-weight: font-weight;
             color: Colors.textBody;
         }
 
         if active: TextField {
             text: field-text;
             input-type: input-type;
+            font-weight: font-weight;
             init => {
                 self.focus();
             }

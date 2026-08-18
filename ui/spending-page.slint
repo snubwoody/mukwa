@@ -35,6 +35,7 @@ import {
 } from "widgets.slint";
 import { IconSet } from "@lucide";
 import { Settings } from "settings.slint";
+import { FontSize } from "theme.slint";
 
 component CategoryItem inherits VerticalLayout {
     in property <Date> current-date;
@@ -304,6 +305,7 @@ component CategoryGroupItem {
 
                 InlineTextField {
                     text: category-group.title;
+                    font-weight: FontWeight.semi-bold;
                     accepted(value) => State.update-category-group(category-group.id, value);
                 }
 
@@ -373,7 +375,7 @@ export component SpendingPage inherits VerticalLayout {
         }
 
         Text {
-            font-size: 20px;
+            font-size: FontSize.heading-sm;
             color: Colors.textHeading;
             text: State.format-dateym(current-date);
         }
@@ -458,6 +460,7 @@ export component SpendingPage inherits VerticalLayout {
 
             Text {
                 text: @tr("Category");
+                font-weight: FontWeight.semi-bold;
                 color: Colors.textBody;
             }
 
@@ -468,12 +471,14 @@ export component SpendingPage inherits VerticalLayout {
             Text {
                 width: 100px;
                 text: @tr("Assigned");
+                font-weight: FontWeight.semi-bold;
                 horizontal-alignment: end;
                 color: Colors.textBody;
             }
 
             Text {
                 width: 100px;
+                font-weight: FontWeight.semi-bold;
                 text: @tr("Spent");
                 horizontal-alignment: end;
                 color: Colors.textBody;
@@ -481,6 +486,7 @@ export component SpendingPage inherits VerticalLayout {
 
             Text {
                 width: 100px;
+                font-weight: FontWeight.semi-bold;
                 text: @tr("Available");
                 horizontal-alignment: end;
                 color: Colors.textBody;
