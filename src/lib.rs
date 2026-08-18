@@ -35,6 +35,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::FromStr;
+use tempfile::tempdir;
 use tiny_skia::Pixmap;
 use tracing::{info, warn};
 
@@ -107,6 +108,37 @@ impl App {
         app.init_analytics();
 
         Ok(app)
+    }
+
+    /// Creates a new `App` for testing.
+    pub fn new_test() -> Result<Self> {
+        let temp = tempdir()?;
+        let service = Service::open_in_memory()?;
+        let main_window = ui::MainWindow::new()?;
+
+        let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
+        let state = AppState::new(service)?;
+
+        #[cfg(target_os = "linux")]
+        slint::set_xdg_app_id("com.wakunguma.Mukwa")?;
+
+        let app = App {
+            state,
+            main_window,
+            settings,
+        };
+
+        app.init_settings();
+        app.init_api();
+        app.init_global_state();
+        app.init_calendar_state();
+        app.init_analytics();
+
+        Ok(app)
+    }
+
+    pub fn window(&self) -> &MainWindow {
+        &self.main_window
     }
 
     fn init_analytics(&self) {
