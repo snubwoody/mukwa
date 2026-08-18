@@ -29,6 +29,7 @@ pub struct ReleaseManifest {
 }
 
 // TODO: add auto-update setting (bool)
+#[derive(Clone, Debug)]
 pub struct AutoUpdater {
     version: Version,
     /// The directory the update is stored in
@@ -44,9 +45,11 @@ impl AutoUpdater {
     }
 
     /// Checks for updates.
-    fn check(&self, url: &str) -> crate::Result<Option<ReleaseManifest>> {
+    pub fn check(&self, url: &str) -> crate::Result<Option<ReleaseManifest>> {
         // TODO ignore ambiguous versions
+        dbg!(1);
         let response = ureq::get(url).call()?;
+        dbg!(2);
         let reader = response.into_body().into_reader();
 
         // TODO: parsing from a string is faster
@@ -60,7 +63,7 @@ impl AutoUpdater {
     }
 
     /// Downloads the latest update into the `update_dir` directory.
-    fn download_update(&self, url: &str) -> crate::Result<()> {
+    pub fn download_update(&self, url: &str) -> crate::Result<()> {
         let response = ureq::get(url).call()?;
         let mut reader = response.into_body().into_reader();
 
@@ -75,6 +78,8 @@ impl AutoUpdater {
         Ok(())
     }
 }
+
+// TODO: maybe just free functions
 
 /// Downloads the latest update into the local app data directory.
 fn download_update(url: &str) -> crate::Result<()> {

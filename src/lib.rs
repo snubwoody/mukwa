@@ -31,6 +31,7 @@ use std::io;
 use std::io::Read;
 use std::time::Instant;
 
+use crate::auto_update::AutoUpdater;
 use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
 use crate::service::Service;
@@ -39,6 +40,7 @@ use crate::ui::MainWindow;
 use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
 use rusqlite::Connection;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::fs;
@@ -66,6 +68,7 @@ pub struct App {
     state: AppState,
     main_window: MainWindow,
     settings: SettingsStore,
+    updater: AutoUpdater,
 }
 
 impl App {
@@ -102,9 +105,12 @@ impl App {
         #[cfg(target_os = "linux")]
         slint::set_xdg_app_id("com.wakunguma.Mukwa")?;
 
+        let updater = AutoUpdater::new("./temp", Version::new(0, 1, 0));
+
         let app = App {
             state,
             main_window,
+            updater,
             settings,
         };
 
@@ -242,6 +248,26 @@ impl App {
     fn init_api(&self) {
         let window = &self.main_window;
         let api = window.global::<ui::Api>();
+
+        api.on_check_for_update({
+            let updater = self.updater.clone();
+            dbg!("Setting up check-for-update");
+            move || {
+                info!("Checking for update...");
+                match updater.check("https://github.com/snubwoody/releases/latest") {
+                    Ok(update) => {
+                        dbg!(&update);
+                        if update.is_none() {
+                            info!("No update found");
+                        }
+                    }
+                    Err(err) => {
+                        warn!("Error while checking for update: {err}")
+                    }
+                }
+                true
+            }
+        });
 
         api.on_format_money_without_symbol({
             move |value| {

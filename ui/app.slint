@@ -295,7 +295,8 @@ export component MainWindow inherits Window {
     default-font-family: Settings.font-family;
 
     init => {
-        update-popup.show();
+        Api.check-for-update();
+        //update-popup.show();
     }
 
     // TODO: add installing update bottom bar
