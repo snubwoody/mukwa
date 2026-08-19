@@ -15,11 +15,12 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { Colors } from "../colors.slint";
-import { FocusBorder } from "./focus-border.slint";
+import { FocusBorder } from "focus-border.slint";
 import { IconDisplay, IconSet, Icon } from "@lucide";
 
 export component Button inherits Rectangle {
     in property <string> text;
+    in property <int> font-weight: FontWeight.normal;
     in property <color> text-color: Colors.textBody;
     in property <color> hover-background;
     in property <bool> enabled <=> touch-area.enabled;
@@ -67,6 +68,7 @@ export component Button inherits Rectangle {
 
         Text {
             text: text;
+            font-weight: font-weight;
             color: text-color;
         }
     }
@@ -94,11 +96,7 @@ export component Button inherits Rectangle {
     }
 }
 
-export enum IconButtonTheme {
-    accent,
-    neutral,
-    ghost
-}
+export enum IconButtonTheme { accent, neutral, ghost }
 
 export component IconButton {
     in property <IconButtonTheme> theme: accent;
@@ -175,11 +173,7 @@ export component IconButton {
     }
 }
 
-export enum PrimaryButtonTheme {
-    accent,
-    neutral,
-    ghost
-}
+export enum PrimaryButtonTheme { accent, neutral, ghost }
 
 export component PrimaryButton {
     in property <PrimaryButtonTheme> theme: accent;
@@ -205,7 +199,6 @@ export component PrimaryButton {
         }
         return transparent;
     }
-
 
     function text-color(button-theme: PrimaryButtonTheme) -> color {
         if (button-theme == PrimaryButtonTheme.accent) {

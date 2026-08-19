@@ -48,6 +48,7 @@ export { Date, CalendarState }from "widgets/calendar.slint";
 import { Table } from "tableview.slint";
 import { IconDisplay, IconSet, Icon } from "@lucide";
 import { SettingsDialog, Settings } from "settings.slint";
+import { FontSize } from "theme.slint";
 
 enum Page { spending, transactions }
 
@@ -58,7 +59,7 @@ component SidebarButton inherits Button {
     padding-bottom: 8px;
     padding-left: 16px;
     padding-right: 16px;
-
+    font-weight: FontWeight.medium;
     background: selected ? Colors.neutral50 : transparent;
     border-radius: 4px;
 
@@ -290,6 +291,7 @@ export component MainWindow inherits Window {
     title: "Mukwa";
     icon: @image-url("../resources/icons/app-icon.png");
     default-font-family: Settings.font-family;
+    default-font-size: FontSize.body;
 
     HorizontalLayout {
         Sidebar {
