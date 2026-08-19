@@ -94,69 +94,69 @@ export component ComboBox {
             horizontal-stretch: 1;
             vertical-stretch: 1;
         }
-    }
 
-    popup := PopupWindow {
-        width: max(root.width,250px);
-        y: root.y + background.height;
-        height: min(content.preferred-height,250px);
-        close-policy: close-on-click-outside;
-        forward-focus: popup-fs;
+        popup := PopupWindow {
+            width: max(root.width,250px);
+            y: root.y + background.height;
+            height: min(content.preferred-height,250px);
+            close-policy: close-on-click-outside;
+            forward-focus: popup-fs;
 
-        popup-background := Rectangle {
-            background: white;
-            border-radius: 12px;
-            border-width: 1px;
-            border-color: Colors.neutral50;
-        }
+            popup-background := Rectangle {
+                background: white;
+                border-radius: 12px;
+                border-width: 1px;
+                border-color: Colors.neutral50;
+            }
 
-        popup-fs := FocusScope {
-            key-pressed(event) => {
-                if (!self.enabled) {
+            popup-fs := FocusScope {
+                key-pressed(event) => {
+                    if (!self.enabled) {
+                        return reject;
+                    }
+                    if (event.text == Key.UpArrow) {
+                        root.move-selection-up();
+                        return accept;
+                    } else if (event.text == Key.DownArrow) {
+                        root.move-selection-down();
+                        return accept;
+                    } else if (event.text == Key.Return || event.text == Key.Escape || event.text == Key.Space) {
+                        changed(options[current-index].value);
+                        popup.close();
+                        return accept;
+                    }
                     return reject;
                 }
-                if (event.text == Key.UpArrow) {
-                    root.move-selection-up();
-                    return accept;
-                } else if (event.text == Key.DownArrow) {
-                    root.move-selection-down();
-                    return accept;
-                } else if (event.text == Key.Return || event.text == Key.Escape) {
-                    changed(options[current-index].value);
-                    popup.close();
-                    return accept;
-                }
-                return reject;
             }
-        }
 
-        flickable := Flickable {
-            max-height: 250px;
-            content-height: content.preferred-height;
-            content := VerticalLayout {
-                for option[i] in options: Rectangle {
-                    background: current-index == i ? Colors.neutral50 : white;
-                    height: 24px;
+            flickable := Flickable {
+                max-height: 250px;
+                content-height: content.preferred-height;
+                content := VerticalLayout {
+                    for option[i] in options: Rectangle {
+                        background: current-index == i ? Colors.neutral50 : white;
+                        height: 24px;
 
-                    states [
-                        hovered when inner-touch-area.has-hover: {
-                            background: Colors.neutral50;
-                            in {
-                                animate background { duration: 150ms; }
+                        states [
+                            hovered when inner-touch-area.has-hover: {
+                                background: Colors.neutral50;
+                                in {
+                                    animate background { duration: 150ms; }
+                                }
+                            }
+                        ]
+                        inner-touch-area := TouchArea {
+                            clicked => {
+                                root.select(i);
+                                changed(options[current-index].value);
+                                popup.close();
                             }
                         }
-                    ]
-                    inner-touch-area := TouchArea {
-                        clicked => {
-                            root.select(i);
-                            changed(options[current-index].value);
-                            popup.close();
-                        }
-                    }
 
-                    Text {
-                        text: option.text;
-                        color: Colors.textBody;
+                        Text {
+                            text: option.text;
+                            color: Colors.textBody;
+                        }
                     }
                 }
             }
