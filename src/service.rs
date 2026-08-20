@@ -24,19 +24,11 @@ use std::path::Path;
 use std::rc::Rc;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Default, Ord, Eq)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq)]
 pub struct Account {
     pub id: Uuid,
     pub name: String,
-}
-
-impl Account {
-    pub fn new(name: &str) -> Account {
-        Account {
-            id: Uuid::now_v7(),
-            name: name.to_string(),
-        }
-    }
+    pub account_type: AccountType,
 }
 
 impl From<Account> for ui::Account {
@@ -44,6 +36,7 @@ impl From<Account> for ui::Account {
         Self {
             id: account.id.to_string().into(),
             name: account.name.into(),
+            account_type: account.account_type.into(),
         }
     }
 }
@@ -71,8 +64,33 @@ impl From<&Account> for ui::Account {
         Self {
             id: account.id.to_string().into(),
             name: account.name.clone().into(),
+            account_type: account.account_type.into(),
         }
     }
+}
+
+impl From<&AccountType> for ui::AccountType {
+    fn from(value: &AccountType) -> Self {
+        match value {
+            AccountType::Cash => Self::Cash,
+            AccountType::Credit => Self::Credit,
+        }
+    }
+}
+
+impl From<AccountType> for ui::AccountType {
+    fn from(value: AccountType) -> Self {
+        match value {
+            AccountType::Cash => Self::Cash,
+            AccountType::Credit => Self::Credit,
+        }
+    }
+}
+
+#[derive(PartialOrd, PartialEq, Debug, Clone, Copy, Ord, Eq)]
+pub enum AccountType {
+    Cash = 1,
+    Credit = 2,
 }
 
 #[derive(PartialOrd, PartialEq, Debug, Default, Clone, Copy)]
@@ -325,9 +343,16 @@ impl<'a> TryFrom<&Row<'a>> for Account {
 
     fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
         let id: String = value.get("id")?;
+        let account_type = match value.get::<_, i64>("account_type_id")? {
+            1 => Ok(AccountType::Cash),
+            2 => Ok(AccountType::Credit),
+            _ => Err(Error::new("Failed to parse account type")),
+        };
+
         let account = Account {
             id: Uuid::parse_str(&id)?,
             name: value.get("name")?,
+            account_type: account_type?,
         };
 
         Ok(account)

@@ -17,9 +17,15 @@
 import { ComboBoxItem } from "widgets/combobox.slint";
 import { Date } from "widgets/calendar.slint";
 
+export enum AccountType {
+    cash,
+    credit
+}
+
 export struct Account {
     id: string,
     name: string,
+    account-type: AccountType
 }
 
 export struct Category {
