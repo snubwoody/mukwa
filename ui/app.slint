@@ -37,13 +37,12 @@ export {
     Category,
     Api,
     CategoryGroup,
-    AccountType
+    AccountType,
 }from "globals.slint";
 export { Settings }from "settings.slint";
-import { Button, TextField } from "widgets.slint";
+import { Button, TextField, ComboBox, PrimaryButton } from "widgets.slint";
 import { TransactionPage } from "transaction-page.slint";
 import { SpendingPage } from "spending-page.slint";
-import { PrimaryButton } from "widgets/button.slint";
 import { ComboBoxItem } from "widgets/combobox.slint";
 export { Date, CalendarState }from "widgets/calendar.slint";
 import { Table } from "tableview.slint";
@@ -117,6 +116,70 @@ component AccountSection inherits VerticalLayout {
     }
 }
 
+component CreateAccount inherits PopupWindow {
+    x: Api.window-size().width * 0.5 - self.width * 0.5;
+    y: Api.window-size().height * 0.5 - self.height * 0.5;
+    width: 450px;
+    close-policy: close-on-click-outside;
+
+    Rectangle {
+        background: white;
+        border-radius: 24px;
+        border-width: 1px;
+        border-color: Colors.borderNeutral;
+    }
+
+    VerticalLayout {
+        padding: 24px;
+        spacing: 32px;
+
+        Text {
+            text: @tr("Create account");
+            color: Colors.textHeading;
+            font-size: FontSize.heading-sm;
+        }
+
+        VerticalLayout {
+            spacing: 16px;
+            name := TextField {
+                label: @tr("Name");
+            }
+
+            balance := TextField {
+                label: @tr("Starting balance");
+                input-type: decimal;
+            }
+
+            account-type := ComboBox {
+                label: @tr("Account type");
+                options: [
+                    { value: "cash", text:"Cash account" },
+                    { value: "credit", text:"Credit account" },
+                ];
+            }
+        }
+
+        HorizontalLayout {
+            alignment: end;
+            spacing: 12px;
+
+            PrimaryButton {
+                theme: neutral;
+                text: @tr("Close");
+                clicked => root.close();
+            }
+
+            PrimaryButton {
+                text: @tr("Create account");
+                clicked => {
+                    State.create-account(name.text);
+                    root.close();
+                }
+            }
+        }
+    }
+}
+
 component Sidebar {
     in-out property <[Account]> accounts;
     in property <Page> current-page;
@@ -130,6 +193,8 @@ component Sidebar {
     background := Rectangle {
         background: Colors.neutral25;
     }
+
+    create-account-dialog := CreateAccount { }
 
     HorizontalLayout {
         VerticalLayout {
@@ -171,7 +236,7 @@ component Sidebar {
                 create-account-btn := PrimaryButton {
                     theme: neutral;
                     text: @tr("Create account");
-                    clicked => popup.show();
+                    clicked => create-account-dialog.show();
                 }
 
                 popup := PopupWindow {
