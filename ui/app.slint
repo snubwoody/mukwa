@@ -124,8 +124,8 @@ component CreateAccount inherits PopupWindow {
 
     function submit() {
         account-type.current-value == "cash"
-        ? State.create-account(name.text,cash)
-        : State.create-account(name.text,credit);
+            ? State.create-account(name.text,cash)
+            : State.create-account(name.text,credit);
         self.close();
     }
 
@@ -157,11 +157,11 @@ component CreateAccount inherits PopupWindow {
                 accepted => submit();
             }
 
-            balance := TextField {
-                label: @tr("Starting balance");
-                input-type: decimal;
-                accepted => submit();
-            }
+            //balance := TextField {
+            //    label: @tr("Starting balance");
+            //    input-type: decimal;
+            //    accepted => submit();
+            //}
 
             account-type := ComboBox {
                 label: @tr("Account type");
@@ -247,87 +247,6 @@ component Sidebar {
                     theme: neutral;
                     text: @tr("Create account");
                     clicked => create-account-dialog.show();
-                }
-
-                popup := PopupWindow {
-                    width: create-account-btn.width;
-                    x: create-account-btn.x;
-                    y: create-account-btn.y + create-account-btn.height + 4px;
-                    height: layout.preferred-height;
-
-                    close-policy: close-on-click-outside;
-
-                    forward-focus: focus-scope;
-                    focus-scope := FocusScope {
-                        key-pressed(event) => {
-                            if (event.text == Key.Return) {
-                                //State.create-account(text-field.text);
-                                popup.close();
-                                return accept;
-                            }
-                            if (event.text == Key.Escape) {
-                                popup.close();
-                                return accept;
-                            }
-                            return reject;
-                        }
-                    }
-
-                    Rectangle {
-                        background: white;
-                        border-width: 1px;
-                        border-radius: 4px;
-                        border-color: Colors.neutral50;
-                    }
-
-                    layout := VerticalLayout {
-                        alignment: start;
-                        padding: 8px;
-                        spacing: 12px;
-
-                        Text {
-                            text: @tr("Create new account");
-                            font-size: 13px;
-                            font-weight: 500;
-                            color: Colors.textHeading;
-                        }
-
-                        VerticalLayout {
-                            spacing: 4px;
-
-                            Text {
-                                text: @tr("Account name");
-                                color: Colors.textBody;
-                            }
-
-                            text-field := TextField {
-                                placeholder-text: @tr("My account");
-                                accepted => {
-                                    //State.create-account(text-field.text);
-                                    popup.close();
-                                }
-                            }
-                        }
-
-                        HorizontalLayout {
-                            spacing: 8px;
-                            cross-axis-alignment: start;
-
-                            PrimaryButton {
-                                theme: ghost;
-                                text: @tr("Cancel");
-                                clicked => popup.close();
-                            }
-
-                            PrimaryButton {
-                                text: @tr("Create");
-                                clicked => {
-                                   //State.create-account(text-field.text);
-                                    popup.close();
-                                }
-                            }
-                        }
-                    }
                 }
             }
 
