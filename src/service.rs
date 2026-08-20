@@ -647,6 +647,8 @@ impl Service {
             connection: Rc::new(connection),
         };
 
+        service.create_account("Test account", AccountType::Cash)?;
+
         Ok(service)
     }
 
@@ -944,13 +946,18 @@ impl Service {
     }
 
     /// Creates a new [`Account`].
-    pub fn create_account(&self, name: &str) -> crate::Result<Account> {
+    pub fn create_account(&self, name: &str, account_type: AccountType) -> crate::Result<Account> {
+        let account_type = match account_type {
+            AccountType::Cash => 1,
+            AccountType::Credit => 2,
+        };
         let connection = self.connection();
-        let sql = "INSERT INTO accounts(id,name) VALUES(?1,?2) RETURNING *";
+        let sql = "INSERT INTO accounts(id,name,account_type) VALUES(?1,?2,?3) RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
-        let mut rows = stmt.query_and_then([&Uuid::now_v7().to_string(), name], |row| {
-            Account::try_from(row)
-        })?;
+        let mut rows = stmt.query_and_then(
+            params![&Uuid::now_v7().to_string(), name, account_type],
+            |row| Account::try_from(row),
+        )?;
         let account = rows.next().unwrap()?;
         Ok(account)
     }
@@ -1253,7 +1260,7 @@ mod test {
     #[test]
     fn create_expense() -> crate::Result<()> {
         let service = Service::open_in_memory()?;
-        let account = service.create_account("My account")?;
+        let account = service.create_account("My account", AccountType::Cash)?;
         let group = service.create_category_group("")?;
         let category = service.create_category("Movies", group.id)?;
         let expense = service
@@ -1277,7 +1284,7 @@ mod test {
     #[test]
     fn create_income() -> crate::Result<()> {
         let service = Service::open_in_memory()?;
-        let account = service.create_account("My account")?;
+        let account = service.create_account("My account", AccountType::Cash)?;
         let income = service
             .create_income()
             .date(date(20, 1, 1))
@@ -1298,8 +1305,8 @@ mod test {
     #[test]
     fn create_transfer() -> crate::Result<()> {
         let service = Service::open_in_memory()?;
-        let account = service.create_account("My account")?;
-        let account2 = service.create_account("My account 2")?;
+        let account = service.create_account("My account", AccountType::Cash)?;
+        let account2 = service.create_account("My account 2", AccountType::Cash)?;
         let transfer = service
             .create_transfer()
             .date(date(2100, 12, 1))

@@ -16,7 +16,7 @@
 
 use jiff::Zoned;
 use jiff::civil::date;
-use mukwa::service::{Category, CategoryGroup, CreateBudgetOpts, Service, TransactionType};
+use mukwa::service::{AccountType, Category, CategoryGroup, CreateBudgetOpts, Service, TransactionType};
 use mukwa::{Money, create_test_db};
 use rusqlite::OptionalExtension;
 use uuid::Uuid;
@@ -25,7 +25,7 @@ use uuid::Uuid;
 fn create_account() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
-    let account = service.create_account("My account")?;
+    let account = service.create_account("My account",AccountType::Cash)?;
     assert_eq!(account.name, "My account");
 
     let connection = service.connection();
@@ -34,7 +34,14 @@ fn create_account() -> mukwa::Result<()> {
         [account.id.to_string()],
         |row| row.get::<_, String>(0),
     )?;
+    let account_type = connection.query_one(
+        "SELECT account_type FROM accounts WHERE id=?",
+        [account.id.to_string()],
+        |row| row.get::<_, i64>(0),
+    )?;
     assert_eq!(name, account.name);
+    todo!()
+    assert_eq!(account_type, 1);
     Ok(())
 }
 
