@@ -671,14 +671,13 @@ impl Service {
     ///
     /// ## Example
     /// ```
-    /// use mukwa::service::Service;
     /// use mukwa::Money;
-    /// use mukwa::service::TransactionType;
+    /// use mukwa::service::{TransactionType,Service,AccountType};
     ///
     /// fn main() -> mukwa::Result<()>{
     ///     let service = Service::open_in_memory()?;
     ///
-    ///     let account = service.create_account("My account")?;
+    ///     let account = service.create_account("Credit card",AccountType::Credit)?;
     ///     let transaction = service
     ///         .create_expense()
     ///         .amount(Money::new(5))
@@ -698,15 +697,14 @@ impl Service {
     ///
     /// ## Example
     /// ```
-    /// use mukwa::service::Service;
     /// use mukwa::Money;
     /// use jiff::civil::date;
-    /// use mukwa::service::TransactionType;
+    /// use mukwa::service::{TransactionType,AccountType,Service};
     ///
     /// fn main() -> mukwa::Result<()>{
     ///     let service = Service::open_in_memory()?;
     ///
-    ///     let account = service.create_account("Chequing")?;
+    ///     let account = service.create_account("Chequing",AccountType::Cash)?;
     ///     let transaction = service
     ///         .create_income()
     ///         .amount(Money::new(12_500))
@@ -728,15 +726,14 @@ impl Service {
     ///
     /// ## Example
     /// ```
-    /// use mukwa::service::Service;
     /// use mukwa::Money;
-    /// use mukwa::service::TransactionType;
+    /// use mukwa::service::{TransactionType,AccountType,Service};
     ///
     /// fn main() -> mukwa::Result<()>{
     ///     let service = Service::open_in_memory()?;
     ///
-    ///     let account = service.create_account("Chequing")?;
-    ///     let account2 = service.create_account("Savings")?;
+    ///     let account = service.create_account("Chequing",AccountType::Cash)?;
+    ///     let account2 = service.create_account("Savings",AccountType::Cash)?;
     ///     let transaction = service
     ///         .create_transfer()
     ///         .amount(Money::new(4000))

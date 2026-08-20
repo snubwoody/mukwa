@@ -34,7 +34,7 @@ use std::time::Instant;
 
 use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
-use crate::service::{Account, Service};
+use crate::service::Service;
 use crate::state::AppState;
 use crate::ui::MainWindow;
 use jiff::civil::Date;
