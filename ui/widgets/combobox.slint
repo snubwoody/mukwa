@@ -24,6 +24,7 @@ export struct ComboBoxItem {
 }
 
 export component ComboBox {
+    in-out property <string> label;
     in property <[ComboBoxItem]> options;
     out property <int> current-index: 0;
     in-out property <string> current-value: options[current-index].value;
@@ -71,34 +72,43 @@ export component ComboBox {
         }
     }
 
-    background := Rectangle {
-        background: white;
-        border-color: Colors.neutral50;
-        border-width: 1px;
-        border-radius: 8px;
-        clip: true;
-    }
+    layout := VerticalLayout {
+        spacing: 8px;
 
-    HorizontalLayout {
-        padding-top: 4px;
-        padding-bottom: 4px;
-        padding-left: 8px;
-        padding-right: 8px;
-        text := Text {
-            text: options[current-index].text;
+        if label != "": Text {
+            text: label;
             color: Colors.textBody;
-            width: 100%;
-            horizontal-alignment: left;
-            vertical-alignment: center;
-            overflow: elide;
-            horizontal-stretch: 1;
-            vertical-stretch: 1;
+        }
+
+        Rectangle {
+            background: white;
+            border-color: Colors.neutral50;
+            border-width: 1px;
+            border-radius: 4px;
+            clip: true;
+
+            VerticalLayout {
+                padding-top: 4px;
+                padding-bottom: 4px;
+                padding-left: 8px;
+                padding-right: 8px;
+                text := Text {
+                    text: options[current-index].text;
+                    color: Colors.textBody;
+                    width: 100%;
+                    horizontal-alignment: left;
+                    vertical-alignment: center;
+                    overflow: elide;
+                    horizontal-stretch: 1;
+                    vertical-stretch: 1;
+                }
+            }
         }
     }
 
     popup := PopupWindow {
         width: max(root.width,250px);
-        y: root.y + background.height;
+        y: root.y + layout.height;
         height: min(content.preferred-height,250px);
         close-policy: close-on-click-outside;
         forward-focus: popup-fs;
