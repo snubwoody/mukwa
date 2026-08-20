@@ -17,6 +17,7 @@ import { Colors } from "../colors.slint";
 
 // TODO: handle cursor position and scrolling
 export component TextField {
+    in-out property <string> label;
     in property <string> placeholder-text;
     in-out property <string> text <=> text-input.text;
     in property <int> font-weight: FontWeight.normal;
@@ -27,24 +28,34 @@ export component TextField {
 
     forward-focus: text-input;
 
-    Rectangle {
-        background: white;
-        border-color: text-input.has-focus ? Colors.accent : Colors.neutral50;
-        border-width: 1px;
-        border-radius: 4px;
-        clip: true;
-    }
+    VerticalLayout {
+        spacing: 8px;
 
-    HorizontalLayout {
-        padding-top: 4px;
-        padding-bottom: 4px;
-        padding-left: 8px;
-        padding-right: 8px;
-        text-input := TextInput {
-            font-weight: font-weight;
-            //accessible-placeholder-text: placeholder-text;
+        if label != "": Text {
+            text: label;
             color: Colors.textBody;
-            text: placeholder-text;
+        }
+
+        Rectangle {
+            background: white;
+            border-color: text-input.has-focus ? Colors.accent : Colors.neutral50;
+            border-width: 1px;
+            border-radius: 4px;
+            clip: true;
+
+            VerticalLayout {
+                padding-top: 4px;
+                padding-bottom: 4px;
+                padding-left: 8px;
+                padding-right: 8px;
+
+                text-input := TextInput {
+                    font-weight: font-weight;
+                    //accessible-placeholder-text: placeholder-text;
+                    color: Colors.textBody;
+                    text: placeholder-text;
+                }
+            }
         }
     }
 }
