@@ -122,6 +122,15 @@ component CreateAccount inherits PopupWindow {
     width: 450px;
     close-policy: close-on-click-outside;
 
+    function submit() {
+        State.create-account(name.text);
+        self.close();
+    }
+
+    init => {
+        name.focus();
+    }
+
     Rectangle {
         background: white;
         border-radius: 24px;
@@ -143,11 +152,13 @@ component CreateAccount inherits PopupWindow {
             spacing: 16px;
             name := TextField {
                 label: @tr("Name");
+                accepted => submit();
             }
 
             balance := TextField {
                 label: @tr("Starting balance");
                 input-type: decimal;
+                accepted => submit();
             }
 
             account-type := ComboBox {
@@ -171,10 +182,7 @@ component CreateAccount inherits PopupWindow {
 
             PrimaryButton {
                 text: @tr("Create account");
-                clicked => {
-                    State.create-account(name.text);
-                    root.close();
-                }
+                clicked => submit();
             }
         }
     }
