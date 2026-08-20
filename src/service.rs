@@ -24,19 +24,11 @@ use std::path::Path;
 use std::rc::Rc;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Default, Ord, Eq)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq, Default)]
 pub struct Account {
     pub id: Uuid,
     pub name: String,
-}
-
-impl Account {
-    pub fn new(name: &str) -> Account {
-        Account {
-            id: Uuid::now_v7(),
-            name: name.to_string(),
-        }
-    }
+    pub account_type: AccountType,
 }
 
 impl From<Account> for ui::Account {
@@ -44,6 +36,7 @@ impl From<Account> for ui::Account {
         Self {
             id: account.id.to_string().into(),
             name: account.name.into(),
+            account_type: account.account_type.into(),
         }
     }
 }
@@ -71,8 +64,34 @@ impl From<&Account> for ui::Account {
         Self {
             id: account.id.to_string().into(),
             name: account.name.clone().into(),
+            account_type: account.account_type.into(),
         }
     }
+}
+
+impl From<&AccountType> for ui::AccountType {
+    fn from(value: &AccountType) -> Self {
+        match value {
+            AccountType::Cash => Self::Cash,
+            AccountType::Credit => Self::Credit,
+        }
+    }
+}
+
+impl From<AccountType> for ui::AccountType {
+    fn from(value: AccountType) -> Self {
+        match value {
+            AccountType::Cash => Self::Cash,
+            AccountType::Credit => Self::Credit,
+        }
+    }
+}
+
+#[derive(PartialOrd, PartialEq, Debug, Clone, Copy, Ord, Eq, Default)]
+pub enum AccountType {
+    #[default]
+    Cash = 1,
+    Credit = 2,
 }
 
 #[derive(PartialOrd, PartialEq, Debug, Default, Clone, Copy)]
@@ -325,9 +344,16 @@ impl<'a> TryFrom<&Row<'a>> for Account {
 
     fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
         let id: String = value.get("id")?;
+        let account_type = match value.get::<_, i64>("account_type_id")? {
+            1 => Ok(AccountType::Cash),
+            2 => Ok(AccountType::Credit),
+            _ => Err(Error::new("Failed to parse account type")),
+        };
+
         let account = Account {
             id: Uuid::parse_str(&id)?,
             name: value.get("name")?,
+            account_type: account_type?,
         };
 
         Ok(account)
@@ -622,6 +648,8 @@ impl Service {
             connection: Rc::new(connection),
         };
 
+        service.create_account("Test account", AccountType::Cash)?;
+
         Ok(service)
     }
 
@@ -643,14 +671,13 @@ impl Service {
     ///
     /// ## Example
     /// ```
-    /// use mukwa::service::Service;
     /// use mukwa::Money;
-    /// use mukwa::service::TransactionType;
+    /// use mukwa::service::{TransactionType,Service,AccountType};
     ///
     /// fn main() -> mukwa::Result<()>{
     ///     let service = Service::open_in_memory()?;
     ///
-    ///     let account = service.create_account("My account")?;
+    ///     let account = service.create_account("Credit card",AccountType::Credit)?;
     ///     let transaction = service
     ///         .create_expense()
     ///         .amount(Money::new(5))
@@ -670,15 +697,14 @@ impl Service {
     ///
     /// ## Example
     /// ```
-    /// use mukwa::service::Service;
     /// use mukwa::Money;
     /// use jiff::civil::date;
-    /// use mukwa::service::TransactionType;
+    /// use mukwa::service::{TransactionType,AccountType,Service};
     ///
     /// fn main() -> mukwa::Result<()>{
     ///     let service = Service::open_in_memory()?;
     ///
-    ///     let account = service.create_account("Chequing")?;
+    ///     let account = service.create_account("Chequing",AccountType::Cash)?;
     ///     let transaction = service
     ///         .create_income()
     ///         .amount(Money::new(12_500))
@@ -700,15 +726,14 @@ impl Service {
     ///
     /// ## Example
     /// ```
-    /// use mukwa::service::Service;
     /// use mukwa::Money;
-    /// use mukwa::service::TransactionType;
+    /// use mukwa::service::{TransactionType,AccountType,Service};
     ///
     /// fn main() -> mukwa::Result<()>{
     ///     let service = Service::open_in_memory()?;
     ///
-    ///     let account = service.create_account("Chequing")?;
-    ///     let account2 = service.create_account("Savings")?;
+    ///     let account = service.create_account("Chequing",AccountType::Cash)?;
+    ///     let account2 = service.create_account("Savings",AccountType::Cash)?;
     ///     let transaction = service
     ///         .create_transfer()
     ///         .amount(Money::new(4000))
@@ -919,13 +944,18 @@ impl Service {
     }
 
     /// Creates a new [`Account`].
-    pub fn create_account(&self, name: &str) -> crate::Result<Account> {
+    pub fn create_account(&self, name: &str, account_type: AccountType) -> crate::Result<Account> {
+        let account_type = match account_type {
+            AccountType::Cash => 1,
+            AccountType::Credit => 2,
+        };
         let connection = self.connection();
-        let sql = "INSERT INTO accounts(id,name) VALUES(?1,?2) RETURNING *";
+        let sql = "INSERT INTO accounts(id,name,account_type_id) VALUES(?1,?2,?3) RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
-        let mut rows = stmt.query_and_then([&Uuid::now_v7().to_string(), name], |row| {
-            Account::try_from(row)
-        })?;
+        let mut rows = stmt.query_and_then(
+            params![&Uuid::now_v7().to_string(), name, account_type],
+            |row| Account::try_from(row),
+        )?;
         let account = rows.next().unwrap()?;
         Ok(account)
     }
@@ -1228,7 +1258,7 @@ mod test {
     #[test]
     fn create_expense() -> crate::Result<()> {
         let service = Service::open_in_memory()?;
-        let account = service.create_account("My account")?;
+        let account = service.create_account("My account", AccountType::Cash)?;
         let group = service.create_category_group("")?;
         let category = service.create_category("Movies", group.id)?;
         let expense = service
@@ -1252,7 +1282,7 @@ mod test {
     #[test]
     fn create_income() -> crate::Result<()> {
         let service = Service::open_in_memory()?;
-        let account = service.create_account("My account")?;
+        let account = service.create_account("My account", AccountType::Cash)?;
         let income = service
             .create_income()
             .date(date(20, 1, 1))
@@ -1273,8 +1303,8 @@ mod test {
     #[test]
     fn create_transfer() -> crate::Result<()> {
         let service = Service::open_in_memory()?;
-        let account = service.create_account("My account")?;
-        let account2 = service.create_account("My account 2")?;
+        let account = service.create_account("My account", AccountType::Cash)?;
+        let account2 = service.create_account("My account 2", AccountType::Cash)?;
         let transfer = service
             .create_transfer()
             .date(date(2100, 12, 1))

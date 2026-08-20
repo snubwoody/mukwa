@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::service::{CreateBudgetOpts, Service, Transaction};
+use crate::service::{AccountType, CreateBudgetOpts, Service, Transaction};
 use crate::{Money, ui};
 use jiff::Zoned;
 use jiff::civil::Date;
@@ -117,8 +117,16 @@ impl AppState {
     }
 
     /// Creates a new account.
-    pub fn create_account(&mut self, name: &str) -> crate::Result<()> {
-        let account = self.service.create_account(name)?;
+    pub fn create_account(
+        &mut self,
+        name: &str,
+        account_type: ui::AccountType,
+    ) -> crate::Result<()> {
+        let account_type = match account_type {
+            ui::AccountType::Cash => AccountType::Cash,
+            ui::AccountType::Credit => AccountType::Credit,
+        };
+        let account = self.service.create_account(name, account_type)?;
         info!(id=?account.id,"Created new account");
         self.accounts.push(account.clone().into());
         self.account_options.push(account.into());

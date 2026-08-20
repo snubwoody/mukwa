@@ -3,7 +3,9 @@
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 ofuse slint :: private_unstable_api :: re_exports as sp;/
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -372,7 +374,11 @@ impl App {
 
         global_state.on_create_account({
             let mut state = state.clone();
-            move |name| state.create_account(name.as_str()).unwrap()
+            move |name, account_type| {
+                if let Err(err) = state.create_account(name.as_str(), account_type) {
+                    warn!("Failed to create account: {err}")
+                }
+            }
         });
 
         global_state.on_get_category({

@@ -17,9 +17,15 @@
 import { ComboBoxItem } from "widgets/combobox.slint";
 import { Date } from "widgets/calendar.slint";
 
+export enum AccountType {
+    cash,
+    credit,
+}
+
 export struct Account {
     id: string,
     name: string,
+    account-type: AccountType,
 }
 
 export struct Category {
@@ -80,7 +86,7 @@ export global Api {
 }
 
 export global State {
-    callback create-account(name: string);
+    callback create-account(name: string, type: AccountType);
     callback create-transaction(CreateTransactionOpts);
     callback duplicate-transaction(id: string);
     callback delete-transaction(id: string);

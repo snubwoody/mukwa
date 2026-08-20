@@ -174,6 +174,23 @@ impl Migrator {
         Ok(())
     }
 
+    /// Runs a single migration.
+    fn run_migration(&self, conn: &mut Connection, migration: &Migration) -> crate::Result<()> {
+        conn.pragma_update(None, "foreign_keys", "OFF")?;
+
+        let tx = conn.transaction()?;
+        tx.execute_batch(&migration.up)
+            .context(format!("Failed to run migration {}", migration.version))?;
+        tx.execute(
+            "INSERT INTO schema_migrations(version) VALUES(?)",
+            [migration.version],
+        )?;
+        tx.commit()?;
+
+        conn.pragma_update(None, "foreign_keys", "ON")?;
+        Ok(())
+    }
+
     /// Run all the migrations.
     pub fn migrate(&self, conn: &mut Connection) -> crate::Result<()> {
         create_migrations_table(conn)?;
@@ -188,21 +205,37 @@ impl Migrator {
             }
 
             let instant = Instant::now();
-            conn.pragma_update(None, "foreign_keys", "OFF")?;
-
-            let tx = conn.transaction()?;
-            tx.execute_batch(&migration.up)
-                .context(format!("Failed to run migration {}", migration.version))?;
-            tx.execute(
-                "INSERT INTO schema_migrations(version) VALUES(?)",
-                [migration.version],
-            )?;
-            tx.commit()?;
-
-            conn.pragma_update(None, "foreign_keys", "ON")?;
+            self.run_migration(conn, migration)?;
 
             let duration = instant.elapsed().as_millis();
             info!("Applied migration {} in {duration}ms", migration.version);
+        }
+
+        Ok(())
+    }
+
+    /// Runs all the migrations up to and including `version`.
+    pub fn migrate_until(&self, conn: &mut Connection, version: i64) -> crate::Result<()> {
+        create_migrations_table(conn)?;
+        let applied_migrations = self.applied_migrations(conn)?;
+
+        let mut migrations = self.migrations.clone();
+        migrations.sort_by_key(|a| a.version);
+
+        for migration in &migrations {
+            if applied_migrations.contains(&migration.version) {
+                continue;
+            }
+
+            let instant = Instant::now();
+            self.run_migration(conn, migration)?;
+
+            let duration = instant.elapsed().as_millis();
+            info!("Applied migration {} in {duration}ms", migration.version);
+
+            if migration.version == version {
+                break;
+            }
         }
 
         Ok(())
