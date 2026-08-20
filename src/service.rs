@@ -24,7 +24,7 @@ use std::path::Path;
 use std::rc::Rc;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq)]
+#[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq, Default)]
 pub struct Account {
     pub id: Uuid,
     pub name: String,
@@ -87,8 +87,9 @@ impl From<AccountType> for ui::AccountType {
     }
 }
 
-#[derive(PartialOrd, PartialEq, Debug, Clone, Copy, Ord, Eq)]
+#[derive(PartialOrd, PartialEq, Debug, Clone, Copy, Ord, Eq, Default)]
 pub enum AccountType {
+    #[default]
     Cash = 1,
     Credit = 2,
 }
@@ -952,7 +953,7 @@ impl Service {
             AccountType::Credit => 2,
         };
         let connection = self.connection();
-        let sql = "INSERT INTO accounts(id,name,account_type) VALUES(?1,?2,?3) RETURNING *";
+        let sql = "INSERT INTO accounts(id,name,account_type_id) VALUES(?1,?2,?3) RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
         let mut rows = stmt.query_and_then(
             params![&Uuid::now_v7().to_string(), name, account_type],

@@ -16,16 +16,19 @@
 
 use jiff::Zoned;
 use jiff::civil::date;
-use mukwa::service::{AccountType, Category, CategoryGroup, CreateBudgetOpts, Service, TransactionType};
+use mukwa::migrator::Migrator;
+use mukwa::service::{
+    AccountType, Category, CategoryGroup, CreateBudgetOpts, Service, TransactionType,
+};
 use mukwa::{Money, create_test_db};
-use rusqlite::OptionalExtension;
+use rusqlite::{Connection, OptionalExtension};
 use uuid::Uuid;
 
 #[test]
 fn create_account() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
-    let account = service.create_account("My account",AccountType::Cash)?;
+    let account = service.create_account("My account", AccountType::Cash)?;
     assert_eq!(account.name, "My account");
 
     let connection = service.connection();
@@ -35,13 +38,12 @@ fn create_account() -> mukwa::Result<()> {
         |row| row.get::<_, String>(0),
     )?;
     let account_type = connection.query_one(
-        "SELECT account_type FROM accounts WHERE id=?",
+        "SELECT t.title FROM accounts a JOIN account_types t ON t.id == a.account_type_id WHERE a.id=?",
         [account.id.to_string()],
-        |row| row.get::<_, i64>(0),
+        |row| row.get::<_, String>(0),
     )?;
     assert_eq!(name, account.name);
-    todo!()
-    assert_eq!(account_type, 1);
+    assert_eq!(account_type, "Cash");
     Ok(())
 }
 
@@ -179,7 +181,11 @@ fn fetch_budgets_by_month() -> mukwa::Result<()> {
 
 #[test]
 fn create_expense_fails_with_no_accounts() -> mukwa::Result<()> {
-    let service = Service::open_in_memory()?;
+    let mut connection = Connection::open_in_memory()?;
+    let mut migrator = Migrator::new();
+    migrator.load_embedded()?;
+    migrator.migrate(&mut connection)?;
+    let service = Service::new(connection);
     let result = service.create_expense().submit();
     assert!(result.is_err());
     Ok(())
@@ -187,7 +193,11 @@ fn create_expense_fails_with_no_accounts() -> mukwa::Result<()> {
 
 #[test]
 fn create_income_fails_with_no_accounts() -> mukwa::Result<()> {
-    let service = Service::open_in_memory()?;
+    let mut connection = Connection::open_in_memory()?;
+    let mut migrator = Migrator::new();
+    migrator.load_embedded()?;
+    migrator.migrate(&mut connection)?;
+    let service = Service::new(connection);
     let result = service.create_expense().submit();
     assert!(result.is_err());
     Ok(())
@@ -197,7 +207,7 @@ fn create_income_fails_with_no_accounts() -> mukwa::Result<()> {
 fn create_expense_uses_first_account() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
-    let account = service.create_account("")?;
+    let account = service.create_account("", AccountType::Cash)?;
     let transaction = service.create_expense().submit()?;
     assert_eq!(transaction.sender_id.unwrap(), account.id);
     Ok(())
@@ -207,7 +217,7 @@ fn create_expense_uses_first_account() -> mukwa::Result<()> {
 fn create_income_uses_first_account() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
-    let account = service.create_account("")?;
+    let account = service.create_account("", AccountType::Cash)?;
     let transaction = service.create_expense().submit()?;
     assert_eq!(transaction.sender_id.unwrap(), account.id);
     Ok(())
@@ -216,7 +226,7 @@ fn create_income_uses_first_account() -> mukwa::Result<()> {
 #[test]
 fn total_spent() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    service.create_account("")?;
+    service.create_account("", AccountType::Cash)?;
 
     let date = date(2020, 12, 14);
     let group = service.create_category_group("")?;
@@ -242,7 +252,7 @@ fn total_spent() -> mukwa::Result<()> {
 #[test]
 fn total_spent_in_group() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    service.create_account("")?;
+    service.create_account("", AccountType::Cash)?;
 
     let group = service.create_category_group("")?;
     let category = service.create_category("", group.id)?;
@@ -268,7 +278,7 @@ fn total_spent_in_group() -> mukwa::Result<()> {
 #[test]
 fn total_assigned_in_group() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    service.create_account("")?;
+    service.create_account("", AccountType::Cash)?;
 
     let group = service.create_category_group("")?;
     let group2 = service.create_category_group("")?;
@@ -296,7 +306,7 @@ fn total_assigned_in_group() -> mukwa::Result<()> {
 #[test]
 fn total_spent_in_group_only_counts_category_once() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    service.create_account("")?;
+    service.create_account("", AccountType::Cash)?;
 
     let group = service.create_category_group("")?;
     let category = service.create_category("", group.id)?;
@@ -317,7 +327,7 @@ fn total_spent_in_group_only_counts_category_once() -> mukwa::Result<()> {
 #[test]
 fn total_spent_filters_by_date() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    service.create_account("")?;
+    service.create_account("", AccountType::Cash)?;
 
     let date = date(2020, 12, 14);
     let group = service.create_category_group("")?;
@@ -343,7 +353,7 @@ fn total_spent_filters_by_date() -> mukwa::Result<()> {
 #[test]
 fn account_balance() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    let account = service.create_account("")?;
+    let account = service.create_account("", AccountType::Cash)?;
 
     let group = service.create_category_group("")?;
     let category = service.create_category("", group.id)?;
@@ -367,7 +377,7 @@ fn account_balance() -> mukwa::Result<()> {
 #[test]
 fn account_balance_negative() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    let account = service.create_account("")?;
+    let account = service.create_account("", AccountType::Cash)?;
 
     let group = service.create_category_group("")?;
     let category = service.create_category("", group.id)?;
@@ -391,7 +401,7 @@ fn account_balance_negative() -> mukwa::Result<()> {
 #[test]
 fn account_balance_with_no_transactions() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    let account = service.create_account("")?;
+    let account = service.create_account("", AccountType::Cash)?;
 
     let group = service.create_category_group("")?;
     service.create_category("", group.id)?;
@@ -411,7 +421,7 @@ fn delete_transaction() -> mukwa::Result<()> {
     let connection = create_test_db();
 
     let service = Service::new(connection);
-    service.create_account("")?;
+    service.create_account("", AccountType::Cash)?;
 
     let transaction = service.create_expense().submit()?;
     service.delete_transaction(transaction.id)?;
@@ -426,7 +436,7 @@ fn duplicate_transaction() -> mukwa::Result<()> {
     let connection = create_test_db();
 
     let service = Service::new(connection);
-    service.create_account("")?;
+    service.create_account("", AccountType::Cash)?;
 
     let transaction = service.create_expense().submit()?;
     service.duplicate_transaction(transaction.id)?;
@@ -448,7 +458,7 @@ fn set_transaction_date() -> mukwa::Result<()> {
     let connection = create_test_db();
 
     let service = Service::new(connection);
-    let account = service.create_account("")?;
+    let account = service.create_account("", AccountType::Cash)?;
 
     let transaction = service.create_expense().account(account.id).submit()?;
     let date = date(200, 12, 22);
@@ -467,8 +477,8 @@ fn set_transaction_date() -> mukwa::Result<()> {
 #[test]
 fn set_transaction_account() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    let account = service.create_account("")?;
-    let account2 = service.create_account("")?;
+    let account = service.create_account("", AccountType::Cash)?;
+    let account2 = service.create_account("", AccountType::Cash)?;
 
     let transaction = service.create_expense().account(account.id).submit()?;
     let transaction = service.set_transaction_account(transaction.id, account2.id)?;
@@ -486,7 +496,7 @@ fn set_transaction_account() -> mukwa::Result<()> {
 #[test]
 fn set_transaction_outflow() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    let account = service.create_account("")?;
+    let account = service.create_account("", AccountType::Cash)?;
 
     let transaction = service.create_expense().account(account.id).submit()?;
     let transaction = service.set_transaction_outflow(transaction.id, Money::new(500))?;
@@ -504,7 +514,7 @@ fn set_transaction_outflow() -> mukwa::Result<()> {
 #[test]
 fn set_transaction_inflow_for_expense() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    let account = service.create_account("")?;
+    let account = service.create_account("", AccountType::Cash)?;
 
     let transaction = service.create_expense().account(account.id).submit()?;
     let transaction = service.set_transaction_inflow(transaction.id, Money::new(500))?;
@@ -517,7 +527,7 @@ fn set_transaction_inflow_for_expense() -> mukwa::Result<()> {
 #[test]
 fn set_transaction_category() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    service.create_account("")?;
+    service.create_account("", AccountType::Cash)?;
 
     let group = service.create_category_group("")?;
     let category = service.create_category("", group.id)?;
@@ -539,7 +549,7 @@ fn can_only_set_category_for_expenses() -> mukwa::Result<()> {
     let connection = create_test_db();
 
     let service = Service::new(connection);
-    let account = service.create_account("")?;
+    let account = service.create_account("", AccountType::Cash)?;
 
     let group = service.create_category_group("")?;
     let category = service.create_category("", group.id)?;
@@ -564,7 +574,7 @@ fn can_only_set_category_for_expenses() -> mukwa::Result<()> {
 fn set_transaction_note() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
-    let account = service.create_account("")?;
+    let account = service.create_account("", AccountType::Cash)?;
 
     let transaction = service.create_expense().account(account.id).submit()?;
     let transaction = service.set_transaction_note(transaction.id, "Shoprite")?;
@@ -584,8 +594,8 @@ fn set_transaction_note() -> mukwa::Result<()> {
 fn fetch_accounts() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
-    let a1 = service.create_account("My account")?;
-    let a2 = service.create_account("My account")?;
+    let a1 = service.create_account("My account", AccountType::Cash)?;
+    let a2 = service.create_account("My account", AccountType::Cash)?;
 
     let accounts = service.fetch_accounts()?;
     assert_eq!(accounts.len(), 2);
@@ -598,7 +608,7 @@ fn fetch_accounts() -> mukwa::Result<()> {
 fn fetch_transactions() -> mukwa::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
-    service.create_account("My account")?;
+    service.create_account("My account", AccountType::Cash)?;
 
     let t1 = service.create_expense().submit()?;
     let t2 = service.create_expense().submit()?;
@@ -727,8 +737,8 @@ fn min_budget_amount_is_zero() -> mukwa::Result<()> {
 #[test]
 fn set_payee_on_an_expense() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    let account = service.create_account("")?;
-    let account2 = service.create_account("")?;
+    let account = service.create_account("", AccountType::Cash)?;
+    let account2 = service.create_account("", AccountType::Cash)?;
 
     let expense = service.create_expense().account(account.id).submit()?;
     let transfer = service.set_transaction_payee(expense.id, account2.id)?;
@@ -752,8 +762,8 @@ fn set_payee_on_an_expense() -> mukwa::Result<()> {
 #[test]
 fn set_payee_on_an_income() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    let account = service.create_account("")?;
-    let account2 = service.create_account("")?;
+    let account = service.create_account("", AccountType::Cash)?;
+    let account2 = service.create_account("", AccountType::Cash)?;
 
     let expense = service.create_income().account(account.id).submit()?;
     let transfer = service.set_transaction_payee(expense.id, account2.id)?;
@@ -777,8 +787,8 @@ fn set_payee_on_an_income() -> mukwa::Result<()> {
 #[test]
 fn set_payee_sets_category_to_null() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    let account = service.create_account("")?;
-    let account2 = service.create_account("")?;
+    let account = service.create_account("", AccountType::Cash)?;
+    let account2 = service.create_account("", AccountType::Cash)?;
     let group = service.create_category_group("")?;
     let category = service.create_category("", group.id)?;
 
@@ -849,7 +859,7 @@ fn delete_category_group_deletes_categories_in_group() -> mukwa::Result<()> {
 #[test]
 fn delete_category_with_dependants() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    service.create_account("")?;
+    service.create_account("", AccountType::Cash)?;
     let group = service.create_category_group("")?;
     let category = service.create_category("", group.id)?;
     service.create_expense().category(category.id).submit()?;
@@ -870,7 +880,7 @@ fn delete_category_with_dependants() -> mukwa::Result<()> {
 #[test]
 fn delete_category_deletes_budget() -> mukwa::Result<()> {
     let service = Service::open_in_memory()?;
-    service.create_account("")?;
+    service.create_account("", AccountType::Cash)?;
     let group = service.create_category_group("")?;
     let category = service.create_category("", group.id)?;
     service.create_budget(CreateBudgetOpts {
