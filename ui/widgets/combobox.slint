@@ -10,6 +10,11 @@ export struct ComboBoxItem {
     text: string,
 }
 
+export global ComboBoxApi {
+    // Work around because Slint doesn't have any find-index like API.
+    pure callback find-index(options: [ComboBoxItem], value: string) -> int;
+}
+
 export component ComboBox {
     in-out property <string> label;
     in property <[ComboBoxItem]> options;
@@ -18,6 +23,11 @@ export component ComboBox {
     in property <bool> enabled;
 
     callback changed(value: string);
+
+    init => {
+        current-index = ComboBoxApi.find-index(options, current-value);
+    }
+
     public function open() {
         popup.show();
     }
@@ -36,6 +46,7 @@ export component ComboBox {
 
     accessible-role: combobox;
     accessible-enabled: enabled;
+    accessible-expanded: popup.is-open;
     accessible-expandable: true;
     accessible-value: current-value;
     forward-focus: focus-scope;

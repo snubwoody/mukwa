@@ -98,6 +98,7 @@ impl App {
 
         app.init_settings();
         app.init_api();
+        app.init_combobox_api();
         app.init_global_state();
         app.init_calendar_state();
         Ok(app)
@@ -224,6 +225,20 @@ impl App {
                 }
                 settings_state.unwrap().set_font_family(family);
             }
+        });
+    }
+
+    fn init_combobox_api(&self) {
+        let window = &self.main_window;
+        let api = window.global::<ui::ComboBoxApi>();
+
+        api.on_find_index(|options, value| {
+            for (index, option) in options.iter().enumerate() {
+                if option.value == value {
+                    return index as i32;
+                }
+            }
+            -1
         });
     }
 

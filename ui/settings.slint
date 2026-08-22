@@ -52,6 +52,7 @@ component GeneralSettings inherits VerticalLayout {
 
         ComboBox {
             options: State.currency-options;
+            current-value: Settings.currency-code;
             changed(value) => {
                 Settings.set-currency-code(value);
             }
@@ -91,6 +92,7 @@ component AppearanceSettings inherits VerticalLayout {
 
         ComboBox {
             options: State.font-options;
+            current-value: Settings.font-family;
             changed(value) => {
                 Settings.set-font-family(value);
             }
