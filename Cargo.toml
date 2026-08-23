@@ -36,6 +36,7 @@ serde = { version = "1.0.229", features = ["derive"] }
 fontdb = "0.24.0"
 tiny-skia = "0.12.0"
 image = "0.25.10"
+native-dialog = "0.9.7"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.189"

@@ -15,6 +15,7 @@ export component ImportCsvDialog inherits PopupWindow {
     width: Api.window-size().width * 0.80;
     height: Api.window-size().height * 0.85;
     close-policy: close-on-click-outside;
+    in property <data-transfer> data;
 
     Rectangle {
         background: white;

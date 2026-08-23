@@ -27,6 +27,7 @@ use crate::state::AppState;
 use crate::ui::MainWindow;
 use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
+use native_dialog::DialogBuilder;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
@@ -246,6 +247,26 @@ impl App {
     fn init_api(&self) {
         let window = &self.main_window;
         let api = window.global::<ui::Api>();
+
+        api.on_open_csv(|| {
+            let result = DialogBuilder::file()
+                .add_filter("CSV file", ["csv"])
+                .open_single_file()
+                .show()
+                .unwrap();
+            match result {
+                Some(path) => {
+                    info!("Opened csv file at {:?}", path);
+                    let mut data = DataTransfer::default();
+                    data.set_file_paths([path]);
+                    data
+                }
+                None => {
+                    warn!("No csv file found");
+                    DataTransfer::default()
+                }
+            }
+        });
 
         api.on_format_money_without_symbol({
             move |value| {
