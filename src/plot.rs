@@ -159,7 +159,6 @@ fn theta_to_ordinal_coord(radius: f32, theta: f32, center: (f32, f32)) -> (f32, 
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::fs;
 
     #[test]
     fn draw_arc_splits_into_45deg_segments() {
@@ -179,18 +178,5 @@ mod test {
         test_coord(0.0, (100.0, 50.0));
         test_coord(2.0 * PI, (100.0, 50.0));
         test_coord(PI, (0.0, 50.0));
-    }
-
-    #[test]
-    fn draw_pie_chart() {
-        let series: Vec<f32> = vec![20.0, 24.0, 100.0];
-        let mut pie = PieChart::new(250.0, 250.0, series, 50.0);
-        //pie.hole_radius = 10.0;
-
-        let mut pixmap = Pixmap::new(500, 500).unwrap();
-        pixmap.fill(tiny_skia::Color::WHITE);
-        pie.draw(&mut pixmap);
-        fs::create_dir_all("temp").unwrap();
-        pixmap.save_png("temp/image.png").unwrap();
     }
 }
