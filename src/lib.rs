@@ -24,6 +24,7 @@ use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
 use crate::service::Service;
 use crate::state::AppState;
+use crate::ui::ComboBoxItem;
 use crate::ui::MainWindow;
 use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
@@ -247,6 +248,36 @@ impl App {
     fn init_api(&self) {
         let window = &self.main_window;
         let api = window.global::<ui::Api>();
+
+        // FIXME: panics on unequal lengths
+        api.on_csv_combobox_options(|records| {
+            let mut index = 0;
+            let mut combobox_items = vec![];
+            if let Some(record) = records.iter().next() {
+                for (index, cell) in record.iter().enumerate() {
+                    let item = ComboBoxItem {
+                        text: cell.clone(),
+                        value: index.to_shared_string(),
+                    };
+                    combobox_items.push(item);
+                }
+            }
+            ModelRc::new(VecModel::from(combobox_items))
+        });
+
+        api.on_read_csv(|data| {
+            let path = data.file_paths().unwrap().next().unwrap();
+            let mut reader = csv::Reader::from_path(path).unwrap();
+            // let mut records = vec![];
+            let model = VecModel::default();
+            for result in reader.records() {
+                let record = result.unwrap();
+                let cells: Vec<_> = record.iter().map(|s| s.to_shared_string()).collect();
+                let inner_model = VecModel::from(cells);
+                model.push(ModelRc::new(inner_model));
+            }
+            ModelRc::new(model)
+        });
 
         api.on_open_csv(|| {
             let result = DialogBuilder::file()

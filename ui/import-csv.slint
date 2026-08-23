@@ -16,6 +16,11 @@ export component ImportCsvDialog inherits PopupWindow {
     height: Api.window-size().height * 0.85;
     close-policy: close-on-click-outside;
     in property <data-transfer> data;
+    property <[[string]]> records;
+
+    init => {
+        records = Api.read-csv(data);
+    }
 
     Rectangle {
         background: white;
@@ -47,32 +52,32 @@ export component ImportCsvDialog inherits PopupWindow {
             spacing: 16px;
             ComboBox {
                 label: @tr("Date");
-                options: [{ value:"date", text: "Date" }];
+                options: Api.csv-combobox-options(records);
             }
 
             ComboBox {
                 label: @tr("Payee");
-                options: [{ value:"date", text: "Date" }];
+                options: Api.csv-combobox-options(records);
             }
 
             ComboBox {
                 label: @tr("Category");
-                options: [{ value:"date", text: "Category" }];
+                options: Api.csv-combobox-options(records);
             }
 
             ComboBox {
                 label: @tr("Note");
-                options: [{ value:"note", text: "Note" }];
+                options: Api.csv-combobox-options(records);
             }
 
             ComboBox {
                 label: @tr("Outflow");
-                options: [{ value:"note", text: "Note" }];
+                options: Api.csv-combobox-options(records);
             }
 
             ComboBox {
                 label: @tr("Inflow");
-                options: [{ value:"note", text: "Note" }];
+                options: Api.csv-combobox-options(records);
             }
         }
     }

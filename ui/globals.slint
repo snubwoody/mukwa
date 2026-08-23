@@ -71,6 +71,8 @@ export global Api {
     pure callback today() -> string;
     pure callback format-money-without-symbol(value: string) -> string;
     pure callback open-csv() -> data-transfer;
+    pure callback read-csv(data-transfer) -> [[string]];
+    pure callback csv-combobox-options([[string]]) -> [ComboBoxItem];
 }
 
 export global State {
