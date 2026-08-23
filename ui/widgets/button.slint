@@ -102,6 +102,19 @@ export component IconButton {
         }
         return transparent;
     }
+    
+    function hover-background-color(button-theme: IconButtonTheme) -> color {
+        if (button-theme == IconButtonTheme.accent) {
+            return Colors.accent.darker(0.2);
+        }
+        if (button-theme == IconButtonTheme.neutral) {
+            return Colors.neutral100;
+        }
+        if (button-theme == IconButtonTheme.ghost) {
+            return Colors.neutral50;
+        }
+        return transparent;
+    }
 
     function icon-color(button-theme: IconButtonTheme) -> color {
         if (button-theme == IconButtonTheme.accent) {
@@ -113,8 +126,11 @@ export component IconButton {
     forward-focus: focus-scope;
 
     background := Rectangle {
-        background: background-color(theme);
+        background: touch-area.has-hover ? hover-background-color(theme) : background-color(theme);
         border-radius: 4px;
+        animate background {
+             duration: 150ms;
+        }
     }
 
     HorizontalLayout {
