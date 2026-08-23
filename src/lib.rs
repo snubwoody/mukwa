@@ -171,7 +171,7 @@ impl App {
                 let radius = width.min(height) / 2.0;
                 let mut chart = PieChart::new(width / 2.0, height / 2.0, series, radius);
                 // FIXME: artifacts
-                //chart.set_hole_radius(radius - 50.0);
+                chart.set_hole_radius(radius - 150.0);
                 chart.draw(&mut pixmap);
 
                 let buffer =
