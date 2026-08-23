@@ -83,8 +83,8 @@ impl PieChart {
         draw_arc(
             &mut pb,
             self.hole_radius,
-            start_angle,
-            end_theta,
+            start_angle + end_theta,
+            -end_theta,
             (self.x, self.y),
         );
 

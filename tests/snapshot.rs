@@ -6,8 +6,6 @@ use mukwa::plot::PieChart;
 use std::path::Path;
 use tiny_skia::{Color, Pixmap};
 
-// TODO: test 0 radius, radius greater, equal, extremely thin
-
 fn test_snapshot(path: impl AsRef<Path>, pixmap: &Pixmap) {
     let pixels = pixmap.data();
     let image = image::open(path).unwrap();
@@ -34,6 +32,29 @@ fn simple_pie_chart() -> Result<()> {
     pie.draw(&mut pixmap);
 
     test_snapshot("tests/references/simple_pie_chart.png", &pixmap);
+    Ok(())
+}
+
+#[test]
+fn simple_donut_chart() -> Result<()> {
+    let colors = vec![
+        Color::from_rgba8(100, 24, 24, 255),
+        Color::from_rgba8(0, 254, 24, 255),
+        Color::from_rgba8(0, 24, 254, 255),
+    ];
+
+    let size = 250.0;
+    let center = size / 2.0;
+    let series: Vec<f32> = vec![20.0, 24.0, 100.0];
+    let mut pie = PieChart::new(center, center, series, 100.0);
+    pie.set_colors(colors);
+    pie.set_hole_radius(50.0);
+
+    let mut pixmap = Pixmap::new(size as u32, size as u32).unwrap();
+    pixmap.fill(Color::WHITE);
+    pie.draw(&mut pixmap);
+
+    test_snapshot("tests/references/simple_donut_chart.png", &pixmap);
     Ok(())
 }
 
