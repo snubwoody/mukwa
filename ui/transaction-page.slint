@@ -29,6 +29,7 @@ import { Calendar, Date } from "widgets/calendar.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
 import { Settings } from "settings.slint";
 import { IconButton } from "widgets/button.slint";
+import { ImportCsvDialog } from "import-csv.slint";
 import { IconSet } from "@lucide";
 
 component DateCell inherits TableCell {
@@ -426,6 +427,8 @@ export component TransactionPage inherits VerticalLayout {
     in property <string> active-account-id;
     property <bool> new-transaction-active: false;
 
+    import-csv-dialog := ImportCsvDialog { }
+
     VerticalLayout {
         padding: 12px;
         spacing: 4px;
@@ -460,6 +463,7 @@ export component TransactionPage inherits VerticalLayout {
             icon: IconSet.FileDown;
             theme: ghost;
             accessible-label: @tr("Import CSV file");
+            clicked => import-csv-dialog.show();
         }
 
         PrimaryButton {

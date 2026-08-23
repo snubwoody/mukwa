@@ -1,0 +1,78 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { Api } from "globals.slint";
+import { ComboBox } from "widgets/combobox.slint";
+import { Colors } from "colors.slint";
+import { FontSize } from "theme.slint";
+import { IconButton } from "widgets/button.slint";
+import { IconSet } from "@lucide";
+
+export component ImportCsvDialog inherits PopupWindow {
+    // FIXME: absolute position not working, based on parent
+    x: Api.window-size().width * 0.5 - self.width * 0.5;
+    y: Api.window-size().height * 0.5 - self.height * 0.5;
+    width: Api.window-size().width * 0.80;
+    height: Api.window-size().height * 0.85;
+    close-policy: close-on-click-outside;
+
+    Rectangle {
+        background: white;
+        border-radius: 20px;
+        border-color: Colors.neutral50;
+        border-width: 1px;
+    }
+
+    VerticalLayout {
+        spacing: 20px;
+        padding: 36px;
+
+        HorizontalLayout {
+            alignment: space-between;
+            Text {
+                text: @tr("Import transactions");
+                color: Colors.textHeading;
+                font-size: FontSize.heading-sm;
+            }
+
+            IconButton {
+                icon: IconSet.X;
+                theme: ghost;
+                clicked => root.close();
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 16px;
+            ComboBox {
+                label: @tr("Date");
+                options: [{ value:"date", text: "Date" }];
+            }
+
+            ComboBox {
+                label: @tr("Payee");
+                options: [{ value:"date", text: "Date" }];
+            }
+
+            ComboBox {
+                label: @tr("Category");
+                options: [{ value:"date", text: "Category" }];
+            }
+
+            ComboBox {
+                label: @tr("Note");
+                options: [{ value:"note", text: "Note" }];
+            }
+
+            ComboBox {
+                label: @tr("Outflow");
+                options: [{ value:"note", text: "Note" }];
+            }
+
+            ComboBox {
+                label: @tr("Inflow");
+                options: [{ value:"note", text: "Note" }];
+            }
+        }
+    }
+}

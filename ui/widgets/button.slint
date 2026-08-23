@@ -102,7 +102,7 @@ export component IconButton {
         }
         return transparent;
     }
-    
+
     function hover-background-color(button-theme: IconButtonTheme) -> color {
         if (button-theme == IconButtonTheme.accent) {
             return Colors.accent.darker(0.2);
@@ -128,9 +128,7 @@ export component IconButton {
     background := Rectangle {
         background: touch-area.has-hover ? hover-background-color(theme) : background-color(theme);
         border-radius: 4px;
-        animate background {
-             duration: 150ms;
-        }
+        animate background { duration: 150ms; }
     }
 
     HorizontalLayout {
