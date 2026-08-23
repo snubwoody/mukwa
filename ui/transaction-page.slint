@@ -28,6 +28,8 @@ import { FocusBorder } from "widgets/focus-border.slint";
 import { Calendar, Date } from "widgets/calendar.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
 import { Settings } from "settings.slint";
+import { IconButton } from "widgets/button.slint";
+import { IconSet } from "@lucide";
 
 component DateCell inherits TableCell {
     in property <Transaction> transaction;
@@ -276,7 +278,6 @@ component TransactionRow inherits TableRow {
     }
 }
 
-// TODO: remove the account option and set to active-account-id
 component NewTransactionRow inherits VerticalLayout {
     property <Transaction> transaction: {
         id: "placeholder-transaction",
@@ -453,9 +454,16 @@ export component TransactionPage inherits VerticalLayout {
         padding-right: 16px;
         padding-top: 8px;
         padding-bottom: 8px;
+        spacing: 8px;
+
+        IconButton {
+            icon: IconSet.FileDown;
+            theme: ghost;
+            accessible-label: @tr("Import CSV file");
+        }
 
         PrimaryButton {
-            text: @tr("Add transaction");
+            text: @tr("New");
             clicked => {
                 new-transaction-active = true;
             }
