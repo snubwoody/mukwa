@@ -62,7 +62,7 @@ impl AppState {
         let accounts_model = Rc::new(VecModel::from(account_list));
         let account_options_model = Rc::new(VecModel::from(account_options));
 
-        Ok(AppState {
+        let mut state = AppState {
             service,
             accounts: accounts_model,
             categories: category_model,
@@ -72,7 +72,10 @@ impl AppState {
             transactions: transactions_model,
             category_options: category_options_model,
             budgets: budget_model,
-        })
+        };
+
+        state.load_accounts()?;
+        Ok(state)
     }
 
     pub fn transactions(&self) -> Rc<VecModel<ui::Transaction>> {
@@ -211,6 +214,7 @@ impl AppState {
 
         info!(id=?transaction.id,"Created new transaction");
         self.transactions.insert(0, transaction.into());
+        self.load_accounts()?;
         Ok(())
     }
 
@@ -224,6 +228,7 @@ impl AppState {
             .filter(|t| t.id.as_str() != id)
             .collect::<Vec<_>>();
         self.transactions.set_vec(transactions);
+        self.load_accounts()?;
         Ok(())
     }
 
@@ -253,6 +258,7 @@ impl AppState {
         let transaction = self.service.duplicate_transaction(id)?;
         self.transactions.push(transaction.into());
         info!("Duplicated transaction {id}");
+        self.load_accounts()?;
         Ok(())
     }
 
@@ -384,6 +390,7 @@ impl AppState {
         let transaction = self.service.set_transaction_account(id, account_id)?;
         info!(id=?id,"Updated transaction account");
         self.replace_transaction(transaction);
+        self.load_accounts()?;
         Ok(())
     }
 
@@ -393,6 +400,7 @@ impl AppState {
         let transaction = self.service.set_transaction_payee(id, account_id)?;
         info!(id=?id,"Updated transaction payee");
         self.replace_transaction(transaction);
+        self.load_accounts()?;
         Ok(())
     }
 
@@ -402,6 +410,7 @@ impl AppState {
         let transaction = self.service.set_transaction_outflow(id, amount)?;
         info!(id=?id,"Updated transaction outflow");
         self.replace_transaction(transaction);
+        self.load_accounts()?;
         Ok(())
     }
 
@@ -411,6 +420,7 @@ impl AppState {
         let transaction = self.service.set_transaction_inflow(id, amount)?;
         info!(id=?id,"Updated transaction inflow");
         self.replace_transaction(transaction);
+        self.load_accounts()?;
         Ok(())
     }
 
@@ -420,6 +430,7 @@ impl AppState {
         let transaction = self.service.set_transaction_category(id, category_id)?;
         info!(id=?id,"Updated transaction category");
         self.replace_transaction(transaction);
+        self.load_accounts()?;
         Ok(())
     }
 
@@ -446,6 +457,22 @@ impl AppState {
             .map(|b| b.into())
             .collect();
         self.budgets.set_vec(budgets_list);
+        Ok(())
+    }
+
+    fn load_accounts(&mut self) -> crate::Result<()> {
+        let accounts = self.service.fetch_accounts()?;
+        let mut account_list = vec![];
+        for account in accounts {
+            let balance = self.service.account_balance(account.id)?;
+            account_list.push(ui::Account {
+                id: account.id.to_shared_string(),
+                name: account.name.to_shared_string(),
+                account_type: account.account_type.into(),
+                balance: balance.to_shared_string(),
+            })
+        }
+        self.accounts.set_vec(account_list);
         Ok(())
     }
 

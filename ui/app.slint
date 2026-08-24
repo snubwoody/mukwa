@@ -95,7 +95,7 @@ component AccountSection inherits VerticalLayout {
                     }
 
                     Text {
-                        text: State.format-money(State.account-balance(account.id), Settings.currency-code);
+                        text: State.format-money(account.balance, Settings.currency-code);
                         color: Colors.textBody;
                     }
                 }
