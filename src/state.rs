@@ -513,3 +513,72 @@ impl AppState {
         self.accounts.iter().find(|a| a.id == id)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn set_outflow_reloads_accounts() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let account = service.create_account("", AccountType::Cash)?;
+        let transaction = service
+            .create_income()
+            .account(account.id)
+            .amount(Money::new(500))
+            .submit()?;
+        let mut state = AppState::new(service)?;
+        state.set_transaction_outflow(&transaction.id.to_shared_string(), "400")?;
+        let account = state.get_account(account.id.to_shared_string()).unwrap();
+        assert_eq!(account.balance, Money::new(-400).to_shared_string());
+        Ok(())
+    }
+
+    #[test]
+    fn set_inflow_reloads_accounts() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let account = service.create_account("", AccountType::Cash)?;
+        let transaction = service
+            .create_income()
+            .account(account.id)
+            .amount(Money::new(50))
+            .submit()?;
+        let mut state = AppState::new(service)?;
+        state.set_transaction_inflow(&transaction.id.to_shared_string(), "100")?;
+        let account = state.get_account(account.id.to_shared_string()).unwrap();
+        assert_eq!(account.balance, Money::new(100).to_shared_string());
+        Ok(())
+    }
+
+    #[test]
+    fn duplicate_transaction_reloads_accounts() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let account = service.create_account("", AccountType::Cash)?;
+        let transaction = service
+            .create_income()
+            .account(account.id)
+            .amount(Money::new(50))
+            .submit()?;
+        let mut state = AppState::new(service)?;
+        state.duplicate_transaction(&transaction.id.to_shared_string())?;
+        let account = state.get_account(account.id.to_shared_string()).unwrap();
+        assert_eq!(account.balance, Money::new(100).to_shared_string());
+        Ok(())
+    }
+
+    #[test]
+    fn delete_transaction_reloads_accounts() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let account = service.create_account("", AccountType::Cash)?;
+        let transaction = service
+            .create_income()
+            .account(account.id)
+            .amount(Money::new(50))
+            .submit()?;
+        let mut state = AppState::new(service)?;
+        state.delete_transaction(&transaction.id.to_shared_string())?;
+        let account = state.get_account(account.id.to_shared_string()).unwrap();
+        assert_eq!(account.balance, Money::new(0).to_shared_string());
+        Ok(())
+    }
+}
