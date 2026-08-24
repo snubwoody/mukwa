@@ -113,9 +113,13 @@ export component TableRow {
 export component Table {
     accessible-role: table;
 
-    VerticalLayout {
-        @children
+    Flickable {
+        content-height: layout.preferred-height;
+        layout := VerticalLayout {
+            @children
+        }
     }
+
     // Flickable {
     //     height: 250px;
     //     layout := VerticalLayout {
