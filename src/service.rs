@@ -24,6 +24,7 @@ impl From<Account> for ui::Account {
             id: account.id.to_string().into(),
             name: account.name.into(),
             account_type: account.account_type.into(),
+            balance: Money::ZERO.to_shared_string(),
         }
     }
 }
@@ -52,6 +53,7 @@ impl From<&Account> for ui::Account {
             id: account.id.to_string().into(),
             name: account.name.clone().into(),
             account_type: account.account_type.into(),
+            balance: Money::ZERO.to_shared_string(),
         }
     }
 }

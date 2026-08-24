@@ -440,7 +440,7 @@ export component TransactionPage inherits VerticalLayout {
         Text {
             text: active-account-id.is-empty
                 ? State.format-money(State.total-balance(),Settings.currency-code)
-                : State.format-money(State.account-balance(active-account-id), Settings.currency-code);
+                : State.format-money(State.get-account(active-account-id).balance, Settings.currency-code);
             font-size: FontSize.heading-sm;
             color: Colors.textHeading;
             font-weight: FontWeight.semi-bold;
