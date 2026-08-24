@@ -7,7 +7,12 @@ import { Colors } from "colors.slint";
 import { FontSize } from "theme.slint";
 import { IconButton } from "widgets/button.slint";
 import { IconSet } from "@lucide";
+import { Table, TableRow, TableCell } from "tableview.slint";
+import { PrimaryButton } from "widgets.slint";
 
+export global ImportCsvState { }
+
+// TODO: add no column option as -1
 export component ImportCsvDialog inherits PopupWindow {
     // FIXME: absolute position not working, based on parent
     x: Api.window-size().width * 0.5 - self.width * 0.5;
@@ -78,6 +83,74 @@ export component ImportCsvDialog inherits PopupWindow {
             ComboBox {
                 label: @tr("Inflow");
                 options: Api.csv-combobox-options(records);
+            }
+        }
+
+        Table {
+            TableRow {
+                TableCell {
+                    Text {
+                        text: @tr("Date");
+                        color: Colors.textBody;
+                    }
+                }
+
+                TableCell {
+                    Text {
+                        text: @tr("Payee");
+                        color: Colors.textBody;
+                    }
+                }
+
+                TableCell {
+                    Text {
+                        text: @tr("Category");
+                        color: Colors.textBody;
+                    }
+                }
+
+                TableCell {
+                    Text {
+                        text: @tr("Note");
+                        color: Colors.textBody;
+                    }
+                }
+
+                TableCell {
+                    Text {
+                        text: @tr("Outflow");
+                        color: Colors.textBody;
+                    }
+                }
+
+                TableCell {
+                    Text {
+                        text: @tr("Inflow");
+                        color: Colors.textBody;
+                    }
+                }
+            }
+
+            for record in records: TableRow {
+                for cell in record: TableCell {
+                    Text {
+                        text: cell;
+                        color: Colors.textBody;
+                    }
+                }
+            }
+        }
+
+        HorizontalLayout {
+            alignment: end;
+            spacing: 16px;
+            PrimaryButton {
+                text: @tr("Cancel");
+                theme: neutral;
+            }
+
+            PrimaryButton {
+                text: @tr("Import");
             }
         }
     }
