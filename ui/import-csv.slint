@@ -61,42 +61,65 @@ export component ImportCsvDialog inherits PopupWindow {
 
         VerticalLayout {
             alignment: start;
+            Text {
+                text: @tr("Match the CSV column to the transaction field");
+                color: Colors.textBody;
+            }
+
             HorizontalLayout {
                 spacing: 16px;
                 ComboBox {
                     label: @tr("Date");
                     current-value: records[0][date-column-index];
                     options: Api.csv-combobox-options(records);
+                    changed(value) => {
+                        date-column-index = self.current-index
+                    }
                 }
 
                 ComboBox {
                     label: @tr("Payee");
                     current-value: records[0][payee-column-index];
                     options: Api.csv-combobox-options(records);
+                    changed(value) => {
+                        payee-column-index = self.current-index
+                    }
                 }
 
                 ComboBox {
                     label: @tr("Category");
                     current-value: records[0][category-column-index];
                     options: Api.csv-combobox-options(records);
+                    changed(value) => {
+                        category-column-index = self.current-index
+                    }
                 }
 
                 ComboBox {
                     label: @tr("Note");
                     current-value: records[0][note-column-index];
                     options: Api.csv-combobox-options(records);
+                    changed(value) => {
+                        note-column-index = self.current-index
+                    }
                 }
 
                 ComboBox {
                     label: @tr("Outflow");
                     current-value: records[0][outflow-column-index];
                     options: Api.csv-combobox-options(records);
+                    changed(value) => {
+                        outflow-column-index = self.current-index
+                    }
                 }
 
                 ComboBox {
                     label: @tr("Inflow");
                     current-value: records[0][inflow-column-index];
                     options: Api.csv-combobox-options(records);
+                    changed(value) => {
+                        inflow-column-index = self.current-index
+                    }
                 }
             }
         }
@@ -147,9 +170,44 @@ export component ImportCsvDialog inherits PopupWindow {
             }
 
             for record in records: TableRow {
-                for cell in record: TableCell {
+                TableCell {
                     Text {
-                        text: cell;
+                        text: record[date-column-index];
+                        color: Colors.textBody;
+                    }
+                }
+
+                TableCell {
+                    Text {
+                        text: record[payee-column-index];
+                        color: Colors.textBody;
+                    }
+                }
+
+                TableCell {
+                    Text {
+                        text: record[category-column-index];
+                        color: Colors.textBody;
+                    }
+                }
+
+                TableCell {
+                    Text {
+                        text: record[note-column-index];
+                        color: Colors.textBody;
+                    }
+                }
+
+                TableCell {
+                    Text {
+                        text: record[outflow-column-index];
+                        color: Colors.textBody;
+                    }
+                }
+
+                TableCell {
+                    Text {
+                        text: record[inflow-column-index];
                         color: Colors.textBody;
                     }
                 }
