@@ -22,6 +22,12 @@ export component ImportCsvDialog inherits PopupWindow {
     close-policy: close-on-click-outside;
     in property <data-transfer> data;
     property <[[string]]> records;
+    property <int> date-column-index: min(0,records[0].length);
+    property <int> payee-column-index: min(1,records[0].length);
+    property <int> category-column-index: min(2,records[0].length);
+    property <int> note-column-index: min(3,records[0].length);
+    property <int> outflow-column-index: min(4,records[0].length);
+    property <int> inflow-column-index: min(5,records[0].length);
 
     init => {
         records = Api.read-csv(data);
@@ -53,36 +59,45 @@ export component ImportCsvDialog inherits PopupWindow {
             }
         }
 
-        HorizontalLayout {
-            spacing: 16px;
-            ComboBox {
-                label: @tr("Date");
-                options: Api.csv-combobox-options(records);
-            }
+        VerticalLayout {
+            alignment: start;
+            HorizontalLayout {
+                spacing: 16px;
+                ComboBox {
+                    label: @tr("Date");
+                    current-value: records[0][date-column-index];
+                    options: Api.csv-combobox-options(records);
+                }
 
-            ComboBox {
-                label: @tr("Payee");
-                options: Api.csv-combobox-options(records);
-            }
+                ComboBox {
+                    label: @tr("Payee");
+                    current-value: records[0][payee-column-index];
+                    options: Api.csv-combobox-options(records);
+                }
 
-            ComboBox {
-                label: @tr("Category");
-                options: Api.csv-combobox-options(records);
-            }
+                ComboBox {
+                    label: @tr("Category");
+                    current-value: records[0][category-column-index];
+                    options: Api.csv-combobox-options(records);
+                }
 
-            ComboBox {
-                label: @tr("Note");
-                options: Api.csv-combobox-options(records);
-            }
+                ComboBox {
+                    label: @tr("Note");
+                    current-value: records[0][note-column-index];
+                    options: Api.csv-combobox-options(records);
+                }
 
-            ComboBox {
-                label: @tr("Outflow");
-                options: Api.csv-combobox-options(records);
-            }
+                ComboBox {
+                    label: @tr("Outflow");
+                    current-value: records[0][outflow-column-index];
+                    options: Api.csv-combobox-options(records);
+                }
 
-            ComboBox {
-                label: @tr("Inflow");
-                options: Api.csv-combobox-options(records);
+                ComboBox {
+                    label: @tr("Inflow");
+                    current-value: records[0][inflow-column-index];
+                    options: Api.csv-combobox-options(records);
+                }
             }
         }
 
