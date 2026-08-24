@@ -196,8 +196,8 @@ component TransactionRow inherits TableRow {
         context-menu.show();
     }
 
-    padding-left: 8px;
-    padding-right: 8px;
+    //padding-left: 8px;
+    //padding-right: 8px;
 
     context-menu := ContextMenu {
         min-width: 250px;
@@ -219,7 +219,7 @@ component TransactionRow inherits TableRow {
     }
 
     DateCell {
-        width: parent.width / length;
+        //width: parent.width / length;
         transaction: transaction;
         changed(value) => {
             State.set-transaction-date(transaction.id, value.year + "-" + value.month + "-" + value.day);
@@ -227,7 +227,7 @@ component TransactionRow inherits TableRow {
     }
 
     if active-account-id == "": AccountCell {
-        width: parent.width / length;
+        //width: parent.width / length;
         transaction: transaction;
         changed(value) => {
             State.set-transaction-account(transaction.id,value);
@@ -236,7 +236,7 @@ component TransactionRow inherits TableRow {
 
     // TODO: add icon showing direction or Transfer to and Transfer from
     PayeeCell {
-        width: parent.width / length;
+        //width: parent.width / length;
         transaction: transaction;
         changed(value) => {
             State.set-transaction-payee(transaction.id,value);
@@ -244,7 +244,7 @@ component TransactionRow inherits TableRow {
     }
 
     CategoryCell {
-        width: parent.width / length;
+        //width: parent.width / length;
         transaction: transaction;
         changed(value) => {
             State.set-transaction-category(transaction.id,value);
@@ -252,7 +252,7 @@ component TransactionRow inherits TableRow {
     }
 
     NoteCell {
-        width: parent.width / length;
+        //width: parent.width / length;
         transaction: transaction;
         changed(value) => {
             State.set-transaction-note(transaction.id, value);
@@ -260,7 +260,7 @@ component TransactionRow inherits TableRow {
     }
 
     MoneyCell {
-        width: parent.width / length;
+        //width: parent.width / length;
         amount: transaction.outflow;
         changed(value) => {
             State.set-transaction-outflow(transaction.id, value);
@@ -268,7 +268,7 @@ component TransactionRow inherits TableRow {
     }
 
     MoneyCell {
-        width: parent.width / length;
+        //width: parent.width / length;
         amount: transaction.inflow;
         changed(value) => {
             State.set-transaction-inflow(transaction.id, value);
@@ -467,10 +467,10 @@ export component TransactionPage inherits VerticalLayout {
         property <int> length: active-account-id.is-empty ? 7 : 6;
 
         TableRow {
-            padding-left: 8px;
-            padding-right: 8px;
+            //padding-left: 8px;
+            //padding-right: 8px;
             for column in columns: TableCell {
-                width: parent.width / length;
+                //width: parent.width / length;
                 Text {
                     text: column;
                     color: Colors.textBody;
@@ -478,22 +478,22 @@ export component TransactionPage inherits VerticalLayout {
             }
         }
 
-        if new-transaction-active: NewTransactionRow {
-            length: length;
-            active-account-id: active-account-id;
-            closed => {
-                new-transaction-active = false;
-            }
-        }
+        // if new-transaction-active: NewTransactionRow {
+        //     length: length;
+        //     active-account-id: active-account-id;
+        //     closed => {
+        //         new-transaction-active = false;
+        //     }
+        // }
 
         // TODO: maybe show payees as well
-        for transaction[index] in transactions: TransactionRow {
-            transaction: transaction;
-            active-account-id: active-account-id;
-            length: length;
-            visible: active-account-id.is-empty ? true :
-                transaction.account-id == active-account-id;
-            height: self.visible ? self.preferred-height : 0;
-        }
+        // for transaction[index] in transactions: TransactionRow {
+        //     transaction: transaction;
+        //     active-account-id: active-account-id;
+        //     length: length;
+        //     visible: active-account-id.is-empty ? true :
+        //         transaction.account-id == active-account-id;
+        //     height: self.visible ? self.preferred-height : 0;
+        // }
     }
 }

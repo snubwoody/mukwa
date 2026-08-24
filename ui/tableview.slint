@@ -112,11 +112,16 @@ export component TableRow {
 
 export component Table {
     accessible-role: table;
-    ScrollView {
-        layout := VerticalLayout {
-            alignment: start;
-            width: root.width;
-            @children
-        }
+
+    VerticalLayout {
+        @children
     }
+    // Flickable {
+    //     height: 250px;
+    //     layout := VerticalLayout {
+    //         alignment: start;
+    //         width: root.width;
+    //         @children
+    //     }
+    // }
 }
