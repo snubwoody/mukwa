@@ -1,4 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-export component AnalyticsPage { }
+export global AnalyticsApi {
+    pure callback draw-pie-chart(width: length, height: length) -> image;
+}
+
+export component AnalyticsPage {
+    Rectangle {
+        width: 500px;
+        height: 500px;
+        Image {
+            width: 100%;
+            height: 100%;
+            source: AnalyticsApi.draw-pie-chart(self.width,self.height);
+        }
+    }
+}
