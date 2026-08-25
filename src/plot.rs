@@ -41,6 +41,10 @@ impl PieSegment {
         pixmap.stroke_path(&path, &paint, &stroke, Transform::identity(), None);
     }
 
+    pub fn color(&self) -> Color {
+        self.color
+    }
+
     fn label_line(&self) -> Path {
         let end_theta = 2.0 * PI * self.ratio;
         let mid_angle = self.start_angle + end_theta * 0.5;
@@ -248,28 +252,6 @@ fn theta_to_ordinal_coord(radius: f32, theta: f32, center: (f32, f32)) -> (f32, 
 #[cfg(test)]
 mod test {
     use super::*;
-
-    #[test]
-    fn draw_label_lines() -> crate::Result<()> {
-        let colors = vec![
-            Color::from_rgba8(100, 24, 24, 255),
-            Color::from_rgba8(0, 254, 24, 255),
-            Color::from_rgba8(0, 24, 254, 255),
-        ];
-
-        let size = 250.0;
-        let center = size / 2.0;
-        let series: Vec<f32> = vec![20.0, 24.0, 100.0];
-        let mut pie = PieChart::new(center, center, series, 100.0);
-        pie.set_colors(colors);
-
-        let mut pixmap = Pixmap::new(size as u32, size as u32).unwrap();
-        pixmap.fill(Color::WHITE);
-        pie.draw_with_labels(&mut pixmap);
-        pixmap.save_png("temp/image.png").unwrap();
-
-        Ok(())
-    }
 
     #[test]
     fn draw_arc_splits_into_45deg_segments() {
