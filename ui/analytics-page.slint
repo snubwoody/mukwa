@@ -44,8 +44,10 @@ export component AnalyticsPage inherits VerticalLayout {
             width: 500px;
             height: 500px;
             for path in AnalyticsApi.draw-pie-chart-segment(self.width, self.height): Path {
-                //width: 250px;
-                //height: 250px;
+                width: 100%;
+                height: 100%;
+                viewbox-width: 500;
+                viewbox-height: 500;
                 stroke-width: 1px;
                 fill: Colors.accent;
                 commands: path;
