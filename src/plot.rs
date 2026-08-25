@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use std::f32::consts::PI;
-use tiny_skia::{Color, FillRule, Paint, Path, PathBuilder, Pixmap, Transform};
+use tiny_skia::{Color, FillRule, Paint, Path, PathBuilder, Pixmap, Stroke, Transform};
 
 pub struct PieSegment {
     // The center position
@@ -28,6 +28,28 @@ impl PieSegment {
             Transform::identity(),
             None,
         );
+    }
+
+    /// Draws the segment's label onto the pixmap.
+    pub fn draw_labels(&self, pixmap: &mut Pixmap) {
+        let path = self.label_line();
+        let mut paint = Paint::default();
+        paint.set_color(Color::from_rgba8(100, 100, 100, 255));
+        let stroke = Stroke::default();
+        pixmap.stroke_path(&path, &paint, &stroke, Transform::identity(), None);
+    }
+
+    fn label_line(&self) -> Path {
+        let end_theta = 2.0 * PI * self.ratio;
+        let mid_angle = self.start_angle + end_theta * 0.5;
+
+        let start = theta_to_ordinal_coord(self.radius, mid_angle, (self.x, self.y));
+        let end = theta_to_ordinal_coord(self.radius + 50.0, mid_angle, (self.x, self.y));
+
+        let mut pb = PathBuilder::new();
+        pb.move_to(start.0, start.1);
+        pb.line_to(end.0, end.1);
+        pb.finish().unwrap()
     }
 
     fn to_path(&self) -> Path {
@@ -148,6 +170,14 @@ impl PieChart {
             segment.draw(pixmap);
         }
     }
+
+    /// Draws the pie chart, with labels, onto the Pixmap
+    pub fn draw_with_labels(&self, pixmap: &mut Pixmap) {
+        for segment in self.segments() {
+            segment.draw(pixmap);
+            segment.draw_labels(pixmap);
+        }
+    }
 }
 
 /// Draws a circular arc approximated using quadratic beziers, starting at `start_angle` and
@@ -193,6 +223,28 @@ fn theta_to_ordinal_coord(radius: f32, theta: f32, center: (f32, f32)) -> (f32, 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn draw_label_lines() -> crate::Result<()> {
+        let colors = vec![
+            Color::from_rgba8(100, 24, 24, 255),
+            Color::from_rgba8(0, 254, 24, 255),
+            Color::from_rgba8(0, 24, 254, 255),
+        ];
+
+        let size = 250.0;
+        let center = size / 2.0;
+        let series: Vec<f32> = vec![20.0, 24.0, 100.0];
+        let mut pie = PieChart::new(center, center, series, 100.0);
+        pie.set_colors(colors);
+
+        let mut pixmap = Pixmap::new(size as u32, size as u32).unwrap();
+        pixmap.fill(Color::WHITE);
+        pie.draw_with_labels(&mut pixmap);
+        pixmap.save_png("temp/image.png").unwrap();
+
+        Ok(())
+    }
 
     #[test]
     fn draw_arc_splits_into_45deg_segments() {
