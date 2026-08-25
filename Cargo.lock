@@ -3232,6 +3232,7 @@ dependencies = [
  "dirs",
  "divan",
  "fontdb 0.24.0",
+ "i-slint-backend-testing",
  "image",
  "jiff",
  "libc",

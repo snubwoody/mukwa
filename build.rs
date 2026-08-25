@@ -1,6 +1,11 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 fn main() {
+    let path = Path::new("ui");
+    println!("cargo:rustc-env=SLINT_INCLUDE_PATH={}", path.display());
     let library = HashMap::from([("lucide".to_string(), PathBuf::from(lucide_slint::lib()))]);
     let config = slint_build::CompilerConfiguration::new().with_library_paths(library);
     slint_build::compile_with_config("ui/app.slint", config).unwrap();
