@@ -12,7 +12,6 @@ pub mod state;
 pub use error::Error;
 pub use error::Result;
 pub use money::{Currency, Money};
-use slint::Image;
 use slint::{DataTransfer, Global, ModelExt};
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
@@ -25,6 +24,7 @@ use tempfile::tempdir;
 
 use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
+use crate::plot::PieChart;
 use crate::service::Service;
 use crate::service::TransactionType;
 use crate::state::AppState;
@@ -33,7 +33,6 @@ use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
-use slint::SharedPixelBuffer;
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -150,10 +149,9 @@ impl App {
             let state = self.state.clone();
 
             move |width, height| {
-                // TODO: make sure colors are in in a consistent order
-                // TODO: collect transactions below a threshold into "other"
-                // FIXME dont unwrap
-                let transactions = state.service().fetch_transactions().unwrap();
+                // TODO: collect categories below a threshold into 'Other'
+                // TODO: order categories consistently
+                let transactions = state.service().fetch_transactions().unwrap_or_default();
                 let mut map = HashMap::new();
                 for transaction in transactions {
                     if let Some(category_id) = transaction.category_id {
@@ -178,18 +176,25 @@ impl App {
                 ];
 
                 let series: Vec<f32> = map.values().copied().collect();
-                let mut pixmap = tiny_skia::Pixmap::new(width as u32, height as u32).unwrap();
+                let mut pixmap =
+                    tiny_skia::Pixmap::new(width.max(1.0) as u32, height.max(1.0) as u32).unwrap();
                 let radius = width.min(height) / 2.0;
-                let mut chart =
-                    crate::plot::PieChart::new(width / 2.0, height / 2.0, series, radius);
+                let mut chart = PieChart::new(width / 2.0, height / 2.0, series, radius);
                 chart.set_colors(colors);
-                // TODO: collect categories below a threshold into 'Other'
                 chart.set_hole_radius(radius - 150.0);
                 chart.draw(&mut pixmap);
+                let segments = chart.segments();
 
-                let buffer =
-                    SharedPixelBuffer::clone_from_slice(pixmap.data(), width as u32, height as u32);
-                Image::from_rgba8(buffer)
+                let slices = VecModel::default();
+                for segment in segments {
+                    let color = segment.color().to_color_u8();
+                    let slice = ui::PieChartSlice {
+                        path: segment.arc_svg().to_shared_string(),
+                        fill: slint::Color::from_rgb_u8(color.red(), color.green(), color.blue()),
+                    };
+                    slices.push(slice);
+                }
+                ModelRc::new(slices)
             }
         });
     }
