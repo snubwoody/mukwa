@@ -12,23 +12,28 @@ pub mod state;
 pub use error::Error;
 pub use error::Result;
 pub use money::{Currency, Money};
+use slint::Image;
 use slint::{DataTransfer, Global, ModelExt};
 use std::cell::{Ref, RefCell, RefMut};
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io;
 use std::io::Read;
 use std::time::Instant;
+use tempfile::tempdir;
 
 use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
 use crate::service::Service;
+use crate::service::TransactionType;
 use crate::state::AppState;
 use crate::ui::MainWindow;
 use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
+use slint::SharedPixelBuffer;
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -102,7 +107,91 @@ impl App {
         app.init_combobox_api();
         app.init_global_state();
         app.init_calendar_state();
+        app.init_analytics();
         Ok(app)
+    }
+
+    /// Creates a new `App` for testing.
+    pub fn new_test() -> Result<Self> {
+        let temp = tempdir()?;
+        let service = Service::open_in_memory()?;
+        let main_window = ui::MainWindow::new()?;
+
+        let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
+        let state = AppState::new(service)?;
+
+        #[cfg(target_os = "linux")]
+        slint::set_xdg_app_id("com.wakunguma.Mukwa")?;
+
+        let app = App {
+            state,
+            main_window,
+            settings,
+        };
+
+        app.init_settings();
+        app.init_api();
+        app.init_global_state();
+        app.init_calendar_state();
+        app.init_analytics();
+
+        Ok(app)
+    }
+
+    pub fn window(&self) -> &MainWindow {
+        &self.main_window
+    }
+
+    fn init_analytics(&self) {
+        let window = &self.main_window;
+        let analytics = window.global::<ui::AnalyticsApi>();
+
+        analytics.on_draw_pie_chart({
+            let state = self.state.clone();
+
+            move |width, height| {
+                // TODO: make sure colors are in in a consistent order
+                // TODO: collect transactions below a threshold into "other"
+                // FIXME dont unwrap
+                let transactions = state.service().fetch_transactions().unwrap();
+                let mut map = HashMap::new();
+                for transaction in transactions {
+                    if let Some(category_id) = transaction.category_id {
+                        match map.get(&category_id) {
+                            Some(value) => {
+                                map.insert(category_id, transaction.amount.inner() as f32 + value);
+                            }
+                            None => {
+                                map.insert(category_id, transaction.amount.inner() as f32);
+                            }
+                        }
+                    }
+                }
+                let colors = vec![
+                    tiny_skia::Color::from_rgba8(0, 117, 222, 255),
+                    tiny_skia::Color::from_rgba8(0, 94, 180, 255),
+                    tiny_skia::Color::from_rgba8(0, 70, 138, 255),
+                    tiny_skia::Color::from_rgba8(0, 48, 98, 255),
+                    tiny_skia::Color::from_rgba8(61, 144, 255, 255),
+                    tiny_skia::Color::from_rgba8(127, 171, 255, 255),
+                    tiny_skia::Color::from_rgba8(236, 241, 255, 255),
+                ];
+
+                let series: Vec<f32> = map.values().copied().collect();
+                let mut pixmap = tiny_skia::Pixmap::new(width as u32, height as u32).unwrap();
+                let radius = width.min(height) / 2.0;
+                let mut chart =
+                    crate::plot::PieChart::new(width / 2.0, height / 2.0, series, radius);
+                chart.set_colors(colors);
+                // TODO: collect categories below a threshold into 'Other'
+                chart.set_hole_radius(radius - 150.0);
+                chart.draw(&mut pixmap);
+
+                let buffer =
+                    SharedPixelBuffer::clone_from_slice(pixmap.data(), width as u32, height as u32);
+                Image::from_rgba8(buffer)
+            }
+        });
     }
 
     fn init_calendar_state(&self) {
@@ -374,6 +463,24 @@ impl App {
 
         global_state.set_account_options(account_options_rc);
         global_state.set_category_options(ModelRc::new(state.category_options()));
+
+        global_state.on_total_spent_all({
+            let state = state.clone();
+            move || match state.service().fetch_transactions() {
+                Ok(transactions) => {
+                    let total: Money = transactions
+                        .iter()
+                        .filter(|t| t.transaction_type() == TransactionType::Expense)
+                        .map(|t| t.amount)
+                        .sum();
+                    total.to_shared_string()
+                }
+                Err(err) => {
+                    warn!("Error while calculating total spent: {err}");
+                    Money::ZERO.to_shared_string()
+                }
+            }
+        });
 
         global_state.on_create_account({
             let mut state = state.clone();
@@ -774,7 +881,7 @@ pub fn run() -> Result<()> {
 pub fn create_test_db() -> Connection {
     let mut connection = Connection::open_in_memory().expect("Failed to open sqlite connection");
     let mut migrator = Migrator::new();
-    migrator.load_from_dir("./migrations").unwrap();
+    migrator.load_embedded().unwrap();
     migrator.migrate(&mut connection).unwrap();
     connection
 }
@@ -949,6 +1056,33 @@ mod test {
         let path = temp.path().join("settings.toml");
         SettingsStore::open(&path)?;
         assert!(fs::exists(path)?);
+        Ok(())
+    }
+
+    #[test]
+    fn total_spent_all_only_includes_expenses() -> Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let mut app = App::new_test()?;
+        app.state
+            .service()
+            .create_expense()
+            .amount(Money::new(200))
+            .submit()?;
+        app.state
+            .service()
+            .create_expense()
+            .amount(Money::new(500))
+            .submit()?;
+        app.state
+            .service()
+            .create_income()
+            .amount(Money::new(10_000))
+            .submit()?;
+        app.state.load_transactions()?;
+        let window = app.window();
+        let global_state = window.global::<ui::State>();
+        let total = global_state.invoke_total_spent_all();
+        assert_eq!(total, Money::new(700).to_shared_string());
         Ok(())
     }
 }

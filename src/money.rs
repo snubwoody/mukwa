@@ -154,6 +154,12 @@ impl FromStr for Money {
     }
 }
 
+impl std::iter::Sum for Money {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Money::ZERO, |acc, x| acc + x)
+    }
+}
+
 macro_rules! generate_currencies {
     ($($code:ident;$name:expr;$symbol:expr;$precision:expr),+) => {
         impl Currency{

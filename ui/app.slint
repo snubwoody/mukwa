@@ -27,6 +27,7 @@ export {
     AccountType,
 }from "globals.slint";
 export { Settings }from "settings.slint";
+export { AnalyticsApi }from "analytics-page.slint";
 import { Button, TextField, ComboBox, PrimaryButton } from "widgets.slint";
 import { TransactionPage } from "transaction-page.slint";
 import { SpendingPage } from "spending-page.slint";
@@ -37,8 +38,13 @@ import { Table } from "tableview.slint";
 import { IconDisplay, IconSet, Icon } from "@lucide";
 import { SettingsDialog, Settings } from "settings.slint";
 import { FontSize } from "theme.slint";
+import { AnalyticsPage } from "analytics-page.slint";
 
-enum Page { spending, transactions }
+enum Page {
+    spending,
+    transactions,
+    analytics,
+}
 
 component SidebarButton inherits Button {
     in property <bool> selected;
@@ -218,6 +224,18 @@ component Sidebar {
                     }
                 }
 
+                SidebarButton {
+                    text: @tr("Analytics");
+                    selected: current-page == Page.analytics && active-account-id == "";
+                    clicked => select-page(Page.analytics);
+                    IconDisplay {
+                        icon: IconSet.ChartPie;
+                        size: 14px;
+                        stroke-width: 2;
+                        stroke: Colors.textBody;
+                    }
+                }
+
                 AccountSection {
                     current-page: current-page;
                     select-page(page) => select-page(page);
@@ -292,6 +310,8 @@ export component MainWindow inherits Window {
         }
 
         if active-page == Page.spending: SpendingPage { }
+
+        if active-page == Page.analytics: AnalyticsPage { }
 
         if active-page == Page.transactions: TransactionPage {
             active-account-id: active-account-id;

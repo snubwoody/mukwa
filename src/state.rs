@@ -82,6 +82,10 @@ impl AppState {
         self.transactions.clone()
     }
 
+    pub fn service(&self) -> Service {
+        self.service.clone()
+    }
+
     pub fn accounts(&self) -> Rc<VecModel<ui::Account>> {
         self.accounts.clone()
     }
@@ -238,7 +242,7 @@ impl AppState {
         info!("Deleted category {id}");
         self.reset_budgets(self.current_budget_month)?;
         self.reset_categories()?;
-        self.reset_transactions()?;
+        self.load_transactions()?;
         Ok(())
     }
 
@@ -249,7 +253,7 @@ impl AppState {
         self.reset_budgets(self.current_budget_month)?;
         self.reset_category_groups()?;
         self.reset_categories()?;
-        self.reset_transactions()?;
+        self.load_transactions()?;
         Ok(())
     }
 
@@ -487,7 +491,7 @@ impl AppState {
         Ok(())
     }
 
-    fn reset_transactions(&mut self) -> crate::Result<()> {
+    pub(crate) fn load_transactions(&mut self) -> crate::Result<()> {
         let transactions: Vec<ui::Transaction> = self
             .service
             .fetch_transactions()?
