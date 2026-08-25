@@ -2,7 +2,9 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use std::f32::consts::PI;
-use tiny_skia::{Color, FillRule, Paint, Path, PathBuilder, Pixmap, Stroke, Transform};
+use tiny_skia::{
+    Color, FillRule, Paint, Path, PathBuilder, PathSegment, Pixmap, Point, Stroke, Transform,
+};
 
 pub struct PieSegment {
     // The center position
@@ -50,6 +52,29 @@ impl PieSegment {
         pb.move_to(start.0, start.1);
         pb.line_to(end.0, end.1);
         pb.finish().unwrap()
+    }
+
+    /// Generates an SVG string for the arc path.
+    pub fn arc_svg(&self) -> String {
+        // TODO: start_position function
+        let mut svg = String::new();
+        let path = self.to_path();
+        for segment in path.segments() {
+            match segment {
+                PathSegment::MoveTo(Point { x, y }) => svg += &format!("M {x} {y} "),
+                PathSegment::LineTo(Point { x, y }) => svg += &format!("L {x} {y} "),
+                PathSegment::QuadTo(Point { x: x1, y: y1 }, Point { x, y }) => {
+                    svg += &format!("S {x1} {y1}, {x} {y} ")
+                }
+                PathSegment::CubicTo(
+                    Point { x: x2, y: y2 },
+                    Point { x: x1, y: y1 },
+                    Point { x, y },
+                ) => svg += &format!("C {x2} {y2}, {x1} {y1}, {x} {y} "),
+                PathSegment::Close => svg += "Z",
+            }
+        }
+        svg
     }
 
     fn to_path(&self) -> Path {
