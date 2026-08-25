@@ -37,6 +37,7 @@ fontdb = "0.24.0"
 tiny-skia = "0.12.0"
 image = "0.25.10"
 
+
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.189"
 
@@ -49,6 +50,11 @@ git = "https://github.com/snubwoody/slint.git"
 branch = "mukwa"
 version = "1.17.0"
 features = ["backend-winit", "renderer-skia", "log"]
+
+[dev-dependencies.i-slint-backend-testing]
+git = "https://github.com/snubwoody/slint.git"
+branch = "mukwa"
+version = "1.17.0"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-sys = { version = "0.61.2", features = ["Win32_Globalization"] }

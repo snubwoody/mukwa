@@ -1061,6 +1061,7 @@ mod test {
 
     #[test]
     fn total_spent_all_only_includes_expenses() -> Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
         let mut app = App::new_test()?;
         app.state
             .service()
