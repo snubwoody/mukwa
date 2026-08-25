@@ -32,6 +32,7 @@ export component AnalyticsPage inherits VerticalLayout {
 
     VerticalLayout {
         spacing: 36px;
+        alignment: start;
         VerticalLayout {
             spacing: 8px;
             alignment: start;
@@ -49,36 +50,38 @@ export component AnalyticsPage inherits VerticalLayout {
             }
         }
 
-        Rectangle {
-            width: 500px;
-            height: 500px;
-            for slice in AnalyticsApi.draw-pie-chart(self.width, self.height): Rectangle {
+        HorizontalLayout {
+            alignment: center;
+            Rectangle {
+                width: 500px;
+                height: 500px;
+                for slice in AnalyticsApi.draw-pie-chart(self.width, self.height): Rectangle {
+                    Path {
+                        width: 100%;
+                        height: 100%;
+                        viewbox-width: 500;
+                        viewbox-height: 500;
+                        fill: slice.fill;
+                        commands: slice.arc-path;
+                    }
 
-                Path {
-                    width: 100%;
-                    height: 100%;
-                    viewbox-width: 500;
-                    viewbox-height: 500;
-                    fill: slice.fill;
-                    commands: slice.arc-path;
-                }
+                    Path {
+                        width: 100%;
+                        height: 100%;
+                        viewbox-width: 500;
+                        viewbox-height: 500;
+                        stroke: Colors.neutral200;
+                        commands: slice.line-path;
+                    }
 
-                Path {
-                    width: 100%;
-                    height: 100%;
-                    viewbox-width: 500;
-                    viewbox-height: 500;
-                    stroke: Colors.neutral200;
-                    commands: slice.line-path;
-                }
-
-                Text {
-                    x: slice.label-x;
-                    y: slice.label-y;
-                    text: slice.label;
-                    color: Colors.textMuted;
-                    font-size: FontSize.caption;
-                    font-weight: FontWeight.light;
+                    Text {
+                        x: slice.label-x;
+                        y: slice.label-y;
+                        text: slice.label;
+                        color: Colors.textMuted;
+                        font-size: FontSize.caption;
+                        font-weight: FontWeight.light;
+                    }
                 }
             }
         }
