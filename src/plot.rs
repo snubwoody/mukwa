@@ -16,6 +16,7 @@ pub struct PieSegment {
     hole_radius: f32,
     radius: f32,
     label_line_length: f32,
+    label: String,
 }
 
 impl PieSegment {
@@ -46,6 +47,10 @@ impl PieSegment {
         self.color
     }
 
+    pub fn label(&self) -> String {
+        self.label.clone()
+    }
+
     fn label_line_path(&self) -> Path {
         let end_theta = 2.0 * PI * self.ratio;
         let mid_angle = self.start_angle + end_theta * 0.5;
@@ -61,6 +66,18 @@ impl PieSegment {
         pb.move_to(start.0, start.1);
         pb.line_to(end.0, end.1);
         pb.finish().unwrap()
+    }
+
+    pub fn label_position(&self) -> (f32, f32) {
+        let end_theta = 2.0 * PI * self.ratio;
+        let mid_angle = self.start_angle + end_theta * 0.5;
+        let approx_font_size = 16.0;
+
+        theta_to_ordinal_coord(
+            self.radius + self.label_line_length + approx_font_size,
+            mid_angle,
+            (self.x, self.y),
+        )
     }
 
     fn segment_to_svg(&self, segment: &PathSegment) -> String {
@@ -149,6 +166,7 @@ pub struct PieChart {
     hole_radius: f32,
     colors: Vec<Color>,
     label_line_length: f32,
+    labels: Vec<String>,
 }
 
 impl PieChart {
@@ -174,6 +192,7 @@ impl PieChart {
             hole_radius: 0.0,
             colors,
             label_line_length: 0.0,
+            labels: Vec::new(),
         }
     }
 
@@ -189,6 +208,10 @@ impl PieChart {
     /// Sets the pie chart colors.
     pub fn set_colors(&mut self, colors: Vec<Color>) {
         self.colors = colors;
+    }
+
+    pub fn set_labels(&mut self, labels: Vec<String>) {
+        self.labels = labels;
     }
 
     pub fn set_label_line_length(&mut self, length: f32) {
@@ -211,6 +234,11 @@ impl PieChart {
                 start_angle,
                 radius: self.radius,
                 label_line_length: self.label_line_length,
+                label: self
+                    .labels
+                    .get(index)
+                    .map(|s| s.to_owned())
+                    .unwrap_or_default(),
             };
 
             start_angle += end_theta;
