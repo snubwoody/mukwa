@@ -3,6 +3,8 @@
 
 import { Colors } from "colors.slint";
 import { FontSize } from "theme.slint";
+import { State } from "globals.slint";
+import { Settings } from "settings.slint";
 
 export global AnalyticsApi {
     pure callback draw-pie-chart(width: length, height: length) -> image;
@@ -22,15 +24,35 @@ export component AnalyticsPage inherits VerticalLayout {
         font-size: FontSize.heading-sm;
     }
 
-    Rectangle {
-        width: 500px;
-        height: 500px;
-        background: white;
-        border-radius: 24px;
-        Image {
-            width: 100%;
-            height: 100%;
-            source: AnalyticsApi.draw-pie-chart(self.width,self.height);
+    VerticalLayout {
+        spacing: 36px;
+        VerticalLayout {
+            spacing: 8px;
+            alignment: start;
+            Text {
+                text: @tr("Total spent");
+                color: Colors.textBody;
+                font-weight: FontWeight.medium;
+            }
+
+            Text {
+                text: State.format-money(State.total-spent-all(), Settings.currency-code);
+                color: Colors.textHeading;
+                font-size: FontSize.heading-sm;
+                font-weight: FontWeight.medium;
+            }
+        }
+
+        Rectangle {
+            width: 500px;
+            height: 500px;
+            background: white;
+            border-radius: 24px;
+            Image {
+                width: 100%;
+                height: 100%;
+                source: AnalyticsApi.draw-pie-chart(self.width,self.height);
+            }
         }
     }
 }

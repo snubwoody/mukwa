@@ -433,6 +433,20 @@ impl App {
         global_state.set_account_options(account_options_rc);
         global_state.set_category_options(ModelRc::new(state.category_options()));
 
+        global_state.on_total_spent_all({
+            let state = state.clone();
+            move || match state.service().fetch_transactions() {
+                Ok(transactions) => {
+                    let total: Money = transactions.iter().map(|t| t.amount).sum();
+                    total.to_shared_string()
+                }
+                Err(err) => {
+                    warn!("Error while calculating total spent: {err}");
+                    Money::ZERO.to_shared_string()
+                }
+            }
+        });
+
         global_state.on_create_account({
             let mut state = state.clone();
             move |name, account_type| {
