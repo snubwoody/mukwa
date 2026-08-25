@@ -64,7 +64,7 @@ impl PieSegment {
                 PathSegment::MoveTo(Point { x, y }) => svg += &format!("M {x} {y} "),
                 PathSegment::LineTo(Point { x, y }) => svg += &format!("L {x} {y} "),
                 PathSegment::QuadTo(Point { x: x1, y: y1 }, Point { x, y }) => {
-                    svg += &format!("S {x1} {y1}, {x} {y} ")
+                    svg += &format!("Q {x1} {y1}, {x} {y} ")
                 }
                 PathSegment::CubicTo(
                     Point { x: x2, y: y2 },
