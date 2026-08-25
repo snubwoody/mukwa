@@ -136,11 +136,22 @@ impl App {
                         }
                     }
                 }
+                let colors = vec![
+                    tiny_skia::Color::from_rgba8(0, 117, 222, 255),
+                    tiny_skia::Color::from_rgba8(0, 94, 180, 255),
+                    tiny_skia::Color::from_rgba8(0, 70, 138, 255),
+                    tiny_skia::Color::from_rgba8(0, 48, 98, 255),
+                    tiny_skia::Color::from_rgba8(61, 144, 255, 255),
+                    tiny_skia::Color::from_rgba8(127, 171, 255, 255),
+                    tiny_skia::Color::from_rgba8(236, 241, 255, 255),
+                ];
+
                 let series: Vec<f32> = map.values().copied().collect();
                 let mut pixmap = tiny_skia::Pixmap::new(width as u32, height as u32).unwrap();
                 let radius = width.min(height) / 2.0;
                 let mut chart =
                     crate::plot::PieChart::new(width / 2.0, height / 2.0, series, radius);
+                chart.set_colors(colors);
                 // FIXME: artifacts
                 chart.set_hole_radius(radius - 150.0);
                 chart.draw(&mut pixmap);
