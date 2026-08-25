@@ -181,6 +181,7 @@ impl App {
                 let radius = width.min(height) / 2.0;
                 let mut chart = PieChart::new(width / 2.0, height / 2.0, series, radius);
                 chart.set_colors(colors);
+                chart.set_label_line_length(50.0);
                 chart.set_hole_radius(radius - 150.0);
                 chart.draw(&mut pixmap);
                 let segments = chart.segments();
@@ -189,7 +190,8 @@ impl App {
                 for segment in segments {
                     let color = segment.color().to_color_u8();
                     let slice = ui::PieChartSlice {
-                        path: segment.arc_svg().to_shared_string(),
+                        arc_path: segment.arc_svg().to_shared_string(),
+                        line_path: segment.label_line_svg().to_shared_string(),
                         fill: slint::Color::from_rgb_u8(color.red(), color.green(), color.blue()),
                     };
                     slices.push(slice);
