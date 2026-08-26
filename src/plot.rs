@@ -204,22 +204,26 @@ impl PieChart {
     ///
     /// ## Panics
     /// Panics if hole radius is `>=` the pie chart radius.
-    pub fn set_hole_radius(&mut self, radius: f32) {
+    pub fn with_hole_radius(mut self, radius: f32) -> Self {
         assert!(radius < self.radius);
         self.hole_radius = radius;
+        self
     }
 
     /// Sets the pie chart colors.
-    pub fn set_colors(&mut self, colors: Vec<Color>) {
+    pub fn with_colors(mut self, colors: Vec<Color>) -> Self {
         self.colors = colors;
+        self
     }
 
-    pub fn set_labels(&mut self, labels: Vec<String>) {
+    pub fn with_labels(mut self, labels: Vec<String>) -> Self {
         self.labels = labels;
+        self
     }
 
-    pub fn set_label_line_length(&mut self, length: f32) {
+    pub fn with_label_line_length(mut self, length: f32) -> Self {
         self.label_line_length = length;
+        self
     }
 
     /// Generates the pie chart segments.

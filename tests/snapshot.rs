@@ -24,8 +24,7 @@ fn simple_pie_chart() -> Result<()> {
     let size = 250.0;
     let center = size / 2.0;
     let series: Vec<f32> = vec![20.0, 24.0, 100.0];
-    let mut pie = PieChart::new(center, center, series, 100.0);
-    pie.set_colors(colors);
+    let mut pie = PieChart::new(center, center, series, 100.0).with_colors(colors);
 
     let mut pixmap = Pixmap::new(size as u32, size as u32).unwrap();
     pixmap.fill(Color::WHITE);
@@ -46,8 +45,7 @@ fn zero_value_slice() -> Result<()> {
     let size = 250.0;
     let center = size / 2.0;
     let series: Vec<f32> = vec![20.0, 0.0, 100.0];
-    let mut pie = PieChart::new(center, center, series, 100.0);
-    pie.set_colors(colors);
+    let mut pie = PieChart::new(center, center, series, 100.0).with_colors(colors);
 
     let mut pixmap = Pixmap::new(size as u32, size as u32).unwrap();
     pixmap.fill(Color::WHITE);
@@ -68,9 +66,9 @@ fn very_thin_donut_chart() -> Result<()> {
     let size = 250.0;
     let center = size / 2.0;
     let series: Vec<f32> = vec![20.0, 0.0, 100.0];
-    let mut pie = PieChart::new(center, center, series, 100.0);
-    pie.set_colors(colors);
-    pie.set_hole_radius(99.5);
+    let mut pie = PieChart::new(center, center, series, 100.0)
+        .with_colors(colors)
+        .with_hole_radius(99.5);
 
     let mut pixmap = Pixmap::new(size as u32, size as u32).unwrap();
     pixmap.fill(Color::WHITE);
@@ -91,9 +89,9 @@ fn simple_donut_chart() -> Result<()> {
     let size = 250.0;
     let center = size / 2.0;
     let series: Vec<f32> = vec![20.0, 24.0, 100.0];
-    let mut pie = PieChart::new(center, center, series, 100.0);
-    pie.set_colors(colors);
-    pie.set_hole_radius(50.0);
+    let mut pie = PieChart::new(center, center, series, 100.0)
+        .with_colors(colors)
+        .with_hole_radius(50.0);
 
     let mut pixmap = Pixmap::new(size as u32, size as u32).unwrap();
     pixmap.fill(Color::WHITE);
@@ -114,10 +112,10 @@ fn donut_chart_with_label_lines() -> Result<()> {
     let size = 250.0;
     let center = size / 2.0;
     let series: Vec<f32> = vec![20.0, 10.0, 40.0, 24.0, 50.0, 90.0, 100.0];
-    let mut pie = PieChart::new(center, center, series, 100.0);
-    pie.set_label_line_length(25.0);
-    pie.set_colors(colors);
-    pie.set_hole_radius(50.0);
+    let mut pie = PieChart::new(center, center, series, 100.0)
+        .with_label_line_length(25.0)
+        .with_colors(colors)
+        .with_hole_radius(50.0);
 
     let mut pixmap = Pixmap::new(size as u32, size as u32).unwrap();
     pixmap.fill(Color::WHITE);
@@ -135,8 +133,7 @@ fn single_slice() -> Result<()> {
     let size = 250.0;
     let center = size / 2.0;
     let series: Vec<f32> = vec![100.0];
-    let mut pie = PieChart::new(center, center, series, 100.0);
-    pie.set_colors(colors);
+    let mut pie = PieChart::new(center, center, series, 100.0).with_colors(colors);
 
     let mut pixmap = Pixmap::new(size as u32, size as u32).unwrap();
     pixmap.fill(Color::WHITE);
@@ -157,8 +154,7 @@ fn color_wrap_around() -> Result<()> {
     let size = 250.0;
     let center = size / 2.0;
     let series: Vec<f32> = vec![100.0, 500.0, 90.0, 200.0];
-    let mut pie = PieChart::new(center, center, series, 100.0);
-    pie.set_colors(colors);
+    let mut pie = PieChart::new(center, center, series, 100.0).with_colors(colors);
 
     let mut pixmap = Pixmap::new(size as u32, size as u32).unwrap();
     pixmap.fill(Color::WHITE);
@@ -181,8 +177,7 @@ fn tiny_slice() -> Result<()> {
     let size = 250.0;
     let center = size / 2.0;
     let series: Vec<f32> = vec![0.0001, 0.1, 90.0, 200.0];
-    let mut pie = PieChart::new(center, center, series, 100.0);
-    pie.set_colors(colors);
+    let mut pie = PieChart::new(center, center, series, 100.0).with_colors(colors);
 
     let mut pixmap = Pixmap::new(size as u32, size as u32).unwrap();
     pixmap.fill(Color::WHITE);
@@ -202,8 +197,7 @@ fn clip() -> Result<()> {
     let size = 250.0;
     let center = size / 2.0;
     let series: Vec<f32> = vec![90.0, 200.0];
-    let mut pie = PieChart::new(250.0, center, series, 100.0);
-    pie.set_colors(colors);
+    let mut pie = PieChart::new(250.0, center, series, 100.0).with_colors(colors);
 
     let mut pixmap = Pixmap::new(size as u32, size as u32).unwrap();
     pixmap.fill(Color::WHITE);

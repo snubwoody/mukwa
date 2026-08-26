@@ -189,21 +189,25 @@ impl App {
                 let mut pixmap =
                     tiny_skia::Pixmap::new(width.max(1.0) as u32, height.max(1.0) as u32).unwrap();
                 let radius = width.min(height) / 2.0;
-                let mut chart = PieChart::new(width / 2.0, height / 2.0, series, radius);
-                chart.set_colors(colors.to_vec());
-                chart.set_label_line_length(50.0);
-                chart.set_labels(labels);
-                chart.set_hole_radius(radius - 150.0);
+
+                let mut chart = PieChart::new(width / 2.0, height / 2.0, series, radius)
+                    .with_colors(colors.to_vec())
+                    .with_label_line_length(50.0)
+                    .with_labels(labels)
+                    .with_hole_radius(radius - 150.0);
+
                 chart.draw(&mut pixmap);
                 let segments = chart.segments();
 
                 let slices = VecModel::default();
                 let values = map.values().copied().collect::<Vec<f32>>();
+
                 for (index, segment) in segments.iter().enumerate() {
                     // FIXME: already scaled money
                     let color = segment.color().to_color_u8();
                     let (label_x, label_y) = segment.label_position();
                     let amount = Money::from_f64(values[index].into());
+
                     let slice = ui::PieChartSlice {
                         arc_path: segment.arc_svg().to_shared_string(),
                         line_path: segment.label_line_svg().to_shared_string(),
@@ -214,8 +218,10 @@ impl App {
                         label_y,
                         ratio: segment.ratio(),
                     };
+
                     slices.push(slice);
                 }
+
                 ModelRc::new(slices)
             }
         });
