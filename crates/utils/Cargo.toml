@@ -9,3 +9,4 @@ tracing-subscriber.workspace = true
 rusqlite.workspace = true
 clap.workspace = true
 tracing-appender.workspace = true
+mukwa-core = {path = "../core"}

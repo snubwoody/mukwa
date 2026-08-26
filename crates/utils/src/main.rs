@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use clap::{Parser, Subcommand};
-use mukwa::migrator::Migrator;
+use mukwa_core::migrator::Migrator;
 use rusqlite::Connection;
 use std::path::PathBuf;
 use tracing::{info, warn};
@@ -37,7 +37,7 @@ enum MigrateCommand {
     Rollback,
 }
 
-fn run() -> mukwa::Result<()> {
+fn run() -> mukwa_core::Result<()> {
     let cli = Cli::parse();
     match cli.command {
         Command::Migrate {
@@ -46,7 +46,7 @@ fn run() -> mukwa::Result<()> {
             path,
         } => match command {
             MigrateCommand::New { name } => {
-                let path = mukwa::migrator::create_migration_file(&migrations_dir, &name)?;
+                let path = mukwa_core::migrator::create_migration_file(&migrations_dir, &name)?;
                 info!("Created migration: {:?}", path)
             }
             MigrateCommand::Up => {

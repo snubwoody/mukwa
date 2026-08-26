@@ -5716,6 +5716,7 @@ name = "utils"
 version = "0.1.0-alpha.6"
 dependencies = [
  "clap",
+ "mukwa-core",
  "rusqlite",
  "tracing",
  "tracing-appender",
