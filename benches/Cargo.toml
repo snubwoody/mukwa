@@ -1,0 +1,20 @@
+[package]
+name = "benches"
+version.workspace = true
+edition.workspace = true
+
+[[bench]]
+name = "service"
+harness = false
+path = "src/service.rs"
+
+[[bench]]
+name = "fmt"
+harness = false
+path = "src/fmt.rs"
+
+[dependencies]
+divan = "0.1.21"
+tempfile.workspace = true
+rusqlite.workspace = true
+mukwa-core = {path = "../crates/core"}

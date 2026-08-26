@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use crate::{Error, Money, create_test_db, ui};
+use crate::{Error, Money, create_test_db};
 use jiff::Zoned;
 use jiff::civil::Date;
 use rusqlite::{Connection, Row, params};
-use slint::{SharedString, ToSharedString};
 use std::marker::PhantomData;
 use std::path::Path;
 use std::rc::Rc;
@@ -16,64 +15,6 @@ pub struct Account {
     pub id: Uuid,
     pub name: String,
     pub account_type: AccountType,
-}
-
-impl From<Account> for ui::Account {
-    fn from(account: Account) -> Self {
-        Self {
-            id: account.id.to_string().into(),
-            name: account.name.into(),
-            account_type: account.account_type.into(),
-            balance: Money::ZERO.to_shared_string(),
-        }
-    }
-}
-
-impl From<Account> for ui::ComboBoxItem {
-    fn from(account: Account) -> Self {
-        Self {
-            value: account.id.to_string().into(),
-            text: account.name.to_string().into(),
-        }
-    }
-}
-
-impl From<&Account> for ui::ComboBoxItem {
-    fn from(account: &Account) -> Self {
-        Self {
-            value: account.id.to_string().into(),
-            text: account.name.to_string().into(),
-        }
-    }
-}
-
-impl From<&Account> for ui::Account {
-    fn from(account: &Account) -> Self {
-        Self {
-            id: account.id.to_string().into(),
-            name: account.name.clone().into(),
-            account_type: account.account_type.into(),
-            balance: Money::ZERO.to_shared_string(),
-        }
-    }
-}
-
-impl From<&AccountType> for ui::AccountType {
-    fn from(value: &AccountType) -> Self {
-        match value {
-            AccountType::Cash => Self::Cash,
-            AccountType::Credit => Self::Credit,
-        }
-    }
-}
-
-impl From<AccountType> for ui::AccountType {
-    fn from(value: AccountType) -> Self {
-        match value {
-            AccountType::Cash => Self::Cash,
-            AccountType::Credit => Self::Credit,
-        }
-    }
 }
 
 #[derive(PartialOrd, PartialEq, Debug, Clone, Copy, Ord, Eq, Default)]
@@ -98,30 +39,6 @@ pub struct Budget {
     pub month: i64,
     pub year: i64,
     pub category_id: Uuid,
-}
-
-impl From<Budget> for ui::Budget {
-    fn from(value: Budget) -> Self {
-        Self {
-            id: value.id.to_shared_string(),
-            amount: value.amount.to_shared_string(),
-            year: value.year as i32,
-            month: value.month as i32,
-            category_id: value.category_id.to_shared_string(),
-        }
-    }
-}
-
-impl From<&Budget> for ui::Budget {
-    fn from(value: &Budget) -> Self {
-        Self {
-            id: value.id.to_shared_string(),
-            amount: value.amount.to_shared_string(),
-            year: value.year as i32,
-            month: value.month as i32,
-            category_id: value.category_id.to_shared_string(),
-        }
-    }
 }
 
 impl<'a> TryFrom<&Row<'a>> for Budget {
@@ -157,77 +74,11 @@ pub struct CategoryGroup {
     pub title: String,
 }
 
-impl From<Category> for ui::Category {
-    fn from(value: Category) -> Self {
-        Self {
-            id: value.id.to_shared_string(),
-            title: value.title.to_shared_string(),
-            group_id: value.group_id.to_shared_string(),
-        }
-    }
-}
-
-impl From<CategoryGroup> for ui::CategoryGroup {
-    fn from(value: CategoryGroup) -> Self {
-        Self {
-            id: value.id.to_shared_string(),
-            title: value.title.to_shared_string(),
-        }
-    }
-}
-
-impl From<&CategoryGroup> for ui::CategoryGroup {
-    fn from(value: &CategoryGroup) -> Self {
-        Self {
-            id: value.id.to_shared_string(),
-            title: value.title.to_shared_string(),
-        }
-    }
-}
-
-impl From<&Category> for ui::Category {
-    fn from(value: &Category) -> Self {
-        Self {
-            id: value.id.to_shared_string(),
-            title: value.title.to_shared_string(),
-            group_id: value.group_id.to_shared_string(),
-        }
-    }
-}
-
-impl From<Category> for ui::ComboBoxItem {
-    fn from(value: Category) -> Self {
-        Self {
-            value: value.id.to_string().into(),
-            text: value.title.to_string().into(),
-        }
-    }
-}
-
-impl From<&Category> for ui::ComboBoxItem {
-    fn from(value: &Category) -> Self {
-        Self {
-            value: value.id.to_string().into(),
-            text: value.title.to_string().into(),
-        }
-    }
-}
-
 #[derive(PartialOrd, PartialEq, Debug, Clone, Copy, Eq, Ord)]
 pub enum TransactionType {
     Expense,
     Income,
     Transfer,
-}
-
-impl From<TransactionType> for ui::TransactionType {
-    fn from(value: TransactionType) -> Self {
-        match value {
-            TransactionType::Expense => ui::TransactionType::Expense,
-            TransactionType::Income => ui::TransactionType::Income,
-            TransactionType::Transfer => ui::TransactionType::Transfer,
-        }
-    }
 }
 
 #[derive(PartialEq, Eq, Debug, Default, Clone)]
@@ -346,102 +197,6 @@ impl<'a> TryFrom<&Row<'a>> for Account {
         };
 
         Ok(account)
-    }
-}
-
-impl From<Transaction> for ui::Transaction {
-    fn from(value: Transaction) -> Self {
-        let category_id = match value.category_id {
-            Some(id) => id.to_string(),
-            None => String::new(),
-        };
-
-        let transaction_type = value.transaction_type();
-        let inflow = if transaction_type == TransactionType::Income {
-            value.amount.to_shared_string()
-        } else {
-            SharedString::new()
-        };
-
-        let outflow = if transaction_type == TransactionType::Transfer
-            || transaction_type == TransactionType::Expense
-        {
-            value.amount.to_shared_string()
-        } else {
-            SharedString::new()
-        };
-
-        let note = value.note.unwrap_or_default().to_shared_string();
-
-        let account_id = match transaction_type {
-            TransactionType::Income => value.receiver_id.unwrap().to_shared_string(),
-            _ => value.sender_id.unwrap().to_shared_string(),
-        };
-
-        let payee_id = match transaction_type {
-            TransactionType::Transfer => value.receiver_id.unwrap().to_shared_string(),
-            _ => SharedString::new(),
-        };
-
-        Self {
-            id: value.id.to_shared_string(),
-            account_id,
-            payee_id,
-            category_id: category_id.to_shared_string(),
-            date: value.date.to_shared_string(),
-            outflow,
-            note,
-            inflow,
-            transaction_type: transaction_type.into(),
-        }
-    }
-}
-
-impl From<&Transaction> for ui::Transaction {
-    fn from(value: &Transaction) -> Self {
-        let category_id = match value.category_id {
-            Some(id) => id.to_string(),
-            None => String::new(),
-        };
-
-        let transaction_type = value.transaction_type();
-        let inflow = if transaction_type == TransactionType::Income {
-            value.amount.to_shared_string()
-        } else {
-            SharedString::new()
-        };
-
-        let outflow = if transaction_type == TransactionType::Transfer
-            || transaction_type == TransactionType::Expense
-        {
-            value.amount.to_shared_string()
-        } else {
-            SharedString::new()
-        };
-
-        let note = value.note.clone().unwrap_or_default().to_shared_string();
-
-        let account_id = match transaction_type {
-            TransactionType::Income => value.receiver_id.unwrap().to_shared_string(),
-            _ => value.sender_id.unwrap().to_shared_string(),
-        };
-
-        let payee_id = match transaction_type {
-            TransactionType::Transfer => value.receiver_id.unwrap().to_shared_string(),
-            _ => SharedString::new(),
-        };
-
-        Self {
-            id: value.id.to_string().into(),
-            account_id,
-            payee_id,
-            category_id: category_id.into(),
-            note,
-            date: value.date.to_string().into(),
-            outflow,
-            inflow,
-            transaction_type: transaction_type.into(),
-        }
     }
 }
 
@@ -660,10 +415,10 @@ impl Service {
     ///
     /// ## Example
     /// ```
-    /// use mukwa::Money;
-    /// use mukwa::service::{TransactionType,Service,AccountType};
+    /// use mukwa_core::Money;
+    /// use mukwa_core::service::{TransactionType,Service,AccountType};
     ///
-    /// fn main() -> mukwa::Result<()>{
+    /// fn main() -> mukwa_core::Result<()>{
     ///     let service = Service::open_in_memory()?;
     ///
     ///     let account = service.create_account("Credit card",AccountType::Credit)?;
@@ -686,11 +441,11 @@ impl Service {
     ///
     /// ## Example
     /// ```
-    /// use mukwa::Money;
+    /// use mukwa_core::Money;
     /// use jiff::civil::date;
-    /// use mukwa::service::{TransactionType,AccountType,Service};
+    /// use mukwa_core::service::{TransactionType,AccountType,Service};
     ///
-    /// fn main() -> mukwa::Result<()>{
+    /// fn main() -> mukwa_core::Result<()>{
     ///     let service = Service::open_in_memory()?;
     ///
     ///     let account = service.create_account("Chequing",AccountType::Cash)?;
@@ -715,10 +470,10 @@ impl Service {
     ///
     /// ## Example
     /// ```
-    /// use mukwa::Money;
-    /// use mukwa::service::{TransactionType,AccountType,Service};
+    /// use mukwa_core::Money;
+    /// use mukwa_core::service::{TransactionType,AccountType,Service};
     ///
-    /// fn main() -> mukwa::Result<()>{
+    /// fn main() -> mukwa_core::Result<()>{
     ///     let service = Service::open_in_memory()?;
     ///
     ///     let account = service.create_account("Chequing",AccountType::Cash)?;
@@ -996,6 +751,7 @@ impl Service {
         let mut rows = stmt.query_and_then(params, |row| Budget::try_from(row))?;
         let budget = rows.next().unwrap()?;
 
+        tracing::info!("Created new budget {}", budget.id);
         Ok(budget)
     }
 

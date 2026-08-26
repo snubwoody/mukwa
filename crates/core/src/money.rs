@@ -30,7 +30,7 @@ impl Money {
     ///
     /// ## Examples
     /// ```
-    /// use mukwa::Money;
+    /// use mukwa_core::Money;
     ///
     /// let money = Money::new(200);
     /// assert_eq!(money.inner(),200_000_000);
@@ -49,7 +49,7 @@ impl Money {
     ///
     /// ## Example
     /// ```
-    /// use mukwa::Money;
+    /// use mukwa_core::Money;
     ///
     /// assert_eq!(Money::new(-100).abs(),Money::new(100))
     /// ```

@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use crate::service::{AccountType, CreateBudgetOpts, Service, Transaction};
-use crate::{Money, ui};
+use crate::ui;
 use jiff::Zoned;
 use jiff::civil::Date;
+use mukwa_core::Money;
+use mukwa_core::service::{AccountType, Service, Transaction};
 use slint::{Model, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
 use tracing::{debug, info};
 use uuid::Uuid;
 
-// TODO: set the new transaction to editing
 #[derive(Clone)]
 pub struct AppState {
     service: Service,
@@ -155,14 +155,6 @@ impl AppState {
         Ok(())
     }
 
-    /// Creates a new budget.
-    pub fn create_budget(&mut self, opts: CreateBudgetOpts) -> crate::Result<()> {
-        let budget = self.service.create_budget(opts)?;
-        info!(id=?budget.id,"Created new budget");
-        self.budgets.push(budget.into());
-        Ok(())
-    }
-
     /// Creates a new transaction.
     pub fn create_transaction(&mut self, opts: ui::CreateTransactionOpts) -> crate::Result<()> {
         let date = Date::strptime("%Y-%m-%d", &opts.date)?;
@@ -290,16 +282,6 @@ impl AppState {
         let date = Date::new(date.year as i16, date.month as i8, date.day as i8)?;
         let total = self.service.total_assigned_in_group(id, date)?;
         Ok(total)
-    }
-
-    pub fn fetch_or_init_budgets(&self, date: Date) -> crate::Result<Vec<ui::Budget>> {
-        let budgets: Vec<ui::Budget> = self
-            .service
-            .fetch_or_init_budgets(date)?
-            .iter()
-            .map(|b| b.into())
-            .collect();
-        Ok(budgets)
     }
 
     pub fn left_to_spend(&self, id: &str) -> crate::Result<Money> {
@@ -513,6 +495,7 @@ impl AppState {
         Ok(())
     }
 
+    #[allow(unused)]
     pub fn get_account(&self, id: SharedString) -> Option<ui::Account> {
         self.accounts.iter().find(|a| a.id == id)
     }
@@ -520,7 +503,13 @@ impl AppState {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use crate::state::AppState;
+    use crate::ui::CreateTransactionOpts;
+    use jiff::Zoned;
+    use jiff::civil::date;
+    use mukwa_core::service::{AccountType, CreateBudgetOpts, Service};
+    use mukwa_core::{Money, create_test_db};
+    use slint::{Model, SharedString, ToSharedString};
 
     #[test]
     fn set_outflow_reloads_accounts() -> crate::Result<()> {
@@ -583,6 +572,277 @@ mod test {
         state.delete_transaction(&transaction.id.to_shared_string())?;
         let account = state.get_account(account.id.to_shared_string()).unwrap();
         assert_eq!(account.balance, Money::new(0).to_shared_string());
+        Ok(())
+    }
+
+    #[test]
+    fn create_expense() -> crate::Result<()> {
+        let connection = create_test_db();
+        let service = Service::new(connection);
+        let account = service.create_account("", AccountType::Cash)?;
+        let group = service.create_category_group("")?;
+        let category = service.create_category("", group.id)?;
+
+        let mut state = AppState::new(service)?;
+        let opts = CreateTransactionOpts {
+            account_id: account.id.to_shared_string(),
+            outflow: "0.00".to_shared_string(),
+            category_id: category.id.to_shared_string(),
+            date: Zoned::now().date().to_shared_string(),
+            note: SharedString::from("Pick n Pay"),
+            ..Default::default()
+        };
+        state.create_transaction(opts)?;
+
+        let transaction = state.transactions().remove(0);
+        assert_eq!(transaction.account_id, account.id.to_shared_string());
+        assert_eq!(transaction.category_id, category.id.to_shared_string());
+        assert_eq!(transaction.date, Zoned::now().date().to_shared_string());
+        assert_eq!(transaction.note.as_str(), "Pick n Pay");
+        assert_eq!(transaction.inflow.as_str(), "");
+        assert_eq!(transaction.payee_id.as_str(), "");
+        assert_eq!(transaction.outflow.as_str(), Money::ZERO.to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn create_income() -> crate::Result<()> {
+        let connection = create_test_db();
+        let service = Service::new(connection);
+        let account = service.create_account("", AccountType::Cash)?;
+
+        let mut state = AppState::new(service)?;
+        let opts = CreateTransactionOpts {
+            account_id: account.id.to_shared_string(),
+            inflow: "0.00".to_shared_string(),
+            date: Zoned::now().date().to_shared_string(),
+            note: SharedString::from("Pick n Pay"),
+            ..Default::default()
+        };
+        state.create_transaction(opts)?;
+
+        let transaction = state.transactions().remove(0);
+        assert_eq!(transaction.account_id, account.id.to_shared_string());
+        assert_eq!(transaction.date, Zoned::now().date().to_shared_string());
+        assert_eq!(transaction.note.as_str(), "Pick n Pay");
+        assert_eq!(transaction.outflow.as_str(), "");
+        assert_eq!(transaction.payee_id.as_str(), "");
+        assert_eq!(transaction.inflow.as_str(), Money::ZERO.to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn create_expense_uses_account() -> crate::Result<()> {
+        let connection = create_test_db();
+        let service = Service::new(connection);
+        service.create_account("", AccountType::Cash)?;
+        service.create_account("", AccountType::Cash)?;
+        service.create_account("", AccountType::Cash)?;
+        let account = service.create_account("", AccountType::Cash)?;
+        let group = service.create_category_group("")?;
+        let category = service.create_category("", group.id)?;
+
+        let mut state = AppState::new(service)?;
+        let opts = CreateTransactionOpts {
+            account_id: account.id.to_shared_string(),
+            outflow: "0.00".to_shared_string(),
+            category_id: category.id.to_shared_string(),
+            date: Zoned::now().date().to_shared_string(),
+            note: SharedString::from("Pick n Pay"),
+            ..Default::default()
+        };
+        state.create_transaction(opts)?;
+
+        let transaction = state.transactions().remove(0);
+        assert_eq!(transaction.account_id, account.id.to_shared_string());
+        Ok(())
+    }
+
+    #[test]
+    fn create_expense_empty_category() -> crate::Result<()> {
+        let connection = create_test_db();
+        let service = Service::new(connection);
+        service.create_account("", AccountType::Cash)?;
+
+        let mut state = AppState::new(service)?;
+        let opts = CreateTransactionOpts {
+            outflow: "0.00".to_shared_string(),
+            date: Zoned::now().date().to_shared_string(),
+            ..Default::default()
+        };
+        state.create_transaction(opts)?;
+        Ok(())
+    }
+
+    #[test]
+    fn create_category_creates_a_budget() -> crate::Result<()> {
+        let connection = create_test_db();
+        let service = Service::new(connection);
+        let group = service.create_category_group("")?;
+        let mut state = AppState::new(service.clone())?;
+
+        state.create_category("Groceries", &group.id.to_string())?;
+
+        let categories = service.fetch_categories()?;
+        let budgets = service.fetch_budgets_by_month(Zoned::now().date())?;
+        assert_eq!(budgets.len(), 1);
+        assert_eq!(budgets[0].category_id, categories[0].id);
+        Ok(())
+    }
+
+    #[test]
+    fn create_category_creates_a_budget_in_current_month() -> crate::Result<()> {
+        let connection = create_test_db();
+        let service = Service::new(connection);
+        let group = service.create_category_group("")?;
+        let mut state = AppState::new(service.clone())?;
+
+        state.set_current_budget_month(date(2020, 1, 1))?;
+        state.create_category("Groceries", &group.id.to_string())?;
+        let categories = service.fetch_categories()?;
+        let budgets = service.fetch_budgets_by_month(date(2020, 1, 1))?;
+        assert_eq!(budgets.len(), 1);
+        assert_eq!(budgets[0].year, 2020);
+        assert_eq!(budgets[0].month, 1);
+        assert_eq!(budgets[0].category_id, categories[0].id);
+        Ok(())
+    }
+
+    #[test]
+    fn create_account_adds_to_account_list() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let accounts = service.fetch_accounts()?;
+        let mut state = AppState::new(service)?;
+        state.create_account("", AccountType::Cash.into())?;
+        state.create_account("", AccountType::Cash.into())?;
+
+        assert_eq!(state.accounts().iter().len(), accounts.len() + 2);
+        Ok(())
+    }
+
+    #[test]
+    fn create_category_group_adds_to_list() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let mut state = AppState::new(service)?;
+        state.create_category_group("")?;
+        state.create_category_group("")?;
+
+        assert_eq!(state.category_groups().iter().len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn create_account_adds_to_account_options() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let accounts = service.fetch_accounts()?;
+
+        let mut state = AppState::new(service)?;
+        state.create_account("", AccountType::Cash.into())?;
+        state.create_account("", AccountType::Cash.into())?;
+
+        assert_eq!(state.account_options().iter().len(), accounts.len() + 2);
+        Ok(())
+    }
+
+    #[test]
+    fn state_loads_data_from_service() -> crate::Result<()> {
+        let connection = create_test_db();
+        let service = Service::new(connection);
+
+        service.create_account("", AccountType::Cash)?;
+        service.create_account("", AccountType::Cash)?;
+
+        service.create_expense().submit()?;
+        service.create_expense().submit()?;
+        service.create_expense().submit()?;
+
+        let state = AppState::new(service)?;
+        assert_eq!(state.transactions().iter().len(), 3);
+        assert_eq!(state.accounts().iter().len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn state_loads_categories_from_service() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let group = service.create_category_group("")?;
+        service.create_category(Default::default(), group.id)?;
+        service.create_category(Default::default(), group.id)?;
+
+        let state = AppState::new(service)?;
+        assert_eq!(state.categories().iter().len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn calculate_total_spent() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        service.create_account("", AccountType::Cash)?;
+        let group = service.create_category_group("")?;
+        let category = service.create_category("", group.id)?;
+        service
+            .create_expense()
+            .amount(Money::new(500))
+            .category(category.id)
+            .submit()?;
+
+        let budget = service.create_budget(CreateBudgetOpts {
+            category_id: category.id,
+            ..Default::default()
+        })?;
+        let state = AppState::new(service)?;
+        let total = state.total_spent(budget.id.to_string().as_str())?;
+        assert_eq!(total, Money::new(500));
+        Ok(())
+    }
+
+    #[test]
+    fn calculate_total_spent_only_includes_current_month() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        service.create_account("", AccountType::Cash)?;
+        let group = service.create_category_group("")?;
+        let category = service.create_category(Default::default(), group.id)?;
+        service
+            .create_expense()
+            .amount(Money::new(500))
+            .category(category.id)
+            .submit()?;
+        service
+            .create_expense()
+            .amount(Money::new(500))
+            .category(category.id)
+            .date(date(1990, 1, 1))
+            .submit()?;
+        let budget = service.create_budget(CreateBudgetOpts {
+            category_id: category.id,
+            ..Default::default()
+        })?;
+        let state = AppState::new(service)?;
+        let total = state.total_spent(budget.id.to_string().as_str())?;
+        assert_eq!(total, Money::new(500));
+        Ok(())
+    }
+
+    #[test]
+    fn left_to_spend_caps_at_zero() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        service.create_account("", AccountType::Cash)?;
+        let group = service.create_category_group("")?;
+        let category = service.create_category(Default::default(), group.id)?;
+        let budget = service.create_budget(CreateBudgetOpts {
+            category_id: category.id,
+            amount: Some(Money::new(200)),
+            month: Some(Zoned::now().date()),
+        })?;
+        service
+            .create_expense()
+            .amount(Money::new(500))
+            .date(Zoned::now().date())
+            .category(category.id)
+            .submit()?;
+        let state = AppState::new(service)?;
+        let total = state.left_to_spend(budget.id.to_string().as_str())?;
+        assert_eq!(total, Money::ZERO);
         Ok(())
     }
 }

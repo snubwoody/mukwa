@@ -3,8 +3,8 @@
 
 // Tests to make sure the migrations don't break the user's database.
 
-use mukwa::service::{AccountType, Service};
-use mukwa::{Result, migrator::Migrator};
+use mukwa_core::service::{AccountType, Service};
+use mukwa_core::{Result, migrator::Migrator};
 use rusqlite::Connection;
 use uuid::Uuid;
 

@@ -3,16 +3,16 @@
 
 use jiff::Zoned;
 use jiff::civil::date;
-use mukwa::migrator::Migrator;
-use mukwa::service::{
+use mukwa_core::migrator::Migrator;
+use mukwa_core::service::{
     AccountType, Category, CategoryGroup, CreateBudgetOpts, Service, TransactionType,
 };
-use mukwa::{Money, create_test_db};
+use mukwa_core::{Money, create_test_db};
 use rusqlite::{Connection, OptionalExtension};
 use uuid::Uuid;
 
 #[test]
-fn create_account() -> mukwa::Result<()> {
+fn create_account() -> mukwa_core::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
     let account = service.create_account("My account", AccountType::Cash)?;
@@ -35,7 +35,7 @@ fn create_account() -> mukwa::Result<()> {
 }
 
 #[test]
-fn create_category() -> mukwa::Result<()> {
+fn create_category() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let group = service.create_category_group("")?;
     let category = service.create_category("Groceries", group.id)?;
@@ -52,7 +52,7 @@ fn create_category() -> mukwa::Result<()> {
 }
 
 #[test]
-fn move_category() -> mukwa::Result<()> {
+fn move_category() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
 
     let group = service.create_category_group("")?;
@@ -73,7 +73,7 @@ fn move_category() -> mukwa::Result<()> {
 }
 
 #[test]
-fn create_category_group() -> mukwa::Result<()> {
+fn create_category_group() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let group = service.create_category_group("Wants")?;
     assert_eq!(group.title, "Wants");
@@ -94,7 +94,7 @@ fn create_category_group() -> mukwa::Result<()> {
 }
 
 #[test]
-fn update_category_group() -> mukwa::Result<()> {
+fn update_category_group() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let group = service.create_category_group("Wants")?;
     service.update_category_group(group.id, "Needs")?;
@@ -110,7 +110,7 @@ fn update_category_group() -> mukwa::Result<()> {
 }
 
 #[test]
-fn create_budget() -> mukwa::Result<()> {
+fn create_budget() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let group = service.create_category_group("")?;
     let category = service.create_category("Groceries", group.id)?;
@@ -144,7 +144,7 @@ fn create_budget() -> mukwa::Result<()> {
 }
 
 #[test]
-fn fetch_budgets_by_month() -> mukwa::Result<()> {
+fn fetch_budgets_by_month() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let group = service.create_category_group("")?;
     let category = service.create_category("Groceries", group.id)?;
@@ -167,7 +167,7 @@ fn fetch_budgets_by_month() -> mukwa::Result<()> {
 }
 
 #[test]
-fn create_expense_fails_with_no_accounts() -> mukwa::Result<()> {
+fn create_expense_fails_with_no_accounts() -> mukwa_core::Result<()> {
     let mut connection = Connection::open_in_memory()?;
     let mut migrator = Migrator::new();
     migrator.load_embedded()?;
@@ -179,7 +179,7 @@ fn create_expense_fails_with_no_accounts() -> mukwa::Result<()> {
 }
 
 #[test]
-fn create_income_fails_with_no_accounts() -> mukwa::Result<()> {
+fn create_income_fails_with_no_accounts() -> mukwa_core::Result<()> {
     let mut connection = Connection::open_in_memory()?;
     let mut migrator = Migrator::new();
     migrator.load_embedded()?;
@@ -191,7 +191,7 @@ fn create_income_fails_with_no_accounts() -> mukwa::Result<()> {
 }
 
 #[test]
-fn create_expense_uses_first_account() -> mukwa::Result<()> {
+fn create_expense_uses_first_account() -> mukwa_core::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
     let account = service.create_account("", AccountType::Cash)?;
@@ -201,7 +201,7 @@ fn create_expense_uses_first_account() -> mukwa::Result<()> {
 }
 
 #[test]
-fn create_income_uses_first_account() -> mukwa::Result<()> {
+fn create_income_uses_first_account() -> mukwa_core::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
     let account = service.create_account("", AccountType::Cash)?;
@@ -211,7 +211,7 @@ fn create_income_uses_first_account() -> mukwa::Result<()> {
 }
 
 #[test]
-fn total_spent() -> mukwa::Result<()> {
+fn total_spent() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("", AccountType::Cash)?;
 
@@ -237,7 +237,7 @@ fn total_spent() -> mukwa::Result<()> {
 }
 
 #[test]
-fn total_spent_in_group() -> mukwa::Result<()> {
+fn total_spent_in_group() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("", AccountType::Cash)?;
 
@@ -263,7 +263,7 @@ fn total_spent_in_group() -> mukwa::Result<()> {
 }
 
 #[test]
-fn total_assigned_in_group() -> mukwa::Result<()> {
+fn total_assigned_in_group() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("", AccountType::Cash)?;
 
@@ -291,7 +291,7 @@ fn total_assigned_in_group() -> mukwa::Result<()> {
 }
 
 #[test]
-fn total_spent_in_group_only_counts_category_once() -> mukwa::Result<()> {
+fn total_spent_in_group_only_counts_category_once() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("", AccountType::Cash)?;
 
@@ -312,7 +312,7 @@ fn total_spent_in_group_only_counts_category_once() -> mukwa::Result<()> {
 }
 
 #[test]
-fn total_spent_filters_by_date() -> mukwa::Result<()> {
+fn total_spent_filters_by_date() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("", AccountType::Cash)?;
 
@@ -338,7 +338,7 @@ fn total_spent_filters_by_date() -> mukwa::Result<()> {
 }
 
 #[test]
-fn account_balance() -> mukwa::Result<()> {
+fn account_balance() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let account = service.create_account("", AccountType::Cash)?;
 
@@ -362,7 +362,7 @@ fn account_balance() -> mukwa::Result<()> {
 }
 
 #[test]
-fn account_balance_negative() -> mukwa::Result<()> {
+fn account_balance_negative() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let account = service.create_account("", AccountType::Cash)?;
 
@@ -386,7 +386,7 @@ fn account_balance_negative() -> mukwa::Result<()> {
 }
 
 #[test]
-fn account_balance_with_no_transactions() -> mukwa::Result<()> {
+fn account_balance_with_no_transactions() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let account = service.create_account("", AccountType::Cash)?;
 
@@ -404,7 +404,7 @@ fn account_balance_with_no_transactions() -> mukwa::Result<()> {
 }
 
 #[test]
-fn delete_transaction() -> mukwa::Result<()> {
+fn delete_transaction() -> mukwa_core::Result<()> {
     let connection = create_test_db();
 
     let service = Service::new(connection);
@@ -419,7 +419,7 @@ fn delete_transaction() -> mukwa::Result<()> {
 }
 
 #[test]
-fn duplicate_transaction() -> mukwa::Result<()> {
+fn duplicate_transaction() -> mukwa_core::Result<()> {
     let connection = create_test_db();
 
     let service = Service::new(connection);
@@ -441,7 +441,7 @@ fn duplicate_transaction() -> mukwa::Result<()> {
 }
 
 #[test]
-fn set_transaction_date() -> mukwa::Result<()> {
+fn set_transaction_date() -> mukwa_core::Result<()> {
     let connection = create_test_db();
 
     let service = Service::new(connection);
@@ -462,7 +462,7 @@ fn set_transaction_date() -> mukwa::Result<()> {
 }
 
 #[test]
-fn set_transaction_account() -> mukwa::Result<()> {
+fn set_transaction_account() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let account = service.create_account("", AccountType::Cash)?;
     let account2 = service.create_account("", AccountType::Cash)?;
@@ -481,7 +481,7 @@ fn set_transaction_account() -> mukwa::Result<()> {
 }
 
 #[test]
-fn set_transaction_outflow() -> mukwa::Result<()> {
+fn set_transaction_outflow() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let account = service.create_account("", AccountType::Cash)?;
 
@@ -499,7 +499,7 @@ fn set_transaction_outflow() -> mukwa::Result<()> {
 }
 
 #[test]
-fn set_transaction_inflow_for_expense() -> mukwa::Result<()> {
+fn set_transaction_inflow_for_expense() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let account = service.create_account("", AccountType::Cash)?;
 
@@ -512,7 +512,7 @@ fn set_transaction_inflow_for_expense() -> mukwa::Result<()> {
 }
 
 #[test]
-fn set_transaction_category() -> mukwa::Result<()> {
+fn set_transaction_category() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("", AccountType::Cash)?;
 
@@ -532,7 +532,7 @@ fn set_transaction_category() -> mukwa::Result<()> {
 }
 
 #[test]
-fn can_only_set_category_for_expenses() -> mukwa::Result<()> {
+fn can_only_set_category_for_expenses() -> mukwa_core::Result<()> {
     let connection = create_test_db();
 
     let service = Service::new(connection);
@@ -558,7 +558,7 @@ fn can_only_set_category_for_expenses() -> mukwa::Result<()> {
 }
 
 #[test]
-fn set_transaction_note() -> mukwa::Result<()> {
+fn set_transaction_note() -> mukwa_core::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
     let account = service.create_account("", AccountType::Cash)?;
@@ -578,7 +578,7 @@ fn set_transaction_note() -> mukwa::Result<()> {
 }
 
 #[test]
-fn fetch_accounts() -> mukwa::Result<()> {
+fn fetch_accounts() -> mukwa_core::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
     let a1 = service.create_account("My account", AccountType::Cash)?;
@@ -592,7 +592,7 @@ fn fetch_accounts() -> mukwa::Result<()> {
 }
 
 #[test]
-fn fetch_transactions() -> mukwa::Result<()> {
+fn fetch_transactions() -> mukwa_core::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
     service.create_account("My account", AccountType::Cash)?;
@@ -610,7 +610,7 @@ fn fetch_transactions() -> mukwa::Result<()> {
 }
 
 #[test]
-fn fetch_categories() -> mukwa::Result<()> {
+fn fetch_categories() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let group = service.create_category_group("")?;
     let c1 = service.create_category("", group.id)?;
@@ -626,7 +626,7 @@ fn fetch_categories() -> mukwa::Result<()> {
 }
 
 #[test]
-fn fetch_category_groups() -> mukwa::Result<()> {
+fn fetch_category_groups() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let g1 = service.create_category_group("Needs")?;
     let g2 = service.create_category_group("Wants")?;
@@ -641,7 +641,7 @@ fn fetch_category_groups() -> mukwa::Result<()> {
 }
 
 #[test]
-fn fetch_or_init_budgets() -> mukwa::Result<()> {
+fn fetch_or_init_budgets() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let group = service.create_category_group("")?;
     let c1 = service.create_category("", group.id)?;
@@ -660,7 +660,7 @@ fn fetch_or_init_budgets() -> mukwa::Result<()> {
 }
 
 #[test]
-fn fetch_or_init_budgets_in_different_month() -> mukwa::Result<()> {
+fn fetch_or_init_budgets_in_different_month() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let group = service.create_category_group("")?;
     let c1 = service.create_category("", group.id)?;
@@ -680,7 +680,7 @@ fn fetch_or_init_budgets_in_different_month() -> mukwa::Result<()> {
 }
 
 #[test]
-fn fetch_empty_accounts() -> mukwa::Result<()> {
+fn fetch_empty_accounts() -> mukwa_core::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
     let accounts = service.fetch_accounts()?;
@@ -689,7 +689,7 @@ fn fetch_empty_accounts() -> mukwa::Result<()> {
 }
 
 #[test]
-fn cant_create_duplicate_budgets() -> mukwa::Result<()> {
+fn cant_create_duplicate_budgets() -> mukwa_core::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
     let group = service.create_category_group("")?;
@@ -706,7 +706,7 @@ fn cant_create_duplicate_budgets() -> mukwa::Result<()> {
 }
 
 #[test]
-fn min_budget_amount_is_zero() -> mukwa::Result<()> {
+fn min_budget_amount_is_zero() -> mukwa_core::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
     let group = service.create_category_group("")?;
@@ -722,7 +722,7 @@ fn min_budget_amount_is_zero() -> mukwa::Result<()> {
 }
 
 #[test]
-fn set_payee_on_an_expense() -> mukwa::Result<()> {
+fn set_payee_on_an_expense() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let account = service.create_account("", AccountType::Cash)?;
     let account2 = service.create_account("", AccountType::Cash)?;
@@ -747,7 +747,7 @@ fn set_payee_on_an_expense() -> mukwa::Result<()> {
 }
 
 #[test]
-fn set_payee_on_an_income() -> mukwa::Result<()> {
+fn set_payee_on_an_income() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let account = service.create_account("", AccountType::Cash)?;
     let account2 = service.create_account("", AccountType::Cash)?;
@@ -772,7 +772,7 @@ fn set_payee_on_an_income() -> mukwa::Result<()> {
 }
 
 #[test]
-fn set_payee_sets_category_to_null() -> mukwa::Result<()> {
+fn set_payee_sets_category_to_null() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let account = service.create_account("", AccountType::Cash)?;
     let account2 = service.create_account("", AccountType::Cash)?;
@@ -799,7 +799,7 @@ fn set_payee_sets_category_to_null() -> mukwa::Result<()> {
 }
 
 #[test]
-fn delete_category() -> mukwa::Result<()> {
+fn delete_category() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let group = service.create_category_group("")?;
     let category = service.create_category("", group.id)?;
@@ -815,7 +815,7 @@ fn delete_category() -> mukwa::Result<()> {
 }
 
 #[test]
-fn delete_category_group() -> mukwa::Result<()> {
+fn delete_category_group() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let group = service.create_category_group("")?;
     service.delete_category_group(group.id)?;
@@ -830,7 +830,7 @@ fn delete_category_group() -> mukwa::Result<()> {
 }
 
 #[test]
-fn delete_category_group_deletes_categories_in_group() -> mukwa::Result<()> {
+fn delete_category_group_deletes_categories_in_group() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let group = service.create_category_group("")?;
     service.create_category("", group.id)?;
@@ -844,7 +844,7 @@ fn delete_category_group_deletes_categories_in_group() -> mukwa::Result<()> {
 }
 
 #[test]
-fn delete_category_with_dependants() -> mukwa::Result<()> {
+fn delete_category_with_dependants() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("", AccountType::Cash)?;
     let group = service.create_category_group("")?;
@@ -865,7 +865,7 @@ fn delete_category_with_dependants() -> mukwa::Result<()> {
     Ok(())
 }
 #[test]
-fn delete_category_deletes_budget() -> mukwa::Result<()> {
+fn delete_category_deletes_budget() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("", AccountType::Cash)?;
     let group = service.create_category_group("")?;

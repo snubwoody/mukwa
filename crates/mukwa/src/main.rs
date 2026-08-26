@@ -1,48 +1,246 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-pub mod error;
-pub mod fmt;
-pub mod migrator;
-mod money;
-pub mod plot;
-pub mod service;
-pub mod state;
+// Prevents additional console window on Windows in release
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-pub use error::Error;
-pub use error::Result;
-pub use money::{Currency, Money};
+mod settings;
+mod state;
+
+pub use mukwa_core::error::{Error, Result};
+use mukwa_core::{Currency, Money};
+use settings::SettingsStore;
 use slint::{DataTransfer, Global, ModelExt};
-use std::cell::{Ref, RefCell, RefMut};
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::fs::File;
-use std::io;
-use std::io::Read;
+use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 use tempfile::tempdir;
 
-use crate::fmt::CurrencyFormatter;
-use crate::migrator::Migrator;
-use crate::plot::PieChart;
-use crate::service::Service;
-use crate::service::TransactionType;
 use crate::state::AppState;
 use crate::ui::MainWindow;
 use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
+use mukwa_core::fmt;
+use mukwa_core::fmt::CurrencyFormatter;
+use mukwa_core::migrator::Migrator;
+use mukwa_core::plot::PieChart;
+use mukwa_core::service::TransactionType;
+use mukwa_core::service::{
+    Account, AccountType, Budget, Category, CategoryGroup, Service, Transaction,
+};
 use rusqlite::Connection;
-use serde::{Deserialize, Serialize};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::FromStr;
-use tracing::{info, warn};
+use tiny_skia::Pixmap;
+
+use tracing::{error, info, warn};
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+
+fn main() {
+    #[cfg(debug_assertions)]
+    let log_dir = PathBuf::from(".mukwa/logs");
+    #[cfg(not(debug_assertions))]
+    let log_dir = mukwa_core::log_dir();
+
+    fs::create_dir_all(&log_dir).expect("Failed to create directory");
+
+    let file_appender = RollingFileAppender::builder()
+        .rotation(Rotation::DAILY)
+        .filename_prefix("mukwa")
+        .max_log_files(7)
+        .filename_suffix("log")
+        .build(log_dir)
+        .expect("Failed to setup logging");
+
+    // Keep guard in scope
+    let (file_writer, _guard) = tracing_appender::non_blocking(file_appender);
+
+    let std_io_layer = tracing_subscriber::fmt::layer().with_writer(std::io::stdout);
+
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_file(false)
+        .with_line_number(false)
+        .with_writer(file_writer)
+        .with_ansi(false);
+
+    let level = if cfg!(debug_assertions) {
+        "info,i_slint_core=debug,mukwa=trace"
+    } else {
+        "info,mukwa=debug"
+    };
+
+    tracing_subscriber::registry()
+        .with(EnvFilter::new(level))
+        .with(std_io_layer)
+        .with(file_layer)
+        .try_init()
+        .expect("Failed to setup logging");
+
+    info!("Launching application");
+
+    if let Err(err) = run() {
+        error!("{}", err.report());
+    }
+
+    info!("Closing application");
+}
 
 /// Slint auto generated code.
 pub mod ui {
     slint::include_modules!();
+}
+
+impl From<Account> for ui::Account {
+    fn from(account: Account) -> Self {
+        Self {
+            id: account.id.to_string().into(),
+            name: account.name.into(),
+            account_type: account.account_type.into(),
+            balance: Money::ZERO.to_shared_string(),
+        }
+    }
+}
+
+impl From<Account> for ui::ComboBoxItem {
+    fn from(account: Account) -> Self {
+        Self {
+            value: account.id.to_string().into(),
+            text: account.name.to_string().into(),
+        }
+    }
+}
+
+impl From<&Account> for ui::ComboBoxItem {
+    fn from(account: &Account) -> Self {
+        Self {
+            value: account.id.to_string().into(),
+            text: account.name.to_string().into(),
+        }
+    }
+}
+
+impl From<&Account> for ui::Account {
+    fn from(account: &Account) -> Self {
+        Self {
+            id: account.id.to_string().into(),
+            name: account.name.clone().into(),
+            account_type: account.account_type.into(),
+            balance: Money::ZERO.to_shared_string(),
+        }
+    }
+}
+
+impl From<&AccountType> for ui::AccountType {
+    fn from(value: &AccountType) -> Self {
+        match value {
+            AccountType::Cash => Self::Cash,
+            AccountType::Credit => Self::Credit,
+        }
+    }
+}
+
+impl From<AccountType> for ui::AccountType {
+    fn from(value: AccountType) -> Self {
+        match value {
+            AccountType::Cash => Self::Cash,
+            AccountType::Credit => Self::Credit,
+        }
+    }
+}
+
+impl From<Budget> for ui::Budget {
+    fn from(value: Budget) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            amount: value.amount.to_shared_string(),
+            year: value.year as i32,
+            month: value.month as i32,
+            category_id: value.category_id.to_shared_string(),
+        }
+    }
+}
+
+impl From<&Budget> for ui::Budget {
+    fn from(value: &Budget) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            amount: value.amount.to_shared_string(),
+            year: value.year as i32,
+            month: value.month as i32,
+            category_id: value.category_id.to_shared_string(),
+        }
+    }
+}
+
+impl From<Category> for ui::Category {
+    fn from(value: Category) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
+            group_id: value.group_id.to_shared_string(),
+        }
+    }
+}
+
+impl From<CategoryGroup> for ui::CategoryGroup {
+    fn from(value: CategoryGroup) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
+        }
+    }
+}
+
+impl From<&CategoryGroup> for ui::CategoryGroup {
+    fn from(value: &CategoryGroup) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
+        }
+    }
+}
+
+impl From<&Category> for ui::Category {
+    fn from(value: &Category) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
+            group_id: value.group_id.to_shared_string(),
+        }
+    }
+}
+
+impl From<Category> for ui::ComboBoxItem {
+    fn from(value: Category) -> Self {
+        Self {
+            value: value.id.to_string().into(),
+            text: value.title.to_string().into(),
+        }
+    }
+}
+
+impl From<&Category> for ui::ComboBoxItem {
+    fn from(value: &Category) -> Self {
+        Self {
+            value: value.id.to_string().into(),
+            text: value.title.to_string().into(),
+        }
+    }
+}
+
+impl From<TransactionType> for ui::TransactionType {
+    fn from(value: TransactionType) -> Self {
+        match value {
+            TransactionType::Expense => ui::TransactionType::Expense,
+            TransactionType::Income => ui::TransactionType::Income,
+            TransactionType::Transfer => ui::TransactionType::Transfer,
+        }
+    }
 }
 
 impl From<Date> for ui::Date {
@@ -51,6 +249,102 @@ impl From<Date> for ui::Date {
             year: value.year() as i32,
             month: value.month() as i32,
             day: value.day() as i32,
+        }
+    }
+}
+
+impl From<Transaction> for ui::Transaction {
+    fn from(value: Transaction) -> Self {
+        let category_id = match value.category_id {
+            Some(id) => id.to_string(),
+            None => String::new(),
+        };
+
+        let transaction_type = value.transaction_type();
+        let inflow = if transaction_type == TransactionType::Income {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
+        let outflow = if transaction_type == TransactionType::Transfer
+            || transaction_type == TransactionType::Expense
+        {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
+        let note = value.note.unwrap_or_default().to_shared_string();
+
+        let account_id = match transaction_type {
+            TransactionType::Income => value.receiver_id.unwrap().to_shared_string(),
+            _ => value.sender_id.unwrap().to_shared_string(),
+        };
+
+        let payee_id = match transaction_type {
+            TransactionType::Transfer => value.receiver_id.unwrap().to_shared_string(),
+            _ => SharedString::new(),
+        };
+
+        Self {
+            id: value.id.to_shared_string(),
+            account_id,
+            payee_id,
+            category_id: category_id.to_shared_string(),
+            date: value.date.to_shared_string(),
+            outflow,
+            note,
+            inflow,
+            transaction_type: transaction_type.into(),
+        }
+    }
+}
+
+impl From<&Transaction> for ui::Transaction {
+    fn from(value: &Transaction) -> Self {
+        let category_id = match value.category_id {
+            Some(id) => id.to_string(),
+            None => String::new(),
+        };
+
+        let transaction_type = value.transaction_type();
+        let inflow = if transaction_type == TransactionType::Income {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
+        let outflow = if transaction_type == TransactionType::Transfer
+            || transaction_type == TransactionType::Expense
+        {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
+        let note = value.note.clone().unwrap_or_default().to_shared_string();
+
+        let account_id = match transaction_type {
+            TransactionType::Income => value.receiver_id.unwrap().to_shared_string(),
+            _ => value.sender_id.unwrap().to_shared_string(),
+        };
+
+        let payee_id = match transaction_type {
+            TransactionType::Transfer => value.receiver_id.unwrap().to_shared_string(),
+            _ => SharedString::new(),
+        };
+
+        Self {
+            id: value.id.to_string().into(),
+            account_id,
+            payee_id,
+            category_id: category_id.into(),
+            note,
+            date: value.date.to_string().into(),
+            outflow,
+            inflow,
+            transaction_type: transaction_type.into(),
         }
     }
 }
@@ -66,7 +360,7 @@ impl App {
         let data_dir = if cfg!(debug_assertions) {
             PathBuf::from(".mukwa")
         } else {
-            data_dir()
+            mukwa_core::data_dir()
         };
 
         fs::create_dir_all(&data_dir)?;
@@ -85,7 +379,7 @@ impl App {
         let settings_dir = if cfg!(debug_assertions) {
             PathBuf::from(".mukwa")
         } else {
-            config_dir()
+            mukwa_core::config_dir()
         };
 
         fs::create_dir_all(&settings_dir)?;
@@ -186,7 +480,7 @@ impl App {
 
                 let series: Vec<f32> = map.values().map(|amount| amount.inner() as f32).collect();
                 let mut pixmap =
-                    tiny_skia::Pixmap::new(width.max(1.0) as u32, height.max(1.0) as u32).unwrap();
+                    Pixmap::new(width.max(1.0) as u32, height.max(1.0) as u32).unwrap();
                 let radius = width.min(height) / 2.0;
 
                 let chart = PieChart::new(width / 2.0, height / 2.0, series, radius)
@@ -909,187 +1203,9 @@ pub fn run() -> Result<()> {
     Ok(())
 }
 
-/// Opens an in memory sqlite database for testing.
-pub fn create_test_db() -> Connection {
-    let mut connection = Connection::open_in_memory().expect("Failed to open sqlite connection");
-    let mut migrator = Migrator::new();
-    migrator.load_embedded().unwrap();
-    migrator.migrate(&mut connection).unwrap();
-    connection
-}
-
-/// Returns the path to the application's data directory.
-///
-/// # Panics
-/// Panics if the system data directory cannot be found.
-pub fn data_dir() -> PathBuf {
-    dirs::data_dir().unwrap().join("Mukwa")
-}
-
-/// Returns the path to the application's config directory.
-///
-/// # Panics
-/// Panics if the system's config directory cannot be found.
-pub fn config_dir() -> PathBuf {
-    dirs::config_dir().unwrap().join("Mukwa")
-}
-
-/// Returns the path to the application's log directory.
-///
-/// ## Platform specific
-///
-/// |Platform | Value                                |
-/// | ------- | ------------------------------------ |
-/// | Linux   | `$XDG_STATE_HOME`/Mukwa/logs         |
-/// | macOS   | `$HOME`/Library/Logs/Mukwa           |
-/// | Windows | `{LocalAppData}`/Mukwa/logs |
-///
-/// ## Panics
-/// Panics if the system directories cannot be found.
-pub fn log_dir() -> PathBuf {
-    if cfg!(windows) {
-        dirs::data_local_dir().unwrap().join("Mukwa/logs")
-    } else if cfg!(target_os = "macos") {
-        dirs::home_dir().unwrap().join("Library/Logs/Mukwa")
-    } else {
-        dirs::state_dir().unwrap().join("Mukwa/logs")
-    }
-}
-
-#[derive(Clone)]
-pub struct SettingsStore {
-    path: PathBuf,
-    inner: Rc<RefCell<Settings>>,
-}
-
-impl SettingsStore {
-    fn set_currency_code(&self, code: &str) -> Result<()> {
-        self.settings_mut().currency_code = code.to_owned();
-        self.write()?;
-        info!("Updated currency code to {code}");
-        Ok(())
-    }
-
-    fn set_font_family(&self, family: &str) -> Result<()> {
-        self.settings_mut().appearance.font_family = family.to_owned();
-        self.write()?;
-        info!("Updated font family to {family}");
-        Ok(())
-    }
-
-    fn currency_code(&self) -> String {
-        self.settings().currency_code.clone()
-    }
-
-    fn font_family(&self) -> String {
-        self.settings().appearance.font_family.clone()
-    }
-
-    fn settings(&self) -> Ref<'_, Settings> {
-        self.inner.borrow()
-    }
-
-    fn settings_mut(&self) -> RefMut<'_, Settings> {
-        self.inner.borrow_mut()
-    }
-
-    fn write(&self) -> Result<()> {
-        let settings = self.settings();
-        let contents = toml::to_string(&*settings)?;
-        fs::write(&self.path, contents)?;
-        Ok(())
-    }
-
-    pub fn open(path: impl AsRef<Path>) -> Result<SettingsStore> {
-        match File::open(&path) {
-            Ok(mut file) => {
-                info!("Loading settings from {:?}", path.as_ref());
-
-                let mut buffer = Vec::new();
-                file.read_to_end(&mut buffer)?;
-                let settings: Settings = toml::from_slice(&buffer)?;
-                let store = SettingsStore {
-                    path: path.as_ref().to_path_buf(),
-                    inner: Rc::new(RefCell::new(settings)),
-                };
-                Ok(store)
-            }
-            Err(err) => {
-                if err.kind() != io::ErrorKind::NotFound {
-                    return Err(err.into());
-                }
-
-                let settings = Settings::default();
-                let contents = toml::to_string(&settings)?;
-                fs::write(&path, contents)?;
-
-                info!("Initialised settings at {:?}", path.as_ref());
-                let store = SettingsStore {
-                    path: path.as_ref().to_path_buf(),
-                    inner: Rc::new(RefCell::new(settings)),
-                };
-                Ok(store)
-            }
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "kebab-case")]
-pub struct Settings {
-    currency_code: String,
-    #[serde(default)]
-    appearance: Appearance,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "kebab-case")]
-pub struct Appearance {
-    font_family: String,
-}
-
-impl Default for Appearance {
-    fn default() -> Self {
-        let default_font = if cfg!(target_os = "windows") {
-            "Segoe UI"
-        } else if cfg!(target_os = "macos") {
-            "SF Pro"
-        } else {
-            // Slint will use the default font
-            ""
-        };
-
-        Self {
-            font_family: String::from(default_font),
-        }
-    }
-}
-
-impl Default for Settings {
-    fn default() -> Settings {
-        Settings {
-            currency_code: String::from("USD"),
-            appearance: Appearance::default(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
-    use tempfile::tempdir;
-
     use super::*;
-    use crate::SettingsStore;
-    use std::fs;
-
-    #[test]
-    fn init_settings_if_not_found() -> Result<()> {
-        let temp = tempdir()?;
-        let path = temp.path().join("settings.toml");
-        SettingsStore::open(&path)?;
-        assert!(fs::exists(path)?);
-        Ok(())
-    }
 
     #[test]
     fn total_spent_all_only_includes_expenses() -> Result<()> {
