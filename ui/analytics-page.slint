@@ -107,19 +107,21 @@ export component AnalyticsPage inherits HorizontalLayout {
                 text: @tr("Category");
                 font-weight: FontWeight.medium;
                 color: Colors.textBody;
+                font-size: FontSize.body-lg;
             }
 
             Text {
                 text: @tr("Total spent");
                 font-weight: FontWeight.medium;
                 color: Colors.textBody;
+                font-size: FontSize.body-lg;
             }
         }
 
         Rectangle {
             width: 100%;
             height: 1px;
-            border-color: Colors.borderNeutral;
+            background: Colors.borderNeutral;
         }
 
         VerticalLayout {
@@ -153,7 +155,7 @@ export component AnalyticsPage inherits HorizontalLayout {
                         width: parent.width * slice.ratio;
                         height: 20px;
                         border-radius: 4px;
-                        background: Colors.accent;
+                        background: slice.fill;
                     }
 
                     Text {
