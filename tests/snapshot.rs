@@ -24,7 +24,7 @@ fn simple_pie_chart() -> Result<()> {
     let size = 250.0;
     let center = size / 2.0;
     let series: Vec<f32> = vec![20.0, 24.0, 100.0];
-    let mut pie = PieChart::new(center, center, series, 100.0).with_colors(colors);
+    let pie = PieChart::new(center, center, series, 100.0).with_colors(colors);
 
     let mut pixmap = Pixmap::new(size as u32, size as u32).unwrap();
     pixmap.fill(Color::WHITE);
@@ -45,7 +45,7 @@ fn zero_value_slice() -> Result<()> {
     let size = 250.0;
     let center = size / 2.0;
     let series: Vec<f32> = vec![20.0, 0.0, 100.0];
-    let mut pie = PieChart::new(center, center, series, 100.0).with_colors(colors);
+    let pie = PieChart::new(center, center, series, 100.0).with_colors(colors);
 
     let mut pixmap = Pixmap::new(size as u32, size as u32).unwrap();
     pixmap.fill(Color::WHITE);
@@ -66,7 +66,7 @@ fn very_thin_donut_chart() -> Result<()> {
     let size = 250.0;
     let center = size / 2.0;
     let series: Vec<f32> = vec![20.0, 0.0, 100.0];
-    let mut pie = PieChart::new(center, center, series, 100.0)
+    let pie = PieChart::new(center, center, series, 100.0)
         .with_colors(colors)
         .with_hole_radius(99.5);
 
