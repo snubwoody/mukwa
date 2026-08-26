@@ -15,12 +15,14 @@ pub struct PieSegment {
     start_angle: f32,
     hole_radius: f32,
     radius: f32,
+    label_line_length: f32,
+    label: String,
 }
 
 impl PieSegment {
     /// Draws the pie chart segment onto the pixmap.
     pub fn draw(&self, pixmap: &mut Pixmap) {
-        let path = self.to_path();
+        let path = self.arc_path();
         let mut paint = Paint::default();
         paint.set_color(self.color);
         pixmap.fill_path(
@@ -34,7 +36,7 @@ impl PieSegment {
 
     /// Draws the segment's label onto the pixmap.
     pub fn draw_labels(&self, pixmap: &mut Pixmap) {
-        let path = self.label_line();
+        let path = self.label_line_path();
         let mut paint = Paint::default();
         paint.set_color(Color::from_rgba8(100, 100, 100, 255));
         let stroke = Stroke::default();
@@ -45,12 +47,24 @@ impl PieSegment {
         self.color
     }
 
-    fn label_line(&self) -> Path {
+    pub fn label(&self) -> String {
+        self.label.clone()
+    }
+
+    pub fn ratio(&self) -> f32 {
+        self.ratio
+    }
+
+    fn label_line_path(&self) -> Path {
         let end_theta = 2.0 * PI * self.ratio;
         let mid_angle = self.start_angle + end_theta * 0.5;
 
         let start = theta_to_ordinal_coord(self.radius, mid_angle, (self.x, self.y));
-        let end = theta_to_ordinal_coord(self.radius + 50.0, mid_angle, (self.x, self.y));
+        let end = theta_to_ordinal_coord(
+            self.radius + self.label_line_length,
+            mid_angle,
+            (self.x, self.y),
+        );
 
         let mut pb = PathBuilder::new();
         pb.move_to(start.0, start.1);
@@ -58,30 +72,56 @@ impl PieSegment {
         pb.finish().unwrap()
     }
 
-    /// Generates an SVG string for the arc path.
+    pub fn label_position(&self) -> (f32, f32) {
+        let end_theta = 2.0 * PI * self.ratio;
+        let mid_angle = self.start_angle + end_theta * 0.5;
+        let approx_font_size = 16.0;
+
+        theta_to_ordinal_coord(
+            self.radius + self.label_line_length + approx_font_size,
+            mid_angle,
+            (self.x, self.y),
+        )
+    }
+
+    fn segment_to_svg(&self, segment: &PathSegment) -> String {
+        match segment {
+            PathSegment::MoveTo(Point { x, y }) => format!("M {x} {y} "),
+            PathSegment::LineTo(Point { x, y }) => format!("L {x} {y} "),
+            PathSegment::QuadTo(Point { x: x1, y: y1 }, Point { x, y }) => {
+                format!("Q {x1} {y1}, {x} {y} ")
+            }
+            PathSegment::CubicTo(
+                Point { x: x2, y: y2 },
+                Point { x: x1, y: y1 },
+                Point { x, y },
+            ) => format!("C {x2} {y2}, {x1} {y1}, {x} {y} "),
+            PathSegment::Close => String::from("Z"),
+        }
+    }
+
+    /// Generates an SVG path string for the arc path.
     pub fn arc_svg(&self) -> String {
         // TODO: start_position function
         let mut svg = String::new();
-        let path = self.to_path();
+        let path = self.arc_path();
         for segment in path.segments() {
-            match segment {
-                PathSegment::MoveTo(Point { x, y }) => svg += &format!("M {x} {y} "),
-                PathSegment::LineTo(Point { x, y }) => svg += &format!("L {x} {y} "),
-                PathSegment::QuadTo(Point { x: x1, y: y1 }, Point { x, y }) => {
-                    svg += &format!("Q {x1} {y1}, {x} {y} ")
-                }
-                PathSegment::CubicTo(
-                    Point { x: x2, y: y2 },
-                    Point { x: x1, y: y1 },
-                    Point { x, y },
-                ) => svg += &format!("C {x2} {y2}, {x1} {y1}, {x} {y} "),
-                PathSegment::Close => svg += "Z",
-            }
+            svg += &self.segment_to_svg(&segment);
         }
         svg
     }
 
-    fn to_path(&self) -> Path {
+    /// Generates an SVG path string for the label line path.
+    pub fn label_line_svg(&self) -> String {
+        let mut svg = String::new();
+        let path = self.label_line_path();
+        for segment in path.segments() {
+            svg += &self.segment_to_svg(&segment);
+        }
+        svg
+    }
+
+    fn arc_path(&self) -> Path {
         let end_theta = 2.0 * PI * self.ratio;
         let start_angle = self.start_angle;
 
@@ -129,6 +169,8 @@ pub struct PieChart {
     radius: f32,
     hole_radius: f32,
     colors: Vec<Color>,
+    label_line_length: f32,
+    labels: Vec<String>,
 }
 
 impl PieChart {
@@ -153,6 +195,8 @@ impl PieChart {
             radius,
             hole_radius: 0.0,
             colors,
+            label_line_length: 0.0,
+            labels: Vec::new(),
         }
     }
 
@@ -160,17 +204,29 @@ impl PieChart {
     ///
     /// ## Panics
     /// Panics if hole radius is `>=` the pie chart radius.
-    pub fn set_hole_radius(&mut self, radius: f32) {
+    pub fn with_hole_radius(mut self, radius: f32) -> Self {
         assert!(radius < self.radius);
         self.hole_radius = radius;
+        self
     }
 
     /// Sets the pie chart colors.
-    pub fn set_colors(&mut self, colors: Vec<Color>) {
+    pub fn with_colors(mut self, colors: Vec<Color>) -> Self {
         self.colors = colors;
+        self
     }
 
-    /// Generates the pie chart segments
+    pub fn with_labels(mut self, labels: Vec<String>) -> Self {
+        self.labels = labels;
+        self
+    }
+
+    pub fn with_label_line_length(mut self, length: f32) -> Self {
+        self.label_line_length = length;
+        self
+    }
+
+    /// Generates the pie chart segments.
     pub fn segments(&self) -> Vec<PieSegment> {
         let mut start_angle = 0.0;
         let mut segments = vec![];
@@ -185,6 +241,12 @@ impl PieChart {
                 color: self.colors[index % self.colors.len()],
                 start_angle,
                 radius: self.radius,
+                label_line_length: self.label_line_length,
+                label: self
+                    .labels
+                    .get(index)
+                    .map(|s| s.to_owned())
+                    .unwrap_or_default(),
             };
 
             start_angle += end_theta;
@@ -193,14 +255,14 @@ impl PieChart {
         segments
     }
 
-    /// Draws the pie chart onto the Pixmap
+    /// Draws the pie chart onto the Pixmap.
     pub fn draw(&self, pixmap: &mut Pixmap) {
         for segment in self.segments() {
             segment.draw(pixmap);
         }
     }
 
-    /// Draws the pie chart, with labels, onto the Pixmap
+    /// Draws the pie chart, with labels, onto the Pixmap.
     pub fn draw_with_labels(&self, pixmap: &mut Pixmap) {
         for segment in self.segments() {
             segment.draw(pixmap);

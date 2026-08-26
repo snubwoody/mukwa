@@ -146,26 +146,35 @@ impl App {
         let analytics = window.global::<ui::AnalyticsApi>();
 
         analytics.on_draw_pie_chart({
+            // TODO: draw gray no data donut chart if empty
             let state = self.state.clone();
 
             move |width, height| {
                 // TODO: collect categories below a threshold into 'Other'
-                // TODO: order categories consistently
+                // TODO: order categories by total spent
                 let transactions = state.service().fetch_transactions().unwrap_or_default();
                 let mut map = HashMap::new();
+                let mut labels = vec![];
                 for transaction in transactions {
                     if let Some(category_id) = transaction.category_id {
                         match map.get(&category_id) {
                             Some(value) => {
-                                map.insert(category_id, transaction.amount.inner() as f32 + value);
+                                map.insert(category_id, transaction.amount + *value);
                             }
                             None => {
-                                map.insert(category_id, transaction.amount.inner() as f32);
+                                let category = state
+                                    .categories()
+                                    .iter()
+                                    .find(|c| c.id == category_id.to_shared_string())
+                                    .map(|c| c.title.to_string())
+                                    .unwrap_or_default();
+                                labels.push(category);
+                                map.insert(category_id, transaction.amount);
                             }
                         }
                     }
                 }
-                let colors = vec![
+                let colors = [
                     tiny_skia::Color::from_rgba8(0, 117, 222, 255),
                     tiny_skia::Color::from_rgba8(0, 94, 180, 255),
                     tiny_skia::Color::from_rgba8(0, 70, 138, 255),
@@ -175,25 +184,43 @@ impl App {
                     tiny_skia::Color::from_rgba8(236, 241, 255, 255),
                 ];
 
-                let series: Vec<f32> = map.values().copied().collect();
+                let series: Vec<f32> = map.values().map(|amount| amount.inner() as f32).collect();
                 let mut pixmap =
                     tiny_skia::Pixmap::new(width.max(1.0) as u32, height.max(1.0) as u32).unwrap();
                 let radius = width.min(height) / 2.0;
-                let mut chart = PieChart::new(width / 2.0, height / 2.0, series, radius);
-                chart.set_colors(colors);
-                chart.set_hole_radius(radius - 150.0);
+
+                let chart = PieChart::new(width / 2.0, height / 2.0, series, radius)
+                    .with_colors(colors.to_vec())
+                    .with_label_line_length(50.0)
+                    .with_labels(labels)
+                    .with_hole_radius(radius - 150.0);
+
                 chart.draw(&mut pixmap);
                 let segments = chart.segments();
 
                 let slices = VecModel::default();
-                for segment in segments {
+                let values = map.values().copied().collect::<Vec<_>>();
+
+                for (index, segment) in segments.iter().enumerate() {
+                    // FIXME: already scaled money
                     let color = segment.color().to_color_u8();
+                    let (label_x, label_y) = segment.label_position();
+                    let amount = values[index];
+
                     let slice = ui::PieChartSlice {
-                        path: segment.arc_svg().to_shared_string(),
+                        arc_path: segment.arc_svg().to_shared_string(),
+                        line_path: segment.label_line_svg().to_shared_string(),
                         fill: slint::Color::from_rgb_u8(color.red(), color.green(), color.blue()),
+                        label: segment.label().to_shared_string(),
+                        label_x,
+                        amount: amount.to_shared_string(),
+                        label_y,
+                        ratio: segment.ratio(),
                     };
+
                     slices.push(slice);
                 }
+
                 ModelRc::new(slices)
             }
         });

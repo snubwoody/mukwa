@@ -8,53 +8,161 @@ import { Settings } from "settings.slint";
 
 export struct PieChartSlice {
     fill: color,
-    path: string,
+    arc-path: string,
+    line-path: string,
+    label: string,
+    label-x: length,
+    label-y: length,
+    amount: string,
+    ratio: float
 }
 
 export global AnalyticsApi {
     pure callback draw-pie-chart(width: length, height: length) -> [PieChartSlice];
 }
 
-export component AnalyticsPage inherits VerticalLayout {
-    padding: 24px;
-    spacing: 24px;
+// TODO: wrap Path in TouchArea
+export component AnalyticsPage inherits HorizontalLayout {
+    property <[PieChartSlice]> pie-chart-slices: AnalyticsApi.draw-pie-chart(500px, 500px);
+    VerticalLayout {
+        spacing: 24px;
+        padding: 24px;
+        Text {
+            text: @tr("Spending chart");
+            color: Colors.textHeading;
+            font-size: FontSize.heading-sm;
+        }
 
-    Text {
-        text: @tr("Spending chart");
-        color: Colors.textHeading;
-        font-size: FontSize.heading-sm;
+        VerticalLayout {
+            spacing: 36px;
+            alignment: start;
+            VerticalLayout {
+                spacing: 8px;
+                alignment: start;
+                Text {
+                    text: @tr("Total spent");
+                    color: Colors.textBody;
+                    font-weight: FontWeight.medium;
+                }
+
+                Text {
+                    text: State.format-money(State.total-spent-all(), Settings.currency-code);
+                    color: Colors.textHeading;
+                    font-size: FontSize.heading-sm;
+                    font-weight: FontWeight.medium;
+                }
+            }
+
+            HorizontalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 500px;
+                    height: 500px;
+                    for slice in pie-chart-slices: Rectangle {
+                        Path {
+                            width: 100%;
+                            height: 100%;
+                            viewbox-width: 500;
+                            viewbox-height: 500;
+                            fill: slice.fill;
+                            commands: slice.arc-path;
+                        }
+
+                        Path {
+                            width: 100%;
+                            height: 100%;
+                            viewbox-width: 500;
+                            viewbox-height: 500;
+                            stroke: Colors.neutral200;
+                            commands: slice.line-path;
+                        }
+
+                        Text {
+                            x: slice.label-x;
+                            y: slice.label-y;
+                            text: slice.label;
+                            color: Colors.textMuted;
+                            font-size: FontSize.caption;
+                            font-weight: FontWeight.light;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        width: 1px;
+        height: 100%;
+        background: Colors.borderNeutral;
     }
 
     VerticalLayout {
-        spacing: 36px;
-        VerticalLayout {
-            spacing: 8px;
-            alignment: start;
+        alignment: start;
+        HorizontalLayout {
+            padding: 20px;
+            alignment: space-between;
+            cross-axis-alignment: center;
             Text {
-                text: @tr("Total spent");
-                color: Colors.textBody;
+                text: @tr("Category");
                 font-weight: FontWeight.medium;
+                color: Colors.textBody;
+                font-size: FontSize.body-lg;
             }
 
             Text {
-                text: State.format-money(State.total-spent-all(), Settings.currency-code);
-                color: Colors.textHeading;
-                font-size: FontSize.heading-sm;
+                text: @tr("Total spent");
                 font-weight: FontWeight.medium;
+                color: Colors.textBody;
+                font-size: FontSize.body-lg;
             }
         }
 
         Rectangle {
-            width: 500px;
-            height: 500px;
-            for slice in AnalyticsApi.draw-pie-chart(self.width, self.height): Path {
-                width: 100%;
-                height: 100%;
-                viewbox-width: 500;
-                viewbox-height: 500;
-                stroke-width: 1px;
-                fill: slice.fill;
-                commands: slice.path;
+            width: 100%;
+            height: 1px;
+            background: Colors.borderNeutral;
+        }
+
+        VerticalLayout {
+            width: 350px;
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-top: 16px;
+            padding-bottom: 16px;
+            spacing: 16px;
+            for slice in pie-chart-slices: VerticalLayout {
+                spacing: 8px;
+                HorizontalLayout {
+                    alignment: space-between;
+                    cross-axis-alignment: center;
+                    Text {
+                        text: slice.label;
+                        color: Colors.textBody;
+                    }
+
+                    Text {
+                        text: State.format-money(slice.amount, Settings.currency-code);
+                        color: Colors.textBody;
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    width: 100%;
+                    cross-axis-alignment: center;
+                    Rectangle {
+                        width: parent.width * slice.ratio;
+                        height: 20px;
+                        border-radius: 4px;
+                        background: slice.fill;
+                    }
+
+                    Text {
+                        text: (slice.ratio * 100).round() + "%";
+                        color: Colors.textMuted;
+                    }
+                }
             }
         }
     }
