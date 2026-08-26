@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use divan::Bencher;
-use mukwa::Money;
-use mukwa::fmt::CurrencyFormatter;
+use mukwa_core::Money;
+use mukwa_core::fmt::CurrencyFormatter;
 
 fn main() {
     divan::main();

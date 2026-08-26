@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use divan::Bencher;
-use mukwa::migrator::Migrator;
-use mukwa::service::Service;
+use mukwa_core::migrator::Migrator;
+use mukwa_core::service::{Service,AccountType};
 use rusqlite::Connection;
 use tempfile::tempdir;
 
@@ -19,14 +19,14 @@ fn create_account<const N: usize>(bencher: Bencher) {
             let path = temp.path().join("data.sqlite");
             let mut connection = Connection::open(path).unwrap();
             let mut migrator = Migrator::new();
-            migrator.load_from_dir("./migrations").unwrap();
+            migrator.load_embedded().unwrap();
             migrator.migrate(&mut connection).unwrap();
             let service = Service::new(connection);
             (service, temp)
         })
         .bench_refs(|(service, _temp)| {
             for _ in 0..N {
-                service.create_account("My account").unwrap();
+                service.create_account("My account",AccountType::Cash).unwrap();
             }
         });
 }
