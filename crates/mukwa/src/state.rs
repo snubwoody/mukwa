@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use crate::service::{AccountType, CreateBudgetOpts, Service, Transaction};
-use crate::{Money, ui};
+use mukwa_core::Money;
+use mukwa_core::service::{AccountType, CreateBudgetOpts, Service, Transaction};
+use crate::ui;
 use jiff::Zoned;
 use jiff::civil::Date;
 use slint::{Model, SharedString, ToSharedString, VecModel};
@@ -11,7 +12,6 @@ use std::str::FromStr;
 use tracing::{debug, info};
 use uuid::Uuid;
 
-// TODO: set the new transaction to editing
 #[derive(Clone)]
 pub struct AppState {
     service: Service,

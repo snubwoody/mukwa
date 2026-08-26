@@ -4,15 +4,43 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::fs;
-#[cfg(debug_assertions)]
-use std::path::PathBuf;
+mod state;
 
-use tracing::{error, info};
+pub use mukwa_core::error::{Result,Error};
+use mukwa_core::{Currency, Money};
+use slint::{DataTransfer, Global, ModelExt};
+use std::cell::{Ref, RefCell, RefMut};
+use std::collections::{HashMap, HashSet};
+use std::fs::File;
+use std::io;
+use std::io::Read;
+use std::time::Instant;
+use tempfile::tempdir;
+
+use crate::state::AppState;
+use crate::ui::MainWindow;
+use jiff::civil::Date;
+use jiff::{ToSpan, Zoned};
+use mukwa_core::fmt::CurrencyFormatter;
+use mukwa_core::migrator::Migrator;
+use mukwa_core::plot::PieChart;
+use mukwa_core::service::{Service,Transaction,Account,Category,CategoryGroup,Budget,AccountType};
+use mukwa_core::service::TransactionType;
+use rusqlite::Connection;
+use serde::{Deserialize, Serialize};
+use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::rc::Rc;
+use std::str::FromStr;
+use tiny_skia::Pixmap;
+use mukwa_core::fmt;
+
+use tracing::{error, info,warn};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::{EnvFilter, fmt};
+use tracing_subscriber::{EnvFilter};
 
 fn main() {
     #[cfg(debug_assertions)]
@@ -33,10 +61,9 @@ fn main() {
     // Keep guard in scope
     let (file_writer, _guard) = tracing_appender::non_blocking(file_appender);
 
-    let std_io_layer = fmt::layer().with_writer(std::io::stdout);
+    let std_io_layer = tracing_subscriber::fmt::layer().with_writer(std::io::stdout);
 
-    let file_layer = fmt::layer()
-        // .pretty()
+    let file_layer = tracing_subscriber::fmt::layer()
         .with_file(false)
         .with_line_number(false)
         .with_writer(file_writer)
@@ -57,54 +84,12 @@ fn main() {
 
     info!("Launching application");
 
-    if let Err(err) = mukwa::run() {
+    if let Err(err) = run() {
         error!("{}", err.report());
     }
 
     info!("Closing application");
 }
-
-// SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2026 Wakunguma Kalimukwa
-
-pub mod error;
-pub mod fmt;
-pub mod migrator;
-mod money;
-pub mod plot;
-pub mod service;
-pub mod state;
-
-pub use error::Error;
-pub use error::Result;
-pub use money::{Currency, Money};
-use slint::{DataTransfer, Global, ModelExt};
-use std::cell::{Ref, RefCell, RefMut};
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::fs::File;
-use std::io;
-use std::io::Read;
-use std::time::Instant;
-use tempfile::tempdir;
-
-use crate::fmt::CurrencyFormatter;
-use crate::migrator::Migrator;
-use crate::plot::PieChart;
-use crate::service::Service;
-use crate::service::TransactionType;
-use crate::state::AppState;
-use crate::ui::MainWindow;
-use jiff::civil::Date;
-use jiff::{ToSpan, Zoned};
-use rusqlite::Connection;
-use serde::{Deserialize, Serialize};
-use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::rc::Rc;
-use std::str::FromStr;
-use tracing::{info, warn};
 
 /// Slint auto generated code.
 pub mod ui {
@@ -376,7 +361,7 @@ impl App {
         let data_dir = if cfg!(debug_assertions) {
             PathBuf::from(".mukwa")
         } else {
-            data_dir()
+            mukwa_core::data_dir()
         };
 
         fs::create_dir_all(&data_dir)?;
@@ -395,7 +380,7 @@ impl App {
         let settings_dir = if cfg!(debug_assertions) {
             PathBuf::from(".mukwa")
         } else {
-            config_dir()
+            mukwa_core::config_dir()
         };
 
         fs::create_dir_all(&settings_dir)?;
@@ -496,7 +481,7 @@ impl App {
 
                 let series: Vec<f32> = map.values().map(|amount| amount.inner() as f32).collect();
                 let mut pixmap =
-                    tiny_skia::Pixmap::new(width.max(1.0) as u32, height.max(1.0) as u32).unwrap();
+                    Pixmap::new(width.max(1.0) as u32, height.max(1.0) as u32).unwrap();
                 let radius = width.min(height) / 2.0;
 
                 let chart = PieChart::new(width / 2.0, height / 2.0, series, radius)
@@ -1217,44 +1202,6 @@ pub fn run() -> Result<()> {
     let app = App::new()?;
     app.run()?;
     Ok(())
-}
-
-/// Returns the path to the application's data directory.
-///
-/// # Panics
-/// Panics if the system data directory cannot be found.
-pub fn data_dir() -> PathBuf {
-    dirs::data_dir().unwrap().join("Mukwa")
-}
-
-/// Returns the path to the application's config directory.
-///
-/// # Panics
-/// Panics if the system's config directory cannot be found.
-pub fn config_dir() -> PathBuf {
-    dirs::config_dir().unwrap().join("Mukwa")
-}
-
-/// Returns the path to the application's log directory.
-///
-/// ## Platform specific
-///
-/// |Platform | Value                                |
-/// | ------- | ------------------------------------ |
-/// | Linux   | `$XDG_STATE_HOME`/Mukwa/logs         |
-/// | macOS   | `$HOME`/Library/Logs/Mukwa           |
-/// | Windows | `{LocalAppData}`/Mukwa/logs |
-///
-/// ## Panics
-/// Panics if the system directories cannot be found.
-pub fn log_dir() -> PathBuf {
-    if cfg!(windows) {
-        dirs::data_local_dir().unwrap().join("Mukwa/logs")
-    } else if cfg!(target_os = "macos") {
-        dirs::home_dir().unwrap().join("Library/Logs/Mukwa")
-    } else {
-        dirs::state_dir().unwrap().join("Mukwa/logs")
-    }
 }
 
 #[derive(Clone)]
