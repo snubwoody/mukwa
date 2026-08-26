@@ -4,18 +4,14 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod state;
 mod settings;
+mod state;
 
-use settings::SettingsStore;
-pub use mukwa_core::error::{Result,Error};
+pub use mukwa_core::error::{Error, Result};
 use mukwa_core::{Currency, Money};
+use settings::SettingsStore;
 use slint::{DataTransfer, Global, ModelExt};
-use std::cell::{Ref, RefCell, RefMut};
 use std::collections::{HashMap, HashSet};
-use std::fs::File;
-use std::io;
-use std::io::Read;
 use std::time::Instant;
 use tempfile::tempdir;
 
@@ -23,26 +19,27 @@ use crate::state::AppState;
 use crate::ui::MainWindow;
 use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};
+use mukwa_core::fmt;
 use mukwa_core::fmt::CurrencyFormatter;
 use mukwa_core::migrator::Migrator;
 use mukwa_core::plot::PieChart;
-use mukwa_core::service::{Service,Transaction,Account,Category,CategoryGroup,Budget,AccountType};
 use mukwa_core::service::TransactionType;
+use mukwa_core::service::{
+    Account, AccountType, Budget, Category, CategoryGroup, Service, Transaction,
+};
 use rusqlite::Connection;
-use serde::{Deserialize, Serialize};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::FromStr;
 use tiny_skia::Pixmap;
-use mukwa_core::fmt;
 
-use tracing::{error, info,warn};
+use tracing::{error, info, warn};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::{EnvFilter};
 
 fn main() {
     #[cfg(debug_assertions)]
@@ -1205,7 +1202,6 @@ pub fn run() -> Result<()> {
     app.run()?;
     Ok(())
 }
-
 
 #[cfg(test)]
 mod test {

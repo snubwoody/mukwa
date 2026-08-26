@@ -3,7 +3,7 @@
 
 use divan::Bencher;
 use mukwa_core::migrator::Migrator;
-use mukwa_core::service::{Service,AccountType};
+use mukwa_core::service::{AccountType, Service};
 use rusqlite::Connection;
 use tempfile::tempdir;
 
@@ -26,7 +26,9 @@ fn create_account<const N: usize>(bencher: Bencher) {
         })
         .bench_refs(|(service, _temp)| {
             for _ in 0..N {
-                service.create_account("My account",AccountType::Cash).unwrap();
+                service
+                    .create_account("My account", AccountType::Cash)
+                    .unwrap();
             }
         });
 }

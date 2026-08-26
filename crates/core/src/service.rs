@@ -5,7 +5,6 @@ use crate::{Error, Money, create_test_db};
 use jiff::Zoned;
 use jiff::civil::Date;
 use rusqlite::{Connection, Row, params};
-use slint::{SharedString, ToSharedString};
 use std::marker::PhantomData;
 use std::path::Path;
 use std::rc::Rc;
@@ -752,6 +751,7 @@ impl Service {
         let mut rows = stmt.query_and_then(params, |row| Budget::try_from(row))?;
         let budget = rows.next().unwrap()?;
 
+        tracing::info!("Created new budget {}", budget.id);
         Ok(budget)
     }
 

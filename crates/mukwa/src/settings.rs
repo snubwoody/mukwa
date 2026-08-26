@@ -3,21 +3,16 @@
 
 use crate::Result;
 use std::cell::{Ref, RefCell, RefMut};
-use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io;
 use std::io::Read;
-use tempfile::tempdir;
-
-use mukwa_core::Money;
 
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use std::str::FromStr;
 
-use tracing::{error, info,warn};
+use tracing::info;
 
 #[derive(Clone)]
 pub struct SettingsStore {

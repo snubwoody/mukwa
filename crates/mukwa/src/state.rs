@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use mukwa_core::Money;
-use mukwa_core::service::{AccountType, CreateBudgetOpts, Service, Transaction};
 use crate::ui;
 use jiff::Zoned;
 use jiff::civil::Date;
+use mukwa_core::Money;
+use mukwa_core::service::{AccountType, Service, Transaction};
 use slint::{Model, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
@@ -155,14 +155,6 @@ impl AppState {
         Ok(())
     }
 
-    /// Creates a new budget.
-    pub fn create_budget(&mut self, opts: CreateBudgetOpts) -> crate::Result<()> {
-        let budget = self.service.create_budget(opts)?;
-        info!(id=?budget.id,"Created new budget");
-        self.budgets.push(budget.into());
-        Ok(())
-    }
-
     /// Creates a new transaction.
     pub fn create_transaction(&mut self, opts: ui::CreateTransactionOpts) -> crate::Result<()> {
         let date = Date::strptime("%Y-%m-%d", &opts.date)?;
@@ -290,16 +282,6 @@ impl AppState {
         let date = Date::new(date.year as i16, date.month as i8, date.day as i8)?;
         let total = self.service.total_assigned_in_group(id, date)?;
         Ok(total)
-    }
-
-    pub fn fetch_or_init_budgets(&self, date: Date) -> crate::Result<Vec<ui::Budget>> {
-        let budgets: Vec<ui::Budget> = self
-            .service
-            .fetch_or_init_budgets(date)?
-            .iter()
-            .map(|b| b.into())
-            .collect();
-        Ok(budgets)
     }
 
     pub fn left_to_spend(&self, id: &str) -> crate::Result<Money> {
@@ -513,6 +495,7 @@ impl AppState {
         Ok(())
     }
 
+    #[allow(unused)]
     pub fn get_account(&self, id: SharedString) -> Option<ui::Account> {
         self.accounts.iter().find(|a| a.id == id)
     }
@@ -520,14 +503,13 @@ impl AppState {
 
 #[cfg(test)]
 mod test {
+    use crate::state::AppState;
+    use crate::ui::CreateTransactionOpts;
     use jiff::Zoned;
     use jiff::civil::date;
     use mukwa_core::service::{AccountType, CreateBudgetOpts, Service};
-    use crate::state::AppState;
-    use crate::ui::CreateTransactionOpts;
     use mukwa_core::{Money, create_test_db};
     use slint::{Model, SharedString, ToSharedString};
-    use super::*;
 
     #[test]
     fn set_outflow_reloads_accounts() -> crate::Result<()> {
@@ -863,5 +845,4 @@ mod test {
         assert_eq!(total, Money::ZERO);
         Ok(())
     }
-
 }
