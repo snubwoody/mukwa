@@ -1,6 +1,72 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+// Prevents additional console window on Windows in release
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+use std::fs;
+#[cfg(debug_assertions)]
+use std::path::PathBuf;
+
+use tracing::{error, info};
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{EnvFilter, fmt};
+
+fn main() {
+    #[cfg(debug_assertions)]
+    let log_dir = PathBuf::from(".mukwa/logs");
+    #[cfg(not(debug_assertions))]
+    let log_dir = mukwa::log_dir();
+
+    fs::create_dir_all(&log_dir).expect("Failed to create directory");
+
+    let file_appender = RollingFileAppender::builder()
+        .rotation(Rotation::DAILY)
+        .filename_prefix("mukwa")
+        .max_log_files(7)
+        .filename_suffix("log")
+        .build(log_dir)
+        .expect("Failed to setup logging");
+
+    // Keep guard in scope
+    let (file_writer, _guard) = tracing_appender::non_blocking(file_appender);
+
+    let std_io_layer = fmt::layer().with_writer(std::io::stdout);
+
+    let file_layer = fmt::layer()
+        // .pretty()
+        .with_file(false)
+        .with_line_number(false)
+        .with_writer(file_writer)
+        .with_ansi(false);
+
+    let level = if cfg!(debug_assertions) {
+        "info,i_slint_core=debug,mukwa=trace"
+    } else {
+        "info,mukwa=debug"
+    };
+
+    tracing_subscriber::registry()
+        .with(EnvFilter::new(level))
+        .with(std_io_layer)
+        .with(file_layer)
+        .try_init()
+        .expect("Failed to setup logging");
+
+    info!("Launching application");
+
+    if let Err(err) = mukwa::run() {
+        error!("{}", err.report());
+    }
+
+    info!("Closing application");
+}
+
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
 pub mod error;
 pub mod fmt;
 pub mod migrator;
@@ -45,12 +111,256 @@ pub mod ui {
     slint::include_modules!();
 }
 
+impl From<Account> for ui::Account {
+    fn from(account: Account) -> Self {
+        Self {
+            id: account.id.to_string().into(),
+            name: account.name.into(),
+            account_type: account.account_type.into(),
+            balance: Money::ZERO.to_shared_string(),
+        }
+    }
+}
+
+impl From<Account> for ui::ComboBoxItem {
+    fn from(account: Account) -> Self {
+        Self {
+            value: account.id.to_string().into(),
+            text: account.name.to_string().into(),
+        }
+    }
+}
+
+impl From<&Account> for ui::ComboBoxItem {
+    fn from(account: &Account) -> Self {
+        Self {
+            value: account.id.to_string().into(),
+            text: account.name.to_string().into(),
+        }
+    }
+}
+
+impl From<&Account> for ui::Account {
+    fn from(account: &Account) -> Self {
+        Self {
+            id: account.id.to_string().into(),
+            name: account.name.clone().into(),
+            account_type: account.account_type.into(),
+            balance: Money::ZERO.to_shared_string(),
+        }
+    }
+}
+
+impl From<&AccountType> for ui::AccountType {
+    fn from(value: &AccountType) -> Self {
+        match value {
+            AccountType::Cash => Self::Cash,
+            AccountType::Credit => Self::Credit,
+        }
+    }
+}
+
+impl From<AccountType> for ui::AccountType {
+    fn from(value: AccountType) -> Self {
+        match value {
+            AccountType::Cash => Self::Cash,
+            AccountType::Credit => Self::Credit,
+        }
+    }
+}
+
+impl From<Budget> for ui::Budget {
+    fn from(value: Budget) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            amount: value.amount.to_shared_string(),
+            year: value.year as i32,
+            month: value.month as i32,
+            category_id: value.category_id.to_shared_string(),
+        }
+    }
+}
+
+impl From<&Budget> for ui::Budget {
+    fn from(value: &Budget) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            amount: value.amount.to_shared_string(),
+            year: value.year as i32,
+            month: value.month as i32,
+            category_id: value.category_id.to_shared_string(),
+        }
+    }
+}
+
+impl From<Category> for ui::Category {
+    fn from(value: Category) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
+            group_id: value.group_id.to_shared_string(),
+        }
+    }
+}
+
+impl From<CategoryGroup> for ui::CategoryGroup {
+    fn from(value: CategoryGroup) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
+        }
+    }
+}
+
+impl From<&CategoryGroup> for ui::CategoryGroup {
+    fn from(value: &CategoryGroup) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
+        }
+    }
+}
+
+impl From<&Category> for ui::Category {
+    fn from(value: &Category) -> Self {
+        Self {
+            id: value.id.to_shared_string(),
+            title: value.title.to_shared_string(),
+            group_id: value.group_id.to_shared_string(),
+        }
+    }
+}
+
+impl From<Category> for ui::ComboBoxItem {
+    fn from(value: Category) -> Self {
+        Self {
+            value: value.id.to_string().into(),
+            text: value.title.to_string().into(),
+        }
+    }
+}
+
+impl From<&Category> for ui::ComboBoxItem {
+    fn from(value: &Category) -> Self {
+        Self {
+            value: value.id.to_string().into(),
+            text: value.title.to_string().into(),
+        }
+    }
+}
+
+impl From<TransactionType> for ui::TransactionType {
+    fn from(value: TransactionType) -> Self {
+        match value {
+            TransactionType::Expense => ui::TransactionType::Expense,
+            TransactionType::Income => ui::TransactionType::Income,
+            TransactionType::Transfer => ui::TransactionType::Transfer,
+        }
+    }
+}
+
 impl From<Date> for ui::Date {
     fn from(value: Date) -> Self {
         Self {
             year: value.year() as i32,
             month: value.month() as i32,
             day: value.day() as i32,
+        }
+    }
+}
+
+impl From<Transaction> for ui::Transaction {
+    fn from(value: Transaction) -> Self {
+        let category_id = match value.category_id {
+            Some(id) => id.to_string(),
+            None => String::new(),
+        };
+
+        let transaction_type = value.transaction_type();
+        let inflow = if transaction_type == TransactionType::Income {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
+        let outflow = if transaction_type == TransactionType::Transfer
+            || transaction_type == TransactionType::Expense
+        {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
+        let note = value.note.unwrap_or_default().to_shared_string();
+
+        let account_id = match transaction_type {
+            TransactionType::Income => value.receiver_id.unwrap().to_shared_string(),
+            _ => value.sender_id.unwrap().to_shared_string(),
+        };
+
+        let payee_id = match transaction_type {
+            TransactionType::Transfer => value.receiver_id.unwrap().to_shared_string(),
+            _ => SharedString::new(),
+        };
+
+        Self {
+            id: value.id.to_shared_string(),
+            account_id,
+            payee_id,
+            category_id: category_id.to_shared_string(),
+            date: value.date.to_shared_string(),
+            outflow,
+            note,
+            inflow,
+            transaction_type: transaction_type.into(),
+        }
+    }
+}
+
+impl From<&Transaction> for ui::Transaction {
+    fn from(value: &Transaction) -> Self {
+        let category_id = match value.category_id {
+            Some(id) => id.to_string(),
+            None => String::new(),
+        };
+
+        let transaction_type = value.transaction_type();
+        let inflow = if transaction_type == TransactionType::Income {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
+        let outflow = if transaction_type == TransactionType::Transfer
+            || transaction_type == TransactionType::Expense
+        {
+            value.amount.to_shared_string()
+        } else {
+            SharedString::new()
+        };
+
+        let note = value.note.clone().unwrap_or_default().to_shared_string();
+
+        let account_id = match transaction_type {
+            TransactionType::Income => value.receiver_id.unwrap().to_shared_string(),
+            _ => value.sender_id.unwrap().to_shared_string(),
+        };
+
+        let payee_id = match transaction_type {
+            TransactionType::Transfer => value.receiver_id.unwrap().to_shared_string(),
+            _ => SharedString::new(),
+        };
+
+        Self {
+            id: value.id.to_string().into(),
+            account_id,
+            payee_id,
+            category_id: category_id.into(),
+            note,
+            date: value.date.to_string().into(),
+            outflow,
+            inflow,
+            transaction_type: transaction_type.into(),
         }
     }
 }
@@ -907,15 +1217,6 @@ pub fn run() -> Result<()> {
     let app = App::new()?;
     app.run()?;
     Ok(())
-}
-
-/// Opens an in memory sqlite database for testing.
-pub fn create_test_db() -> Connection {
-    let mut connection = Connection::open_in_memory().expect("Failed to open sqlite connection");
-    let mut migrator = Migrator::new();
-    migrator.load_embedded().unwrap();
-    migrator.migrate(&mut connection).unwrap();
-    connection
 }
 
 /// Returns the path to the application's data directory.

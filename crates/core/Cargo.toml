@@ -1,0 +1,29 @@
+[package]
+name = "mukwa-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tracing.workspace = true
+tempfile.workspace = true
+jiff.workspace = true
+uuid.workspace = true
+rusqlite.workspace = true
+dirs.workspace = true
+rust-embed.workspace = true
+toml.workspace = true
+serde.workspace = true
+fontdb.workspace = true
+tiny-skia.workspace = true
+image.workspace = true
+slint.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.189"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation-sys = "0.8.7"
+core-foundation = "0.10.1"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61.2", features = ["Win32_Globalization"] }
