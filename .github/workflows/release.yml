@@ -93,4 +93,3 @@ jobs:
           files: |
             artifacts/**/*
           draft: true
-

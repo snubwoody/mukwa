@@ -12,7 +12,7 @@ fn main() {
 #[divan::bench(consts = [1,50,100,1000,50_000])]
 fn format_money<const N: i64>(bencher: Bencher) {
     bencher
-        .with_inputs(|| CurrencyFormatter::new())
+        .with_inputs(CurrencyFormatter::new)
         .bench_refs(|formatter| {
             formatter
                 .format_money(divan::black_box(Money::new(N)))

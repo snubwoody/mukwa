@@ -13,6 +13,7 @@ let architecture = if $env.ARCHITECTURE? == "aarch64" {
 }
 
 let target_triple = ($architecture) + "-unknown-linux-gnu"
+let mukwa_dir = "crates/mukwa"
 
 print $"Building ($architecture) AppImage"
 
@@ -21,14 +22,15 @@ print $"Building ($architecture) AppImage"
 #} else {
 #}
 
-cargo build -r --target ($target_triple)
+cargo build -p mukwa -r --target ($target_triple)
 
 mkdir build/AppDir/usr/share/metainfo
-cp resources/mukwa.metainfo.xml build/AppDir/usr/share/metainfo/com.wakunguma.Mukwa.appdata.xml
-cp resources/mukwa.desktop build/com.wakunguma.Mukwa.desktop
-cp resources/icons/app-icon.svg build/mukwa.svg
+cp ($mukwa_dir)/resources/mukwa.metainfo.xml build/AppDir/usr/share/metainfo/com.wakunguma.Mukwa.appdata.xml
+cp ($mukwa_dir)/resources/mukwa.desktop build/com.wakunguma.Mukwa.desktop
+cp ($mukwa_dir)/resources/icons/app-icon.svg build/mukwa.svg
+cp target/($target_triple)/release/mukwa build/mukwa
 
-./bin/linuxdeploy-($architecture).AppImage --appdir build/AppDir -e target/($target_triple)/release/mukwa -d build/com.wakunguma.Mukwa.desktop --output appimage -i build/mukwa.svg
+./bin/linuxdeploy-($architecture).AppImage --appdir build/AppDir -e build/mukwa -d build/com.wakunguma.Mukwa.desktop --output appimage -i build/mukwa.svg
 
 mv Mukwa-($architecture).AppImage build/
 print "Successfully built AppImage"

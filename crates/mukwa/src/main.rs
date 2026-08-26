@@ -45,7 +45,7 @@ fn main() {
     #[cfg(debug_assertions)]
     let log_dir = PathBuf::from(".mukwa/logs");
     #[cfg(not(debug_assertions))]
-    let log_dir = mukwa::log_dir();
+    let log_dir = mukwa_core::log_dir();
 
     fs::create_dir_all(&log_dir).expect("Failed to create directory");
 

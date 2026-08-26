@@ -415,10 +415,10 @@ impl Service {
     ///
     /// ## Example
     /// ```
-    /// use mukwa::Money;
-    /// use mukwa::service::{TransactionType,Service,AccountType};
+    /// use mukwa_core::Money;
+    /// use mukwa_core::service::{TransactionType,Service,AccountType};
     ///
-    /// fn main() -> mukwa::Result<()>{
+    /// fn main() -> mukwa_core::Result<()>{
     ///     let service = Service::open_in_memory()?;
     ///
     ///     let account = service.create_account("Credit card",AccountType::Credit)?;
@@ -441,11 +441,11 @@ impl Service {
     ///
     /// ## Example
     /// ```
-    /// use mukwa::Money;
+    /// use mukwa_core::Money;
     /// use jiff::civil::date;
-    /// use mukwa::service::{TransactionType,AccountType,Service};
+    /// use mukwa_core::service::{TransactionType,AccountType,Service};
     ///
-    /// fn main() -> mukwa::Result<()>{
+    /// fn main() -> mukwa_core::Result<()>{
     ///     let service = Service::open_in_memory()?;
     ///
     ///     let account = service.create_account("Chequing",AccountType::Cash)?;
@@ -470,10 +470,10 @@ impl Service {
     ///
     /// ## Example
     /// ```
-    /// use mukwa::Money;
-    /// use mukwa::service::{TransactionType,AccountType,Service};
+    /// use mukwa_core::Money;
+    /// use mukwa_core::service::{TransactionType,AccountType,Service};
     ///
-    /// fn main() -> mukwa::Result<()>{
+    /// fn main() -> mukwa_core::Result<()>{
     ///     let service = Service::open_in_memory()?;
     ///
     ///     let account = service.create_account("Chequing",AccountType::Cash)?;

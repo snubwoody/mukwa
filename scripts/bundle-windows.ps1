@@ -1,5 +1,4 @@
-$OSArchitecture = switch ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)
-{
+$OSArchitecture = switch ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture) {
     "X64" {
         "x86_64"
     }
@@ -11,12 +10,9 @@ $OSArchitecture = switch ([System.Runtime.InteropServices.RuntimeInformation]::O
     }
 }
 
-$Architecture = if ($Architecture)
-{
+$Architecture = if ($Architecture) {
     $Architecture
-}
-else
-{
+} else {
     $OSArchitecture
 }
 
@@ -24,15 +20,16 @@ $AppVersion = "0.1.0-alpha.6"
 $CargoTarget = "$Architecture-pc-windows-msvc"
 $CargoBuildDir = "target/$CargoTarget/release"
 $ResourceDir = "$env:TEMP\MukwaBundleDir";
+$MukwaDir = "crates/mukwa"
 
-cargo build -r --target $CargoTarget
+cargo build -p mukwa -r --target $CargoTarget
 
 mkdir $ResourceDir
 
 Copy-Item -Path "${CargoBuildDir}/mukwa.exe" -Destination "$ResourceDir"
 Copy-Item -Path "LICENSE" -Destination "$ResourceDir"
-Copy-Item -Path "resources/icons/app-icon.ico" -Destination "$ResourceDir"
+Copy-Item -Path "${MukwaDir}/resources/icons/app-icon.ico" -Destination "$ResourceDir"
 
-iscc resources/Mukwa.iss /DAppVersion=$AppVersion /DResourceDir=$ResourceDir /Obuild /FMukwa-$Architecture-Setup
+iscc ${MukwaDir}/resources/Mukwa.iss /DAppVersion=$AppVersion /DResourceDir=$ResourceDir /Obuild /FMukwa-$Architecture-Setup
 
 Remove-Item -Path $ResourceDir -Recurse -Force
