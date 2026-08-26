@@ -51,6 +51,10 @@ impl PieSegment {
         self.label.clone()
     }
 
+    pub fn ratio(&self) -> f32 {
+        self.ratio
+    }
+
     fn label_line_path(&self) -> Path {
         let end_theta = 2.0 * PI * self.ratio;
         let mid_angle = self.start_angle + end_theta * 0.5;

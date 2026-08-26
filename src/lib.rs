@@ -21,6 +21,7 @@ use std::io;
 use std::io::Read;
 use std::time::Instant;
 use tempfile::tempdir;
+use tiny_skia::Color;
 
 use crate::fmt::CurrencyFormatter;
 use crate::migrator::Migrator;
@@ -174,7 +175,7 @@ impl App {
                         }
                     }
                 }
-                let colors = vec![
+                let colors = [
                     tiny_skia::Color::from_rgba8(0, 117, 222, 255),
                     tiny_skia::Color::from_rgba8(0, 94, 180, 255),
                     tiny_skia::Color::from_rgba8(0, 70, 138, 255),
@@ -189,7 +190,7 @@ impl App {
                     tiny_skia::Pixmap::new(width.max(1.0) as u32, height.max(1.0) as u32).unwrap();
                 let radius = width.min(height) / 2.0;
                 let mut chart = PieChart::new(width / 2.0, height / 2.0, series, radius);
-                chart.set_colors(colors);
+                chart.set_colors(colors.to_vec());
                 chart.set_label_line_length(50.0);
                 chart.set_labels(labels);
                 chart.set_hole_radius(radius - 150.0);
@@ -197,16 +198,21 @@ impl App {
                 let segments = chart.segments();
 
                 let slices = VecModel::default();
-                for segment in segments {
+                let values = map.values().copied().collect::<Vec<f32>>();
+                for (index, segment) in segments.iter().enumerate() {
+                    // FIXME: already scaled money
                     let color = segment.color().to_color_u8();
                     let (label_x, label_y) = segment.label_position();
+                    let amount = Money::from_f64(values[index].into());
                     let slice = ui::PieChartSlice {
                         arc_path: segment.arc_svg().to_shared_string(),
                         line_path: segment.label_line_svg().to_shared_string(),
                         fill: slint::Color::from_rgb_u8(color.red(), color.green(), color.blue()),
                         label: segment.label().to_shared_string(),
                         label_x,
+                        amount: amount.to_shared_string(),
                         label_y,
+                        ratio: segment.ratio(),
                     };
                     slices.push(slice);
                 }
