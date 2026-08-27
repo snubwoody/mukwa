@@ -6,6 +6,7 @@ use tiny_skia::{
     Color, FillRule, Paint, Path, PathBuilder, PathSegment, Pixmap, Point, Stroke, Transform,
 };
 
+#[derive(Debug)]
 pub struct PieSegment {
     // The center position
     x: f32,
@@ -161,6 +162,7 @@ impl PieSegment {
     }
 }
 
+#[derive(Debug)]
 pub struct PieChart {
     x: f32,
     y: f32,

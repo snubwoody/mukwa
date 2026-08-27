@@ -14,6 +14,7 @@ use slint::{DataTransfer, Global, ModelExt};
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 use tempfile::tempdir;
+use uuid::Uuid;
 
 use crate::state::AppState;
 use crate::ui::MainWindow;
@@ -33,7 +34,6 @@ use std::fs;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::FromStr;
-use tiny_skia::Pixmap;
 
 use tracing::{error, info, warn};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
@@ -444,12 +444,17 @@ impl App {
             let state = self.state.clone();
 
             move |width, height| {
+                let categories = state.service().fetch_categories().unwrap_or_default();
                 // TODO: collect categories below a threshold into 'Other'
                 // TODO: order categories by total spent
+
+                struct Analytic {
+                    category: Category,
+                    total: Money,
+                }
                 let today = Zoned::now().date();
                 let transactions = state.service().fetch_transactions().unwrap_or_default();
-                let mut map = HashMap::new();
-                let mut labels = vec![];
+                let mut analytics: HashMap<Uuid, Analytic> = HashMap::new();
 
                 for transaction in transactions {
                     if transaction.date.year() != today.year()
@@ -459,19 +464,27 @@ impl App {
                     }
 
                     if let Some(category_id) = transaction.category_id {
-                        match map.get(&category_id) {
+                        match analytics.get(&category_id) {
                             Some(value) => {
-                                map.insert(category_id, transaction.amount + *value);
+                                analytics.insert(
+                                    category_id,
+                                    Analytic {
+                                        total: transaction.amount + value.total,
+                                        category: value.category.clone(),
+                                    },
+                                );
                             }
                             None => {
-                                let category = state
-                                    .categories()
+                                let category = categories
                                     .iter()
-                                    .find(|c| c.id == category_id.to_shared_string())
-                                    .map(|c| c.title.to_string())
+                                    .find(|c| c.id == category_id)
+                                    .cloned()
                                     .unwrap_or_default();
-                                labels.push(category);
-                                map.insert(category_id, transaction.amount);
+                                let analytic = Analytic {
+                                    category,
+                                    total: transaction.amount,
+                                };
+                                analytics.insert(category_id, analytic);
                             }
                         }
                     }
@@ -486,9 +499,14 @@ impl App {
                     tiny_skia::Color::from_rgba8(236, 241, 255, 255),
                 ];
 
-                let series: Vec<f32> = map.values().map(|amount| amount.inner() as f32).collect();
-                let mut pixmap =
-                    Pixmap::new(width.max(1.0) as u32, height.max(1.0) as u32).unwrap();
+                let mut analytics = analytics.values().collect::<Vec<_>>();
+
+                analytics.sort_by(|a, b| a.total.cmp(&b.total).reverse());
+
+                let series: Vec<f32> = analytics.iter().map(|a| a.total.inner() as f32).collect();
+                let labels: Vec<String> =
+                    analytics.iter().map(|a| a.category.title.clone()).collect();
+
                 let radius = width.min(height) / 2.0;
 
                 let chart = PieChart::new(width / 2.0, height / 2.0, series, radius)
@@ -497,16 +515,14 @@ impl App {
                     .with_labels(labels)
                     .with_hole_radius(radius - 150.0);
 
-                chart.draw(&mut pixmap);
                 let segments = chart.segments();
 
                 let slices = VecModel::default();
-                let values = map.values().copied().collect::<Vec<_>>();
 
                 for (index, segment) in segments.iter().enumerate() {
                     let color = segment.color().to_color_u8();
                     let (label_x, label_y) = segment.label_position();
-                    let amount = values[index];
+                    let amount = analytics[index].total;
 
                     let slice = ui::PieChartSlice {
                         arc_path: segment.arc_svg().to_shared_string(),
@@ -1277,7 +1293,57 @@ mod test {
 
         assert_eq!(slices.iter().len(), 1);
         assert_eq!(slice.amount, Money::new(500).to_shared_string());
-        assert_eq!(slice.label, "Groceries");
+        Ok(())
+    }
+
+    #[test]
+    fn draw_pie_chart_sorts_categories() -> Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+
+        let mut app = App::new_test()?;
+        let service = app.state.service();
+        let group = service.create_category_group("")?;
+        let groceries = service.create_category("Groceries", group.id)?;
+        let electricity = service.create_category("Electricity", group.id)?;
+        let water = service.create_category("Water Bill", group.id)?;
+
+        service
+            .create_expense()
+            .category(groceries.id)
+            .date(Zoned::now().date())
+            .amount(Money::new(500))
+            .submit()?;
+        service
+            .create_expense()
+            .category(water.id)
+            .date(Zoned::now().date())
+            .amount(Money::new(200))
+            .submit()?;
+        service
+            .create_expense()
+            .category(electricity.id)
+            .date(Zoned::now().date())
+            .amount(Money::new(70))
+            .submit()?;
+        app.state.load_transactions()?;
+
+        let window = app.window();
+        let analytics = window.global::<ui::AnalyticsApi>();
+        let pie_slices = analytics.invoke_draw_pie_chart(500.0, 500.0);
+        let mut slices = pie_slices.iter();
+
+        assert_eq!(slices.len(), 3);
+
+        let groceries_slice = slices.next().unwrap();
+        let water_slice = slices.next().unwrap();
+        let electricity_slice = slices.next().unwrap();
+
+        assert_eq!(groceries_slice.amount, Money::new(500).to_shared_string());
+        assert_eq!(groceries_slice.label, "Groceries");
+        assert_eq!(water_slice.amount, Money::new(200).to_shared_string());
+        assert_eq!(water_slice.label, "Water Bill");
+        assert_eq!(electricity_slice.amount, Money::new(70).to_shared_string());
+        assert_eq!(electricity_slice.label, "Electricity");
         Ok(())
     }
 }
