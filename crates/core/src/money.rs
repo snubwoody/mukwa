@@ -10,7 +10,7 @@ use std::{
 };
 
 /// `Money` represents a fixed point monetary value, with 6 digits after the decimal point.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 pub struct Money(i64);
 
 impl Money {
