@@ -5,7 +5,7 @@ import { Colors } from "colors.slint";
 import { FontSize } from "theme.slint";
 import { State, Api } from "globals.slint";
 import { Settings } from "settings.slint";
-import { IconButton } from "widgets.slint";
+import { IconButton, Button, PrimaryButton } from "widgets.slint";
 import { IconSet } from "@lucide";
 import { Date, CalendarState } from "widgets/calendar.slint";
 
@@ -22,6 +22,67 @@ export struct PieChartSlice {
 
 export global AnalyticsApi {
     pure callback draw-pie-chart(width: length, height: length) -> [PieChartSlice];
+}
+
+component MonthSwitch inherits HorizontalLayout {
+    spacing: 12px;
+    cross-axis-alignment: center;
+    in-out property <Date> current-date;
+
+    if current-date != Api.parse-date(Api.today()): PrimaryButton {
+        text: @tr("Today");
+        clicked => {
+            current-date = Api.parse-date(Api.today());
+        }
+    }
+
+    Rectangle {
+        border-width: 1px;
+        border-color: Colors.borderNeutral;
+        border-radius: 8px;
+
+        HorizontalLayout {
+            spacing: 4px;
+            cross-axis-alignment: center;
+            alignment: start;
+
+            IconButton {
+                icon: IconSet.ChevronLeft;
+                theme: ghost;
+                accessible-label: @tr("Previous month");
+                clicked => {
+                    current-date = CalendarState.decrement-month(current-date);
+                }
+            }
+
+            Rectangle {
+                height: 100%;
+                width: 1px;
+                background: Colors.borderNeutral;
+            }
+
+            Text {
+            //font-size: FontSize.heading-sm;
+            color: Colors.textHeading;
+                text: State.format-dateym(current-date);
+            }
+
+            Rectangle {
+                height: 100%;
+                width: 1px;
+                background: Colors.borderNeutral;
+            }
+
+            IconButton {
+                icon: IconSet.ChevronRight;
+                theme: ghost;
+                accessible-label: @tr("Next month");
+                clicked => {
+                    current-date = CalendarState.increment-month(current-date);
+                }
+            }
+        }
+    }
 }
 
 // TODO: wrap Path in TouchArea
@@ -42,53 +103,8 @@ export component AnalyticsPage inherits HorizontalLayout {
                 font-size: FontSize.heading-sm;
             }
 
-            Rectangle {
-                border-width: 1px;
-                border-color: Colors.borderNeutral;
-                border-radius: 8px;
-
-                HorizontalLayout {
-                    spacing: 4px;
-                    cross-axis-alignment: center;
-                    alignment: start;
-                    //padding: 16px;
-
-                    IconButton {
-                        icon: IconSet.ChevronLeft;
-                        theme: ghost;
-                        accessible-label: @tr("Previous month");
-                        clicked => {
-                            current-date = CalendarState.decrement-month(current-date);
-                        }
-                    }
-
-                    Rectangle {
-                        height: 100%;
-                        width: 1px;
-                        background: Colors.borderNeutral;
-                    }
-
-                    Text {
-                        //font-size: FontSize.heading-sm;
-                        color: Colors.textHeading;
-                        text: State.format-dateym(current-date);
-                    }
-
-                    Rectangle {
-                        height: 100%;
-                        width: 1px;
-                        background: Colors.borderNeutral;
-                    }
-
-                    IconButton {
-                        icon: IconSet.ChevronRight;
-                        theme: ghost;
-                        accessible-label: @tr("Next month");
-                        clicked => {
-                            current-date = CalendarState.increment-month(current-date);
-                        }
-                    }
-                }
+            MonthSwitch {
+                current-date: current-date;
             }
         }
 
