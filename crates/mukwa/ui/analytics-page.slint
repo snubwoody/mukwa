@@ -3,8 +3,11 @@
 
 import { Colors } from "colors.slint";
 import { FontSize } from "theme.slint";
-import { State } from "globals.slint";
+import { State, Api } from "globals.slint";
 import { Settings } from "settings.slint";
+import { IconButton } from "widgets.slint";
+import { IconSet } from "@lucide";
+import { Date, CalendarState } from "widgets/calendar.slint";
 
 export struct PieChartSlice {
     fill: color,
@@ -24,13 +27,69 @@ export global AnalyticsApi {
 // TODO: wrap Path in TouchArea
 export component AnalyticsPage inherits HorizontalLayout {
     property <[PieChartSlice]> pie-chart-slices: AnalyticsApi.draw-pie-chart(500px, 500px);
+    property <Date> current-date: Api.parse-date(Api.today());
+
     VerticalLayout {
         spacing: 24px;
         padding: 24px;
-        Text {
-            text: @tr("Spending chart");
-            color: Colors.textHeading;
-            font-size: FontSize.heading-sm;
+
+        HorizontalLayout {
+            alignment: space-between;
+
+            Text {
+                text: @tr("Spending chart");
+                color: Colors.textHeading;
+                font-size: FontSize.heading-sm;
+            }
+
+            Rectangle {
+                border-width: 1px;
+                border-color: Colors.borderNeutral;
+                border-radius: 8px;
+
+                HorizontalLayout {
+                    spacing: 4px;
+                    cross-axis-alignment: center;
+                    alignment: start;
+                    //padding: 16px;
+
+                    IconButton {
+                        icon: IconSet.ChevronLeft;
+                        theme: ghost;
+                        accessible-label: @tr("Previous month");
+                        clicked => {
+                            current-date = CalendarState.decrement-month(current-date);
+                        }
+                    }
+
+                    Rectangle {
+                        height: 100%;
+                        width: 1px;
+                        background: Colors.borderNeutral;
+                    }
+
+                    Text {
+                        //font-size: FontSize.heading-sm;
+                        color: Colors.textHeading;
+                        text: State.format-dateym(current-date);
+                    }
+
+                    Rectangle {
+                        height: 100%;
+                        width: 1px;
+                        background: Colors.borderNeutral;
+                    }
+
+                    IconButton {
+                        icon: IconSet.ChevronRight;
+                        theme: ghost;
+                        accessible-label: @tr("Next month");
+                        clicked => {
+                            current-date = CalendarState.increment-month(current-date);
+                        }
+                    }
+                }
+            }
         }
 
         VerticalLayout {
