@@ -31,6 +31,7 @@ component MonthSwitch inherits HorizontalLayout {
 
     if current-date != Api.parse-date(Api.today()): PrimaryButton {
         text: @tr("Today");
+        theme: text-accent;
         clicked => {
             current-date = Api.parse-date(Api.today());
         }
@@ -62,8 +63,7 @@ component MonthSwitch inherits HorizontalLayout {
             }
 
             Text {
-            //font-size: FontSize.heading-sm;
-            color: Colors.textHeading;
+                color: Colors.textHeading;
                 text: State.format-dateym(current-date);
             }
 
