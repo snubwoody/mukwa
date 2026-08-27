@@ -21,19 +21,20 @@ export struct PieChartSlice {
 }
 
 export global AnalyticsApi {
-    pure callback draw-pie-chart(width: length, height: length) -> [PieChartSlice];
+    pure callback draw-pie-chart(width: length, height: length, Date) -> [PieChartSlice];
 }
 
 component MonthSwitch inherits HorizontalLayout {
     spacing: 12px;
     cross-axis-alignment: center;
-    in-out property <Date> current-date;
+    in property <Date> current-date;
+    callback changed(Date);
 
     if current-date != Api.parse-date(Api.today()): PrimaryButton {
         text: @tr("Today");
         theme: text-accent;
         clicked => {
-            current-date = Api.parse-date(Api.today());
+            changed(Api.parse-date(Api.today()));
         }
     }
 
@@ -52,7 +53,7 @@ component MonthSwitch inherits HorizontalLayout {
                 theme: ghost;
                 accessible-label: @tr("Previous month");
                 clicked => {
-                    current-date = CalendarState.decrement-month(current-date);
+                    changed(CalendarState.decrement-month(current-date));
                 }
             }
 
@@ -78,7 +79,7 @@ component MonthSwitch inherits HorizontalLayout {
                 theme: ghost;
                 accessible-label: @tr("Next month");
                 clicked => {
-                    current-date = CalendarState.increment-month(current-date);
+                    changed(CalendarState.increment-month(current-date));
                 }
             }
         }
@@ -87,7 +88,7 @@ component MonthSwitch inherits HorizontalLayout {
 
 // TODO: wrap Path in TouchArea
 export component AnalyticsPage inherits HorizontalLayout {
-    property <[PieChartSlice]> pie-chart-slices: AnalyticsApi.draw-pie-chart(500px, 500px);
+    property <[PieChartSlice]> pie-chart-slices: AnalyticsApi.draw-pie-chart(500px, 500px,current-date);
     property <Date> current-date: Api.parse-date(Api.today());
 
     VerticalLayout {
@@ -105,6 +106,9 @@ export component AnalyticsPage inherits HorizontalLayout {
 
             MonthSwitch {
                 current-date: current-date;
+                changed(date) => {
+                    current-date = date
+                }
             }
         }
 
@@ -227,14 +231,15 @@ export component AnalyticsPage inherits HorizontalLayout {
                     width: 100%;
                     cross-axis-alignment: center;
                     Rectangle {
-                        width: parent.width * slice.ratio;
+                        width: parent.width * max(slice.ratio,0.08) - percent.preferred-width;
                         height: 20px;
                         border-radius: 4px;
                         background: slice.fill;
                     }
 
-                    Text {
-                        text: (slice.ratio * 100).round() + "%";
+                    percent := Text {
+                        property <int> perc;
+                        text: slice.ratio >= 0.01 ? (slice.ratio * 100).round() + "%" : "<1%";
                         color: Colors.textMuted;
                     }
                 }

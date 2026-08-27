@@ -93,6 +93,16 @@ fn main() {
 /// Slint auto generated code.
 pub mod ui {
     slint::include_modules!();
+
+    impl From<jiff::civil::Date> for Date {
+        fn from(value: jiff::civil::Date) -> Self {
+            Date {
+                year: value.year().into(),
+                month: value.month().into(),
+                day: value.day().into(),
+            }
+        }
+    }
 }
 
 impl From<Account> for ui::Account {
@@ -239,16 +249,6 @@ impl From<TransactionType> for ui::TransactionType {
             TransactionType::Expense => ui::TransactionType::Expense,
             TransactionType::Income => ui::TransactionType::Income,
             TransactionType::Transfer => ui::TransactionType::Transfer,
-        }
-    }
-}
-
-impl From<Date> for ui::Date {
-    fn from(value: Date) -> Self {
-        Self {
-            year: value.year() as i32,
-            month: value.month() as i32,
-            day: value.day() as i32,
         }
     }
 }
@@ -443,7 +443,7 @@ impl App {
             // TODO: draw gray no data donut chart if empty
             let state = self.state.clone();
 
-            move |width, height| {
+            move |width, height, date| {
                 let categories = state.service().fetch_categories().unwrap_or_default();
                 // TODO: collect categories below a threshold into 'Other'
                 // TODO: order categories by total spent
@@ -452,13 +452,14 @@ impl App {
                     category: Category,
                     total: Money,
                 }
-                let today = Zoned::now().date();
+                let date = Date::new(date.year as i16, date.month as i8, date.day as i8)
+                    .unwrap_or(Zoned::now().date());
                 let transactions = state.service().fetch_transactions().unwrap_or_default();
                 let mut analytics: HashMap<Uuid, Analytic> = HashMap::new();
 
                 for transaction in transactions {
-                    if transaction.date.year() != today.year()
-                        || transaction.date.month() != today.month()
+                    if transaction.date.year() != date.year()
+                        || transaction.date.month() != date.month()
                     {
                         continue;
                     }
@@ -513,7 +514,7 @@ impl App {
                     .with_colors(colors.to_vec())
                     .with_label_line_length(50.0)
                     .with_labels(labels)
-                    .with_hole_radius(radius - 150.0);
+                    .with_hole_radius(radius - 100.0);
 
                 let segments = chart.segments();
 
@@ -1258,7 +1259,7 @@ mod test {
     }
 
     #[test]
-    fn draw_pie_chart_only_includes_current_month() -> Result<()> {
+    fn draw_pie_chart_filters_by_date() -> Result<()> {
         i_slint_backend_testing::init_no_event_loop();
 
         let mut app = App::new_test()?;
@@ -1270,7 +1271,7 @@ mod test {
             .create_expense()
             .category(category.id)
             .date(Zoned::now().date() + 1.month())
-            .amount(Money::new(200))
+            .amount(Money::new(100))
             .submit()?;
         service
             .create_expense()
@@ -1288,11 +1289,12 @@ mod test {
 
         let window = app.window();
         let analytics = window.global::<ui::AnalyticsApi>();
-        let slices = analytics.invoke_draw_pie_chart(500.0, 500.0);
+        let date = Zoned::now().date() - 1.month();
+        let slices = analytics.invoke_draw_pie_chart(500.0, 500.0, date.into());
         let slice = slices.iter().next().unwrap();
 
         assert_eq!(slices.iter().len(), 1);
-        assert_eq!(slice.amount, Money::new(500).to_shared_string());
+        assert_eq!(slice.amount, Money::new(200).to_shared_string());
         Ok(())
     }
 
@@ -1310,26 +1312,23 @@ mod test {
         service
             .create_expense()
             .category(groceries.id)
-            .date(Zoned::now().date())
             .amount(Money::new(500))
             .submit()?;
         service
             .create_expense()
             .category(water.id)
-            .date(Zoned::now().date())
             .amount(Money::new(200))
             .submit()?;
         service
             .create_expense()
             .category(electricity.id)
-            .date(Zoned::now().date())
             .amount(Money::new(70))
             .submit()?;
         app.state.load_transactions()?;
 
         let window = app.window();
         let analytics = window.global::<ui::AnalyticsApi>();
-        let pie_slices = analytics.invoke_draw_pie_chart(500.0, 500.0);
+        let pie_slices = analytics.invoke_draw_pie_chart(500.0, 500.0, Zoned::now().date().into());
         let mut slices = pie_slices.iter();
 
         assert_eq!(slices.len(), 3);
