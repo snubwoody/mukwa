@@ -1,0 +1,43 @@
+id: com.wakunguma.Mukwa
+runtime: org.freedesktop.Platform
+runtime-version: "26.08"
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: mukwa
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  - --talk-name=org.a11y.Bus
+build-options:
+  append-path: "/usr/lib/sdk/rust-stable/bin"
+modules:
+  - name: mukwa
+    buildsystem: simple
+    build-options:
+      env:
+        CARGO_HOME: /run/build/mukwa/cargo
+        CARGO_NET_OFFLINE: 'true'
+        SKIA_BINARIES_URL: file:///run/build/mukwa/skia-binaries.tar.gz
+    build-commands:
+      - cargo fetch --offline
+      - cargo build --offline -r -p mukwa
+      - install -Dm755 target/release/mukwa /app/bin/mukwa
+      - install -Dm644 crates/mukwa/resources/icons/app-icon.svg /app/share/icons/hicolor/scalable/apps/mukwa.svg
+      - install -Dm644 crates/mukwa/resources/mukwa.desktop /app/share/applications/com.wakunguma.Mukwa.desktop
+      - install -Dm644 crates/mukwa/resources/mukwa.metainfo.xml /app/share/metainfo/com.wakunguma.Mukwa.metainfo.xml
+    sources:
+      - type: archive
+        url: https://github.com/snubwoody/mukwa/archive/refs/tags/v0.2.0.tar.gz
+        sha256: 65d2323620879f5b3b994fb0d6d35d11391d564f648c50abc166978a031afab1
+#      - type: archive
+#        url: https://github.com/rust-skia/skia-binaries/releases/download/0.153.3/skia-binaries-a25a0fdb7d90429aa2d1-x86_64-unknown-linux-gnu-gl-jpegd-jpege-pdf-textlayout-vulkan.tar.gz
+#        dest-filename: skia-binaries.tar.gz
+#        sha256: 097e78d775c9156dc4b070b9cca7008dbab587513ecb1924baf4cf9620f3119b
+      - type: file
+        url: https://github.com/rust-skia/skia-binaries/releases/download/0.153.3/skia-binaries-b7f043e0b1e2a850e702-x86_64-unknown-linux-gnu-ganesh-gl-jpegd-jpege-pdf-vulkan.tar.gz
+        dest-filename: skia-binaries.tar.gz
+        sha256: 9ebe4c448cc9f789bad241cbd11739cdf759e27db5719c23a7635e096d5807b3
+      - cargo-sources.json
