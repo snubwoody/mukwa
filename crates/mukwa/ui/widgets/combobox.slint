@@ -72,6 +72,7 @@ export component ComboBox {
 
     layout := VerticalLayout {
         spacing: 8px;
+        alignment: start;
 
         if label != "": Text {
             text: label;
@@ -90,6 +91,7 @@ export component ComboBox {
                 padding-bottom: 4px;
                 padding-left: 8px;
                 padding-right: 8px;
+                alignment: start;
                 text := Text {
                     text: options[current-index].text;
                     color: Colors.textBody;
@@ -106,7 +108,7 @@ export component ComboBox {
 
     popup := PopupWindow {
         width: max(root.width,250px);
-        y: root.y + layout.height;
+        y: layout.height;
         height: min(content.preferred-height,250px);
         close-policy: close-on-click-outside;
         forward-focus: popup-fs;
