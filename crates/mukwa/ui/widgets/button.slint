@@ -151,7 +151,12 @@ export component IconButton {
     }
 }
 
-export enum PrimaryButtonTheme { accent, neutral, ghost }
+export enum PrimaryButtonTheme {
+    accent,
+    neutral,
+    ghost,
+    text-accent,
+}
 
 export component PrimaryButton {
     in property <PrimaryButtonTheme> theme: accent;
@@ -175,12 +180,18 @@ export component PrimaryButton {
         if (button-theme == PrimaryButtonTheme.neutral) {
             return Colors.neutral100;
         }
+        if (button-theme == PrimaryButtonTheme.text-accent) {
+            return Colors.accent.transparentize(0.85);
+        }
         return transparent;
     }
 
     function text-color(button-theme: PrimaryButtonTheme) -> color {
         if (button-theme == PrimaryButtonTheme.accent) {
             return white;
+        }
+        if (button-theme == PrimaryButtonTheme.text-accent) {
+            return Colors.accent;
         }
         return Colors.textBody;
     }
