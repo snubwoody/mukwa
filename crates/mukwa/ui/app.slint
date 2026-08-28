@@ -118,8 +118,8 @@ component CreateAccount inherits PopupWindow {
 
     function submit() {
         account-type.current-value == "cash"
-            ? State.create-account(name.text,cash)
-            : State.create-account(name.text,credit);
+            ? State.create-account(name.text,cash,balance.text)
+            : State.create-account(name.text,credit,balance.text);
         self.close();
     }
 
@@ -151,11 +151,11 @@ component CreateAccount inherits PopupWindow {
                 accepted => submit();
             }
 
-            //balance := TextField {
-            //    label: @tr("Starting balance");
-            //    input-type: decimal;
-            //    accepted => submit();
-            //}
+            balance := TextField {
+                label: @tr("Starting balance");
+                input-type: decimal;
+                accepted => submit();
+            }
 
             account-type := ComboBox {
                 label: @tr("Account type");

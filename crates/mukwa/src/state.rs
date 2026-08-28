@@ -115,14 +115,38 @@ impl AppState {
         &mut self,
         name: &str,
         account_type: ui::AccountType,
+        balance: &str,
     ) -> crate::Result<()> {
         let account_type = match account_type {
             ui::AccountType::Cash => AccountType::Cash,
             ui::AccountType::Credit => AccountType::Credit,
         };
         let account = self.service.create_account(name, account_type)?;
+
+        if let Ok(starting_balance) = Money::from_str(balance) {
+            match account_type {
+                AccountType::Cash => {
+                    self.service
+                        .create_income()
+                        .account(account.id)
+                        .amount(starting_balance)
+                        .note("Starting balance")
+                        .submit()?;
+                }
+                AccountType::Credit => {
+                    self.service
+                        .create_expense()
+                        .account(account.id)
+                        .note("Starting balance")
+                        .amount(starting_balance)
+                        .submit()?;
+                }
+            }
+        }
+
         info!(id=?account.id,"Created new account");
-        self.accounts.push(account.clone().into());
+        self.load_transactions()?;
+        self.load_accounts()?;
         self.account_options.push(account.into());
         Ok(())
     }
@@ -713,10 +737,40 @@ mod test {
         let service = Service::open_in_memory()?;
         let accounts = service.fetch_accounts()?;
         let mut state = AppState::new(service)?;
-        state.create_account("", AccountType::Cash.into())?;
-        state.create_account("", AccountType::Cash.into())?;
+        state.create_account("", AccountType::Cash.into(), "")?;
+        state.create_account("", AccountType::Cash.into(), "")?;
 
         assert_eq!(state.accounts().iter().len(), accounts.len() + 2);
+        Ok(())
+    }
+
+    #[test]
+    fn create_cash_account_with_starting_balance() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let mut state = AppState::new(service)?;
+        state.create_account("", AccountType::Cash.into(), "250.0")?;
+
+        let transactions = state.service.fetch_transactions()?;
+        assert_eq!(
+            transactions[0].transaction_type(),
+            mukwa_core::service::TransactionType::Income
+        );
+        assert_eq!(transactions[0].amount, Money::new(250));
+        Ok(())
+    }
+
+    #[test]
+    fn create_credit_account_with_starting_balance() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let mut state = AppState::new(service)?;
+        state.create_account("", AccountType::Credit.into(), "150.0")?;
+
+        let transactions = state.service.fetch_transactions()?;
+        assert_eq!(
+            transactions[0].transaction_type(),
+            mukwa_core::service::TransactionType::Expense
+        );
+        assert_eq!(transactions[0].amount, Money::new(150));
         Ok(())
     }
 
@@ -737,8 +791,8 @@ mod test {
         let accounts = service.fetch_accounts()?;
 
         let mut state = AppState::new(service)?;
-        state.create_account("", AccountType::Cash.into())?;
-        state.create_account("", AccountType::Cash.into())?;
+        state.create_account("", AccountType::Cash.into(), "")?;
+        state.create_account("", AccountType::Cash.into(), "")?;
 
         assert_eq!(state.account_options().iter().len(), accounts.len() + 2);
         Ok(())

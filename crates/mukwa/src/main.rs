@@ -834,8 +834,10 @@ impl App {
 
         global_state.on_create_account({
             let mut state = state.clone();
-            move |name, account_type| {
-                if let Err(err) = state.create_account(name.as_str(), account_type) {
+            move |name, account_type, balance| {
+                if let Err(err) =
+                    state.create_account(name.as_str(), account_type, balance.as_str())
+                {
                     warn!("Failed to create account: {err}")
                 }
             }
