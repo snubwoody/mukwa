@@ -1,0 +1,20 @@
+name: mukwa
+title: Mukwa
+base: core24
+version: "0.1.1"
+summary: A free personal finance app.
+license: GPL-3.0+
+description: |
+  Mukwa is a free, privacy focused personal finance app, designed to help you track your spending and
+  manage your budgets.
+grade: devel
+confinement: devmode
+source-code: https://github.com/snubwoody/mukwa
+issues: https://github.com/snubwoody/mukwa/issues
+parts:
+  mukwa:
+    plugin: rust
+    source: .
+apps:
+  mukwa:
+    command: mukwa
