@@ -1,5 +1,8 @@
 name: Release
 on:
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 concurrency:
   cancel-in-progress: true
@@ -7,6 +10,35 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
 jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: Swatinem/rust-cache@v2
+      - name: Vendor dependencies
+        run: cargo vendor
+      - name: Update cargo config
+        run: |
+          mkdir .cargo
+          echo "[source.crates-io]
+          replace-with = \"vendored-sources\"
+
+          [source.\"git+https://github.com/snubwoody/slint.git?branch=mukwa\"]
+          git = \"https://github.com/snubwoody/slint.git\"
+          branch = \"mukwa\"
+          replace-with = \"vendored-sources\"
+
+          [source.vendored-sources]
+          directory = \"vendor\"" >> .cargo/config.toml
+      - name: Package files
+        run: |
+          let version = open Cargo.toml | get workspace.package.version
+          tar -cJvf mukwa-v($version)-vendored.tar.xz --exclude=".git" --exclude=".jj" --exclude="target" .
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mukwa-upload-${{ runner.os }}
+          path: ./*-vendored.tar.xz
   bundle-linux:
     runs-on: ubuntu-latest
     permissions:
