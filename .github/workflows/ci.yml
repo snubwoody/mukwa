@@ -12,6 +12,34 @@ concurrency:
   cancel-in-progress: true
   group: ${{github.ref}}-${{github.job}}
 jobs:
+  bench-compile-times:
+    strategy:
+      fail-fast: false
+      matrix:
+        rust-flags:
+          - "-Zshare-generics=y"
+          - "-Zshare-generics=y -Zthreads=8"
+          - "-Zshare-generics=y -Zthreads=8 -Clinker=rust-lld.exe -Clink-arg=/FORCE:MULTIPLE"
+          - "-Zshare-generics=y -Clinker=rust-lld.exe -Clink-arg=/FORCE:MULTIPLE"
+          - "-Zthreads=8 -Clinker=rust-lld.exe -Clink-arg=/FORCE:MULTIPLE"
+          - "-Zthreads=8"
+          - "-Clinker=rust-lld.exe -Clink-arg=/FORCE:MULTIPLE"
+          - ""
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Clean any artifacts
+        run: cargo clean
+      - name: Install nightly toolchain
+        run: rustup toolchain install nightly
+      - run: cargo +nightly build --timings
+        env:
+          RUSTFLAGS: ${{matrix.rust-flags}}
+      - name: Upload cargo build timings
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-timings-${{matrix.rust-flags}}
+          path: target/cargo-timings/*.html
   format:
     strategy:
       fail-fast: false
