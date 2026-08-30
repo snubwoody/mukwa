@@ -111,11 +111,24 @@ component CategoryItem inherits VerticalLayout {
                     }
 
                     Text {
-                        text: "Spent "
-                            + State.format-money(State.total-spent(budget.id),Settings.currency-code)
-                            + " of "
-                            + State.format-money(budget.amount,Settings.currency-code);
+                        text: helper-text();
                         color: Colors.textBody;
+
+                        function helper-text() -> string {
+                            if Api.money-to-float(State.total-spent(budget.id)) == Api.money-to-float(budget.amount) && Api.money-to-float(budget.amount) > 0 {
+                                return "Fully spent";
+                            }
+                            if Api.money-to-float(State.total-spent(budget.id)) > Api.money-to-float(budget.amount) {
+                                return "Overspent "
+                                    + State.format-money(State.total-spent(budget.id),Settings.currency-code)
+                                    + " of "
+                                    + State.format-money(budget.amount,Settings.currency-code);
+                            }
+                            return "Spent "
+                                + State.format-money(State.total-spent(budget.id),Settings.currency-code)
+                                + " of "
+                                + State.format-money(budget.amount,Settings.currency-code);
+                        }
                     }
                 }
 
