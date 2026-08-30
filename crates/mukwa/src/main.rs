@@ -818,11 +818,14 @@ impl App {
 
         global_state.on_total_spent_all({
             let state = state.clone();
-            move || match state.service().fetch_transactions() {
+            move |month| match state.service().fetch_transactions() {
                 Ok(transactions) => {
+                    let date = Date::new(month.year as i16, month.month as i8, month.day as i8)
+                        .unwrap_or(Zoned::now().date());
                     let total: Money = transactions
                         .iter()
                         .filter(|t| t.transaction_type() == TransactionType::Expense)
+                        .filter(|t| t.date.year() == date.year() && t.date.month() == date.month())
                         .map(|t| t.amount)
                         .sum();
                     total.to_shared_string()
@@ -1233,6 +1236,8 @@ pub fn run() -> Result<()> {
 
 #[cfg(test)]
 mod test {
+    use jiff::civil::date;
+
     use super::*;
 
     #[test]
@@ -1257,8 +1262,38 @@ mod test {
         app.state.load_transactions()?;
         let window = app.window();
         let global_state = window.global::<ui::State>();
-        let total = global_state.invoke_total_spent_all();
+        let total = global_state.invoke_total_spent_all(Zoned::now().date().into());
         assert_eq!(total, Money::new(700).to_shared_string());
+        Ok(())
+    }
+
+    #[test]
+    fn total_spent_all_filters_by_month() -> Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let mut app = App::new_test()?;
+        app.state
+            .service()
+            .create_expense()
+            .date(date(2020, 2, 1))
+            .amount(Money::new(200))
+            .submit()?;
+        app.state
+            .service()
+            .create_expense()
+            .date(date(2020, 1, 1))
+            .amount(Money::new(500))
+            .submit()?;
+        app.state.load_transactions()?;
+
+        let date = ui::Date {
+            year: 2020,
+            month: 1,
+            day: 1,
+        };
+        let window = app.window();
+        let global_state = window.global::<ui::State>();
+        let total = global_state.invoke_total_spent_all(date);
+        assert_eq!(total, Money::new(500).to_shared_string());
         Ok(())
     }
 

@@ -125,7 +125,7 @@ export component AnalyticsPage inherits HorizontalLayout {
                 }
 
                 Text {
-                    text: State.format-money(State.total-spent-all(), Settings.currency-code);
+                    text: State.format-money(State.total-spent-all(current-date), Settings.currency-code);
                     color: Colors.textHeading;
                     font-size: FontSize.heading-sm;
                     font-weight: FontWeight.medium;
