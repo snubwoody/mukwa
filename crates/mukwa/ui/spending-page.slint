@@ -121,6 +121,7 @@ component CategoryItem inherits VerticalLayout {
 
                 ProgressBar {
                     progress: budget-progress();
+                    thumb-color: budget-progress() > 1 ? Colors.red700 : green;
                 }
             }
 
