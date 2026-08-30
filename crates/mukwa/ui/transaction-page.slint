@@ -106,10 +106,10 @@ component PayeeCell inherits TableCell {
             return "";
         }
         if active-account-id == transaction.payee-id {
-            return "Transfer:" + State.get-account(active-account-id).name;
+            return "Transfer:" + State.get-account(transaction.account-id).name;
         }
         if active-account-id == transaction.account-id && transaction.transaction-type == transfer {
-            return "Transfer:" + State.get-account(active-account-id).name;
+            return "Transfer:" + State.get-account(transaction.payee-id).name;
         }
         return State.get-account(transaction.payee-id).name;
     }
@@ -279,7 +279,21 @@ component TransactionRow inherits TableRow {
 
     MoneyCell {
         width: parent.width / length;
-        amount: transaction.outflow;
+        amount: outflow();
+
+        function outflow() -> string {
+            if transaction.transaction-type == expense {
+                return transaction.amount;
+            }
+            if transaction.transaction-type == income {
+                return "";
+            }
+            if transaction.transaction-type == transfer && transaction.payee-id != active-account-id {
+                return transaction.amount;
+            }
+            return "";
+        }
+
         changed(value) => {
             State.set-transaction-outflow(transaction.id, value);
         }
@@ -287,7 +301,21 @@ component TransactionRow inherits TableRow {
 
     MoneyCell {
         width: parent.width / length;
-        amount: transaction.inflow;
+        amount: inflow();
+
+        function inflow() -> string {
+            if transaction.transaction-type == income {
+                return transaction.amount;
+            }
+            if transaction.transaction-type == expense {
+                return "";
+            }
+            if transaction.payee-id == active-account-id && !active-account-id.is-empty {
+                return transaction.amount;
+            }
+            return "";
+        }
+
         changed(value) => {
             State.set-transaction-inflow(transaction.id, value);
         }

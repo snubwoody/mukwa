@@ -296,6 +296,7 @@ impl From<Transaction> for ui::Transaction {
             outflow,
             note,
             inflow,
+            amount: value.amount.to_shared_string(),
             transaction_type: transaction_type.into(),
         }
     }
@@ -344,6 +345,7 @@ impl From<&Transaction> for ui::Transaction {
             date: value.date.to_string().into(),
             outflow,
             inflow,
+            amount: value.amount.to_shared_string(),
             transaction_type: transaction_type.into(),
         }
     }
