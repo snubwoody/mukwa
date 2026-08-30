@@ -96,11 +96,28 @@ component AccountCell inherits TableCell {
 
 component PayeeCell inherits TableCell {
     in property <Transaction> transaction;
+    in property <string> active-account-id;
+
+    function payee() -> string {
+        if active-account-id.is-empty && transaction.transaction-type == transfer {
+            return "Transfer:" + State.get-account(transaction.payee-id).name;
+        }
+        if active-account-id.is-empty {
+            return "";
+        }
+        if active-account-id == transaction.payee-id {
+            return "Transfer:" + State.get-account(active-account-id).name;
+        }
+        if active-account-id == transaction.account-id && transaction.transaction-type == transfer {
+            return "Transfer:" + State.get-account(active-account-id).name;
+        }
+        return State.get-account(transaction.payee-id).name;
+    }
 
     callback changed(string);
 
     if !self.is-editing: Text {
-        text: State.get-account(transaction.payee-id).name;
+        text: payee();
         color: Colors.textBody;
     }
 
@@ -238,6 +255,7 @@ component TransactionRow inherits TableRow {
     PayeeCell {
         width: parent.width / length;
         transaction: transaction;
+        active-account-id: active-account-id;
         changed(value) => {
             State.set-transaction-payee(transaction.id,value);
         }
@@ -492,7 +510,7 @@ export component TransactionPage inherits VerticalLayout {
             active-account-id: active-account-id;
             length: length;
             visible: active-account-id.is-empty ? true :
-                transaction.account-id == active-account-id;
+                transaction.account-id == active-account-id || transaction.payee-id == active-account-id;
             height: self.visible ? self.preferred-height : 0;
         }
     }
