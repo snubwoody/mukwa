@@ -512,6 +512,25 @@ fn set_transaction_inflow_for_expense() -> mukwa_core::Result<()> {
 }
 
 #[test]
+fn set_transaction_inflow_for_transfer() -> mukwa_core::Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("", AccountType::Cash)?;
+    let account2 = service.create_account("", AccountType::Cash)?;
+
+    let transaction = service
+        .create_transfer()
+        .accounts(account.id, account2.id)
+        .amount(Money::new(200))
+        .submit()?;
+    let transaction = service.set_transaction_inflow(transaction.id, Money::new(500))?;
+    assert_eq!(transaction.amount, Money::new(500));
+    assert_eq!(transaction.transaction_type(), TransactionType::Transfer);
+    assert_eq!(transaction.sender_id.unwrap(), account.id);
+    assert_eq!(transaction.receiver_id.unwrap(), account2.id);
+    Ok(())
+}
+
+#[test]
 fn set_transaction_category() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("", AccountType::Cash)?;
