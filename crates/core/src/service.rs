@@ -966,7 +966,16 @@ impl Service {
                 let transaction = rows.next().unwrap()?;
                 Ok(transaction)
             }
-            TransactionType::Transfer => Err(Error::new("Invalid transaction type")),
+            TransactionType::Transfer => {
+                let sql = "UPDATE transactions SET amount = ?1 WHERE id = ?2 RETURNING *";
+                let mut stmt = connection.prepare_cached(sql)?;
+                let mut rows = stmt
+                    .query_and_then(params![amount.inner(), id.to_string()], |row| {
+                        Transaction::try_from(row)
+                    })?;
+                let transaction = rows.next().unwrap()?;
+                Ok(transaction)
+            }
         }
     }
 
