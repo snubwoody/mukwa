@@ -52,53 +52,59 @@ export component TableRow {
         }
     }
 
-    Rectangle {
-        states [
-            active when is-editing: {
-                background: Colors.accent.with-alpha(0.1);
-                in {
-                    animate background { duration: 50ms; }
+    VerticalLayout {
+        Rectangle {
+            width: parent.width;
+            states [
+                active when is-editing: {
+                    background: Colors.accent.with-alpha(0.1);
+                    in {
+                        animate background { duration: 50ms; }
+                    }
+                    out {
+                        animate background { duration: 50ms; }
+                    }
                 }
-                out {
-                    animate background { duration: 50ms; }
+                hovered when touch-area.has-hover: {
+                    background: Colors.neutral25;
+                    in {
+                        animate background { duration: 50ms; }
+                    }
+                    out {
+                        animate background { duration: 50ms; }
+                    }
                 }
-            }
-            hovered when touch-area.has-hover: {
-                background: Colors.neutral25;
-                in {
-                    animate background { duration: 50ms; }
+            ]
+
+            layout := VerticalLayout {
+                width: parent.width;
+                HorizontalLayout {
+                    width: 100%;
+                    padding-top: 8px;
+                    padding-bottom: 8px;
+                    padding-left: root.padding-left;
+                    padding-right: root.padding-right;
+                    @children
                 }
-                out {
-                    animate background { duration: 50ms; }
+
+                if is-editing: HorizontalLayout {
+                    alignment: end;
+                    padding-bottom: 4px;
+                    padding-right: root.padding-right;
+                    padding-left: root.padding-left;
+                    spacing: 8px;
+
+                    cancel-btn := PrimaryButton {
+                        theme: ghost;
+                        text: @tr("Cancel");
+                        clicked => cancelled();
+                    }
+
+                    confirm-btn := PrimaryButton {
+                        text: @tr("Confirm");
+                        clicked => confirmed();
+                    }
                 }
-            }
-        ]
-    }
-
-    layout := VerticalLayout {
-        padding-left: root.padding-left;
-        padding-right: root.padding-right;
-
-        HorizontalLayout {
-            padding-top: 8px;
-            padding-bottom: 8px;
-            @children
-        }
-
-        if is-editing: HorizontalLayout {
-            alignment: end;
-            padding-bottom: 4px;
-            spacing: 8px;
-
-            cancel-btn := PrimaryButton {
-                theme: ghost;
-                text: @tr("Cancel");
-                clicked => cancelled();
-            }
-
-            confirm-btn := PrimaryButton {
-                text: @tr("Confirm");
-                clicked => confirmed();
             }
         }
 
@@ -112,10 +118,13 @@ export component TableRow {
 
 export component Table {
     accessible-role: table;
-    ScrollView {
+    Flickable {
+        width: parent.width;
+        height: parent.height;
+        content-height: layout.preferred-height;
         layout := VerticalLayout {
             alignment: start;
-            width: root.width;
+            width: 100%;
             @children
         }
     }
