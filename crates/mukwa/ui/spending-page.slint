@@ -394,9 +394,29 @@ export component SpendingPage inherits VerticalLayout {
     }
 
     HorizontalLayout {
-        alignment: start;
-        padding-left: 16px;
-        padding-right: 16px;
+        alignment: space-between;
+        cross-axis-alignment: center;
+        padding-left: 20px;
+        padding-right: 20px;
+
+        VerticalLayout {
+            spacing: 4px;
+
+            Text {
+                text: State.format-money(State.left-to-assign(), Settings.currency-code);
+                color: Colors.textHeading;
+                font-size: FontSize.body-lg;
+                font-weight: FontWeight.semi-bold;
+            }
+
+            Text {
+                text: @tr("Ready to budget");
+                color: Colors.textMuted;
+                font-size: FontSize.caption;
+                font-weight: FontWeight.semi-bold;
+            }
+        }
+
         button := PrimaryButton {
             text: @tr("New category group");
             clicked => {
@@ -454,6 +474,11 @@ export component SpendingPage inherits VerticalLayout {
     }
 
     VerticalLayout {
+        Rectangle {
+            height: 1px;
+            background: Colors.borderNeutral;
+        }
+
         HorizontalLayout {
             padding-left: 16px;
             padding-right: 16px;

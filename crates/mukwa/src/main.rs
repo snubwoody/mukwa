@@ -816,6 +816,18 @@ impl App {
         global_state.set_account_options(account_options_rc);
         global_state.set_category_options(ModelRc::new(state.category_options()));
 
+        global_state.on_left_to_assign({
+            let state = state.clone();
+            move || {
+                state
+                    .service()
+                    .left_to_assign()
+                    .inspect_err(|err| warn!("Error calculating left to assign: {err}"))
+                    .unwrap_or_default()
+                    .to_shared_string()
+            }
+        });
+
         global_state.on_total_spent_all({
             let state = state.clone();
             move |month| match state.service().fetch_transactions() {
