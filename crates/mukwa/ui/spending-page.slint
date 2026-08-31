@@ -331,6 +331,7 @@ component CategoryGroupItem {
 
 export component SpendingPage inherits VerticalLayout {
     in-out property <Date> current-date: CalendarState.today();
+    property <string> left-to-budget: State.left-to-assign();
     alignment: start;
     spacing: 12px;
 
@@ -377,17 +378,28 @@ export component SpendingPage inherits VerticalLayout {
             spacing: 4px;
 
             Text {
-                text: State.format-money(State.left-to-assign(), Settings.currency-code);
+                text: State.format-money(left-to-budget, Settings.currency-code);
                 color: Colors.textHeading;
                 font-size: FontSize.body-lg;
                 font-weight: FontWeight.semi-bold;
             }
 
             Text {
-                text: @tr("Ready to budget");
+                text: helper-text();
                 color: Colors.textMuted;
                 font-size: FontSize.caption;
                 font-weight: FontWeight.semi-bold;
+
+                function helper-text() -> string {
+                    if Api.money-to-float(State.left-to-assign()) == 0{
+                        return @tr("Fully budgeted");
+                    }
+                    if Api.money-to-float(State.left-to-assign()) < 0{
+                        return @tr("Overbudgeted");
+                    }
+
+                    return @tr("Ready to budget");
+                }
             }
         }
 
