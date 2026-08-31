@@ -3,6 +3,7 @@
 
 use jiff::Zoned;
 use jiff::civil::date;
+use mukwa_core::Result;
 use mukwa_core::migrator::Migrator;
 use mukwa_core::service::{
     AccountType, Category, CategoryGroup, CreateBudgetOpts, Service, TransactionType,
@@ -12,7 +13,41 @@ use rusqlite::{Connection, OptionalExtension};
 use uuid::Uuid;
 
 #[test]
-fn create_account() -> mukwa_core::Result<()> {
+fn left_to_assign() -> Result<()> {
+    let connection = create_test_db();
+    let service = Service::new(connection);
+
+    let group = service.create_category_group("")?;
+    let c1 = service.create_category("", group.id)?;
+    let c2 = service.create_category("", group.id)?;
+    let account = service.create_account("", AccountType::Cash)?;
+
+    service
+        .create_income()
+        .amount(Money::new(500))
+        .account(account.id)
+        .submit()?;
+
+    let b1 = service.create_budget(CreateBudgetOpts {
+        category_id: c1.id,
+        ..Default::default()
+    })?;
+
+    let b2 = service.create_budget(CreateBudgetOpts {
+        category_id: c2.id,
+        ..Default::default()
+    })?;
+
+    service.update_budget(b1.id, Money::new(100))?;
+    service.update_budget(b2.id, Money::new(300))?;
+
+    let left_to_assign = service.left_to_assign()?;
+    assert_eq!(left_to_assign, Money::new(100));
+    Ok(())
+}
+
+#[test]
+fn create_account() -> Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
     let account = service.create_account("My account", AccountType::Cash)?;
