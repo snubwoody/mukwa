@@ -11,6 +11,7 @@ let dirs = [
     "build/lib"
     "build/share"
     "build/share/applications"
+    "build/share/metainfo"
     "build/share/icons"
     "build/share/icons/hicolor"
     "build/share/icons/hicolor/scalable"
@@ -26,8 +27,10 @@ print ""
 let resource_dir = "crates/mukwa/resources"
 cp target/($target_triple)/release/mukwa build/bin
 cp ($resource_dir)/mukwa.desktop build/share/applications/com.wakunguma.Mukwa.desktop
-cp ($resource_dir)/mukwa.metainfo.xml build/share/applications/com.wakunguma.Mukwa.metainfo.xml
+cp ($resource_dir)/mukwa.metainfo.xml build/share/metainfo/com.wakunguma.Mukwa.metainfo.xml
 cp ($resource_dir)/icons/app-icon.svg build/share/icons/hicolor/scalable/mukwa.svg
+cp ($resource_dir)/tar/Makefile build/
+cp ($resource_dir)/tar/README.md build/
 cp LICENSE build
 
 let excluded_libs = [
@@ -53,5 +56,4 @@ for $lib in $libs {
 
 print ""
 mkdir target/bundle/($target_triple)
-#tar -czvf mukwa-v($version)-linux-x86_64.tar.gz -C build target/bundle/($target_triple)/
-tar -czvf mukwa-v($version)-linux-x86_64.tar.gz -C build .
+tar -czvf target/bundle/($target_triple)/mukwa-v($version)-x86_64.tar.gz -C build .
