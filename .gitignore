@@ -2,6 +2,7 @@
 .mukwa/
 /bin/
 temp/
+*.mm_profdata
 
 # IDE settings
 .idea/
