@@ -1,4 +1,4 @@
-## unreleased
+## 0.1.2 - 2026-09-04
 
 - Fixed category text field not working
 - Added support for deleting accounts
