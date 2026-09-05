@@ -40,8 +40,6 @@ component CategoryItem inherits VerticalLayout {
             / Api.money-to-float(budget.amount);
     }
 
-    // FIXME: category text field not working
-
     context-menu := ContextMenu {
         min-width: 250px;
         min-height: 50px;
@@ -74,40 +72,16 @@ component CategoryItem inherits VerticalLayout {
             cross-axis-alignment: center;
 
             VerticalLayout {
-                max-width: 500px;
+                width: 500px;
                 spacing: 12px;
 
                 HorizontalLayout {
                     alignment: space-between;
                     cross-axis-alignment: center;
 
-                    Rectangle {
-                        width: 100px;
-                        property <bool> active: false;
-
-                        TouchArea {
-                            clicked => {
-                                if (!active) {
-                                    active = true;
-                                }
-                            }
-                        }
-
-                        if active: TextField {
-                            width: 100%;
-                            text: category.title;
-
-                            accepted => {
-                                State.update-category(category.id, self.text);
-                                active = false;
-                            }
-                        }
-
-                        if !active: Text {
-                            width: 100%;
-                            text: category.title;
-                            color: Colors.textBody;
-                        }
+                    InlineTextField {
+                        text: category.title;
+                        accepted(value) => State.update-category(category.id, value);
                     }
 
                     Text {
