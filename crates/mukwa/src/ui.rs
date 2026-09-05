@@ -114,6 +114,7 @@ impl From<mukwa_core::service::CategoryGroup> for CategoryGroup {
         Self {
             id: value.id.to_shared_string(),
             title: value.title.to_shared_string(),
+            is_meta: value.is_meta
         }
     }
 }
@@ -123,6 +124,7 @@ impl From<&mukwa_core::service::CategoryGroup> for CategoryGroup {
         Self {
             id: value.id.to_shared_string(),
             title: value.title.to_shared_string(),
+            is_meta: value.is_meta
         }
     }
 }
