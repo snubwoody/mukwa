@@ -288,6 +288,8 @@ component CategoryGroupItem {
                 category-button := IconButton {
                     icon: IconSet.Plus;
                     theme: ghost;
+                    enabled: !category-group.is-meta;
+                    visible: !category-group.is-meta;
                     clicked => {
                         category-popup.show();
                     }

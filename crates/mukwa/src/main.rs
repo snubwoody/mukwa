@@ -6,7 +6,7 @@
 
 mod settings;
 mod state;
-pub mod ui;
+mod ui;
 
 pub use mukwa_core::error::{Error, Result};
 use mukwa_core::{Currency, Money};
