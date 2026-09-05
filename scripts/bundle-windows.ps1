@@ -16,7 +16,7 @@ $Architecture = if ($Architecture) {
     $OSArchitecture
 }
 
-$AppVersion = "0.1.1"
+$AppVersion = "0.1.2"
 $CargoTarget = "$Architecture-pc-windows-msvc"
 $CargoBuildDir = "target/$CargoTarget/release"
 $ResourceDir = "$env:TEMP\MukwaBundleDir";
