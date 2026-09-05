@@ -116,6 +116,8 @@ impl App {
         let service = Service::new(connection);
         let main_window = ui::MainWindow::new()?;
 
+        service.check_credit_account_categories()?;
+
         let settings_dir = if cfg!(debug_assertions) {
             PathBuf::from(".mukwa")
         } else {
