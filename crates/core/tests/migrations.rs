@@ -36,3 +36,21 @@ fn old_accounts_default_to_cash_accounts() -> Result<()> {
     assert_eq!(accounts[0].account_type, AccountType::Cash);
     Ok(())
 }
+
+#[test]
+fn add_credit_payments_meta_group() -> Result<()> {
+    let mut connection = Connection::open_in_memory()?;
+
+    let mut migrator = Migrator::new();
+    migrator.load_embedded()?;
+    migrator.migrate_until(&mut connection, 20260819184648)?;
+    migrator.migrate(&mut connection)?;
+
+    let service = Service::new(connection);
+    let groups = service.fetch_category_groups()?;
+    let group = &groups[0];
+
+    assert_eq!(group.title, "Credit payments");
+    assert!(group.is_meta);
+    Ok(())
+}

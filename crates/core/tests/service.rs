@@ -4,9 +4,7 @@
 use jiff::Zoned;
 use jiff::civil::date;
 use mukwa_core::migrator::Migrator;
-use mukwa_core::service::{
-    AccountType, Category, CategoryGroup, CreateBudgetOpts, Service, TransactionType,
-};
+use mukwa_core::service::{AccountType, Category, CreateBudgetOpts, Service, TransactionType};
 use mukwa_core::{Money, create_test_db};
 use rusqlite::{Connection, OptionalExtension};
 use uuid::Uuid;
@@ -78,18 +76,22 @@ fn create_category_group() -> mukwa_core::Result<()> {
     let group = service.create_category_group("Wants")?;
     assert_eq!(group.title, "Wants");
 
-    service
-        .connection()
-        .query_one("SELECT * FROM category_groups", [], |row| {
+    service.connection().query_one(
+        "SELECT * FROM category_groups WHERE id = ?",
+        [group.id.to_string()],
+        |row| {
             let deleted_at: Option<i64> = row.get("deleted_at")?;
             let id: String = row.get("id")?;
             let title: String = row.get("title")?;
+            let is_meta: bool = row.get("is_meta")?;
 
             assert!(deleted_at.is_none());
             assert_eq!(title, "Wants");
+            assert!(!is_meta);
             assert_eq!(group.id.to_string(), id);
             Ok(())
-        })?;
+        },
+    )?;
     Ok(())
 }
 
@@ -99,13 +101,15 @@ fn update_category_group() -> mukwa_core::Result<()> {
     let group = service.create_category_group("Wants")?;
     service.update_category_group(group.id, "Needs")?;
 
-    service
-        .connection()
-        .query_one("SELECT * FROM category_groups", [], |row| {
+    service.connection().query_one(
+        "SELECT * FROM category_groups where id = ?",
+        [group.id.to_string()],
+        |row| {
             let title: String = row.get("title")?;
             assert_eq!(title, "Needs");
             Ok(())
-        })?;
+        },
+    )?;
     Ok(())
 }
 
@@ -652,7 +656,6 @@ fn fetch_category_groups() -> mukwa_core::Result<()> {
     let g3 = service.create_category_group("Investments & Savings")?;
 
     let category_groups = service.fetch_category_groups()?;
-    assert_eq!(category_groups.len(), 3);
     assert!(category_groups.contains(&g1));
     assert!(category_groups.contains(&g2));
     assert!(category_groups.contains(&g3));
@@ -837,14 +840,12 @@ fn delete_category() -> mukwa_core::Result<()> {
 fn delete_category_group() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let group = service.create_category_group("")?;
+    let groups = service.fetch_category_groups()?;
+    assert!(groups.contains(&group));
+
     service.delete_category_group(group.id)?;
-    let row = service
-        .connection()
-        .query_row("SELECT * FROM category_groups", [], |row| {
-            Ok(CategoryGroup::try_from(row).unwrap())
-        })
-        .optional()?;
-    assert!(row.is_none());
+    let groups = service.fetch_category_groups()?;
+    assert!(!groups.contains(&group));
     Ok(())
 }
 

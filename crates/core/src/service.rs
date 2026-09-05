@@ -66,12 +66,14 @@ pub struct Category {
     pub id: Uuid,
     pub title: String,
     pub group_id: Uuid,
+    pub account_id: Option<Uuid>,
 }
 
 #[derive(PartialOrd, PartialEq, Debug, Default, Clone)]
 pub struct CategoryGroup {
     pub id: Uuid,
     pub title: String,
+    pub is_meta: bool,
 }
 
 #[derive(PartialOrd, PartialEq, Debug, Clone, Copy, Eq, Ord)]
@@ -115,11 +117,15 @@ impl<'a> TryFrom<&Row<'a>> for Category {
         let id: String = value.get("id")?;
         let title: String = value.get("title")?;
         let group_id: String = value.get("group_id")?;
+        let account_id = value
+            .get::<_, Option<String>>("account_id")?
+            .map(|id| Uuid::parse_str(&id).unwrap());
 
         Ok(Category {
             id: Uuid::parse_str(&id)?,
             title: title.to_string(),
             group_id: Uuid::parse_str(&group_id)?,
+            account_id,
         })
     }
 }
@@ -130,10 +136,12 @@ impl<'a> TryFrom<&Row<'a>> for CategoryGroup {
     fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
         let id: String = value.get("id")?;
         let title: String = value.get("title")?;
+        let is_meta: bool = value.get("is_meta")?;
 
         Ok(CategoryGroup {
             id: Uuid::parse_str(&id)?,
             title: title.to_string(),
+            is_meta,
         })
     }
 }
