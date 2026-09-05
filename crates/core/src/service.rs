@@ -5,6 +5,7 @@ use crate::{Error, Money, create_test_db};
 use jiff::Zoned;
 use jiff::civil::Date;
 use rusqlite::{Connection, Row, params};
+use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::path::Path;
 use std::rc::Rc;
@@ -508,6 +509,20 @@ impl Service {
         Ok(budgets)
     }
 
+    /// Fetches all the budgets.
+    pub fn fetch_budgets(&self) -> crate::Result<Vec<Budget>> {
+        let mut budgets = vec![];
+        let connection = self.connection();
+        let sql = "SELECT * FROM budgets";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows = stmt.query_and_then((), |row| Budget::try_from(row))?;
+
+        for row in rows {
+            budgets.push(row?);
+        }
+        Ok(budgets)
+    }
+
     pub fn fetch_or_init_budgets(&self, date: Date) -> crate::Result<Vec<Budget>> {
         let categories = self.fetch_categories()?;
         let budgets = self.fetch_budgets_by_month(date)?;
@@ -1002,12 +1017,113 @@ impl Service {
         let transaction = rows.next().unwrap()?;
         Ok(transaction)
     }
+
+    /// Returns the total amount left to assign.
+    ///
+    /// Calculated by subtracting the total amount assigned to all budgets from the total
+    /// income into cash accounts.
+    pub fn left_to_assign(&self) -> crate::Result<Money> {
+        let total_assignable = self.total_assignable()?;
+        let total_assigned: Money = self
+            .fetch_budgets()?
+            .iter()
+            .map(|budget| budget.amount)
+            .sum();
+
+        Ok(total_assignable - total_assigned)
+    }
+
+    fn total_assignable(&self) -> crate::Result<Money> {
+        // TODO: what happens to money moved to a credit account?
+        let cash_accounts: HashMap<Uuid, Account> = self
+            .fetch_accounts()?
+            .into_iter()
+            .filter(|account| account.account_type == AccountType::Cash)
+            .map(|account| (account.id, account))
+            .collect();
+
+        let mut total_cash = Money::ZERO;
+        let transactions = self.fetch_transactions()?;
+
+        for transaction in transactions {
+            if transaction.transaction_type() != TransactionType::Income {
+                continue;
+            }
+
+            if let Some(account_id) = transaction.receiver_id
+                && cash_accounts.contains_key(&account_id)
+            {
+                total_cash += transaction.amount;
+            }
+        }
+
+        Ok(total_cash)
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use jiff::civil::date;
+
+    #[test]
+    fn total_assignable() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let account = service.create_account("", AccountType::Cash)?;
+
+        service
+            .create_income()
+            .amount(Money::new(25))
+            .account(account.id)
+            .submit()?;
+
+        service
+            .create_income()
+            .amount(Money::new(75))
+            .account(account.id)
+            .submit()?;
+
+        service
+            .create_expense()
+            .amount(Money::new(205))
+            .account(account.id)
+            .submit()?;
+
+        let total_assignable = service.total_assignable()?;
+        assert_eq!(total_assignable, Money::new(100));
+
+        Ok(())
+    }
+
+    #[test]
+    fn total_assignable_excludes_transfers() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let account = service.create_account("", AccountType::Cash)?;
+        let account2 = service.create_account("", AccountType::Cash)?;
+
+        service
+            .create_income()
+            .amount(Money::new(25))
+            .account(account.id)
+            .submit()?;
+
+        service
+            .create_income()
+            .amount(Money::new(5))
+            .account(account.id)
+            .submit()?;
+
+        service
+            .create_transfer()
+            .amount(Money::new(75))
+            .accounts(account.id, account2.id)
+            .submit()?;
+
+        let total_assignable = service.total_assignable()?;
+        assert_eq!(total_assignable, Money::new(30));
+
+        Ok(())
+    }
 
     #[test]
     fn create_expense() -> crate::Result<()> {
