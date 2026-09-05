@@ -986,6 +986,20 @@ impl Service {
         Ok(())
     }
 
+    /// Deletes an account and all associated transactions.
+    pub fn delete_account(&self, id: Uuid) -> crate::Result<()> {
+        let connection = self.connection();
+        
+        let mut stmt = connection.prepare_cached("DELETE FROM transactions WHERE receiver_id = ?")?;
+        stmt.execute([id.to_string()])?;
+        let mut stmt = connection.prepare_cached("DELETE FROM transactions WHERE sender_id = ?")?;
+        stmt.execute([id.to_string()])?;
+        let mut stmt = connection.prepare_cached("DELETE FROM accounts WHERE id = ?")?;
+        stmt.execute([id.to_string()])?;
+        
+        Ok(())
+    }
+
     /// Duplicates a transaction, the new transaction will have all the same values as the old transaction
     /// except the `id`.
     pub fn duplicate_transaction(&self, id: Uuid) -> crate::Result<Transaction> {

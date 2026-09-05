@@ -262,6 +262,17 @@ impl AppState {
         Ok(())
     }
 
+    pub fn delete_account(&mut self, id: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        self.service.delete_account(id)?;
+        info!("Deleted account {id}");
+        self.reset_budgets(self.current_budget_month)?;
+        self.reset_categories()?;
+        self.load_accounts()?;
+        self.load_transactions()?;
+        Ok(())
+    }
+
     pub fn delete_category_group(&mut self, id: &str) -> crate::Result<()> {
         let id = Uuid::parse_str(id)?;
         self.service.delete_category_group(id)?;

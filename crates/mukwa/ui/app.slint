@@ -84,6 +84,7 @@ component AccountListItem inherits SidebarButton {
         ContextMenuItem {
             text: @tr("Delete");
             clicked => {
+                State.delete-account(account.id);
                 parent.close();
             }
         }

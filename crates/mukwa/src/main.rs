@@ -923,6 +923,15 @@ impl App {
             }
         });
 
+        global_state.on_delete_account({
+            let mut state = state.clone();
+            move |id| {
+                if let Err(err) = state.delete_account(&id) {
+                    warn!("Failed to delete account: {err}")
+                }
+            }
+        });
+
         global_state.on_delete_category_group({
             let mut state = state.clone();
             move |id| {
