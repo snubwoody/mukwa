@@ -95,6 +95,7 @@ export global State {
     callback create-category(title: string, group-id: string);
     callback move-category(id: string, group-id: string);
     callback create-category-group(title: string);
+    callback delete-account(string);
 
     pure callback category-to-transfer(id: string) -> data-transfer;
     pure callback transfer-to-category(data-transfer) -> string;

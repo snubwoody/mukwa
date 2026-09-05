@@ -899,3 +899,42 @@ fn delete_category_deletes_budget() -> mukwa_core::Result<()> {
     assert!(budgets.is_empty());
     Ok(())
 }
+
+#[test]
+fn delete_account() -> mukwa_core::Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("My account", AccountType::Cash)?;
+
+    let len = service.fetch_accounts()?.len();
+
+    let accounts = service.fetch_accounts()?;
+    assert!(accounts.contains(&account));
+    service.delete_account(account.id)?;
+
+    let accounts = service.fetch_accounts()?;
+    assert_eq!(accounts.len(), len - 1);
+    assert!(!accounts.contains(&account));
+    Ok(())
+}
+
+#[test]
+fn delete_account_deletes_associated_transactions() -> mukwa_core::Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("My account", AccountType::Cash)?;
+    let account2 = service.create_account("My account", AccountType::Cash)?;
+
+    service.create_expense().account(account.id).submit()?;
+    service.create_income().account(account.id).submit()?;
+    service
+        .create_transfer()
+        .accounts(account.id, account2.id)
+        .submit()?;
+
+    let transactions = service.fetch_accounts()?;
+    assert_eq!(transactions.len(), 3);
+
+    service.delete_account(account.id)?;
+    let transactions = service.fetch_transactions()?;
+    assert!(transactions.is_empty());
+    Ok(())
+}

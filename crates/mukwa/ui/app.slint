@@ -28,7 +28,14 @@ export {
 }from "globals.slint";
 export { Settings }from "settings.slint";
 export { AnalyticsApi, PieChartSlice }from "analytics-page.slint";
-import { Button, TextField, ComboBox, PrimaryButton } from "widgets.slint";
+import {
+    Button,
+    TextField,
+    ComboBox,
+    PrimaryButton,
+    ContextMenu,
+    ContextMenuItem,
+} from "widgets.slint";
 import { TransactionPage } from "transaction-page.slint";
 import { SpendingPage } from "spending-page.slint";
 import { ComboBoxItem } from "widgets/combobox.slint";
@@ -60,6 +67,45 @@ component SidebarButton inherits Button {
     @children
 }
 
+component AccountListItem inherits SidebarButton {
+    in property <Account> account;
+    in property <string> active-account-id;
+    callback select-account(string);
+
+    alignment: start;
+    selected: active-account-id == account.id;
+
+    clicked => select-account(account.id);
+    right-clicked => context-menu.show();
+
+    context-menu := ContextMenu {
+        min-width: 250px;
+        min-height: 50px;
+        ContextMenuItem {
+            text: @tr("Delete");
+            clicked => {
+                State.delete-account(account.id);
+                parent.close();
+            }
+        }
+    }
+
+    HorizontalLayout {
+        alignment: space-between;
+        width: 100%;
+
+        Text {
+            text: account.name;
+            color: Colors.textBody;
+        }
+
+        Text {
+            text: State.format-money(account.balance, Settings.currency-code);
+            color: Colors.textBody;
+        }
+    }
+}
+
 component AccountSection inherits VerticalLayout {
     in property <[Account]> accounts;
     in property <Page> current-page;
@@ -87,24 +133,10 @@ component AccountSection inherits VerticalLayout {
         content := VerticalLayout {
             padding-left: 16px;
 
-            for account in accounts: SidebarButton {
-                alignment: start;
-                selected: active-account-id == account.id;
-                clicked => select-account(account.id);
-                HorizontalLayout {
-                    alignment: space-between;
-                    width: 100%;
-
-                    Text {
-                        text: account.name;
-                        color: Colors.textBody;
-                    }
-
-                    Text {
-                        text: State.format-money(account.balance, Settings.currency-code);
-                        color: Colors.textBody;
-                    }
-                }
+            for account in accounts: AccountListItem {
+                account: account;
+                active-account-id: active-account-id;
+                select-account(account-id) => select-account(account-id);
             }
         }
     }

@@ -22,6 +22,7 @@ export component Button inherits Rectangle {
     padding-bottom: 4px;
 
     callback clicked <=> touch-area.clicked;
+    callback right-clicked();
 
     accessible-label: text;
     accessible-enabled: enabled;
@@ -35,7 +36,13 @@ export component Button inherits Rectangle {
 
     forward-focus: focus-scope;
 
-    touch-area := TouchArea { }
+    touch-area := TouchArea {
+        pointer-event(event) => {
+            if event.button == PointerEventButton.right {
+                right-clicked();
+            }
+        }
+    }
 
     HorizontalLayout {
         padding-right: root.padding-right;
