@@ -8,6 +8,7 @@ use rusqlite::{Connection, Row, params};
 use std::marker::PhantomData;
 use std::path::Path;
 use std::rc::Rc;
+use tracing::info;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq, Default)]
@@ -66,12 +67,14 @@ pub struct Category {
     pub id: Uuid,
     pub title: String,
     pub group_id: Uuid,
+    pub account_id: Option<Uuid>,
 }
 
 #[derive(PartialOrd, PartialEq, Debug, Default, Clone)]
 pub struct CategoryGroup {
     pub id: Uuid,
     pub title: String,
+    pub is_meta: bool,
 }
 
 #[derive(PartialOrd, PartialEq, Debug, Clone, Copy, Eq, Ord)]
@@ -115,11 +118,15 @@ impl<'a> TryFrom<&Row<'a>> for Category {
         let id: String = value.get("id")?;
         let title: String = value.get("title")?;
         let group_id: String = value.get("group_id")?;
+        let account_id = value
+            .get::<_, Option<String>>("account_id")?
+            .map(|id| Uuid::parse_str(&id).unwrap());
 
         Ok(Category {
             id: Uuid::parse_str(&id)?,
             title: title.to_string(),
             group_id: Uuid::parse_str(&group_id)?,
+            account_id,
         })
     }
 }
@@ -130,10 +137,12 @@ impl<'a> TryFrom<&Row<'a>> for CategoryGroup {
     fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
         let id: String = value.get("id")?;
         let title: String = value.get("title")?;
+        let is_meta: bool = value.get("is_meta")?;
 
         Ok(CategoryGroup {
             id: Uuid::parse_str(&id)?,
             title: title.to_string(),
+            is_meta,
         })
     }
 }
@@ -1017,12 +1026,88 @@ impl Service {
         let transaction = rows.next().unwrap()?;
         Ok(transaction)
     }
+
+    /// Checks for missing categories for credit accounts.
+    pub fn check_credit_account_categories(&self) -> crate::Result<()> {
+        let groups = self.fetch_category_groups()?;
+        let credit_group = groups
+            .iter()
+            .find(|group| group.is_meta)
+            .ok_or(Error::new("Credit payments group does not exist"))?;
+
+        let accounts = self.fetch_accounts()?;
+        let iter = accounts
+            .iter()
+            .filter(|account| account.account_type == AccountType::Credit);
+        let categories = self.fetch_categories()?;
+
+        let connection = self.connection();
+        let sql =
+            "INSERT INTO categories(id,title,group_id,account_id) VALUES(?1,?2,?3,?4) RETURNING *";
+        let mut stmt = connection.prepare_cached(sql)?;
+
+        for account in iter {
+            let exists = categories
+                .iter()
+                .find(|c| c.account_id.unwrap_or_default() == account.id)
+                .is_some();
+            if exists {
+                continue;
+            }
+
+            let params = params![
+                Uuid::now_v7().to_string(),
+                account.name,
+                credit_group.id.to_string(),
+                account.id.to_string()
+            ];
+            let mut rows = stmt.query_and_then(params, |row| Category::try_from(row))?;
+
+            let _ = rows.next().unwrap()?;
+            info!("Created category for credit account {}", account.id);
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use jiff::civil::date;
+
+    #[test]
+    fn create_missing_credit_categories() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let groups = service.fetch_category_groups()?;
+        let credit_group = &groups[0];
+        let credit_account = service.create_account("", AccountType::Credit)?;
+        service.create_account("", AccountType::Cash)?;
+        service.check_credit_account_categories()?;
+
+        let categories = service.fetch_categories()?;
+        assert_eq!(categories.len(), 1);
+
+        let category = &categories[0];
+        assert_eq!(category.group_id, credit_group.id);
+        assert_eq!(category.account_id.unwrap(), credit_account.id);
+        Ok(())
+    }
+
+    #[test]
+    fn create_missing_credit_categories_skips_existing_categories() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        service.create_account("", AccountType::Credit)?;
+        service.create_account("", AccountType::Credit)?;
+        service.check_credit_account_categories()?;
+
+        let categories = service.fetch_categories()?;
+        assert_eq!(categories.len(), 2);
+
+        service.check_credit_account_categories()?;
+        let categories = service.fetch_categories()?;
+        assert_eq!(categories.len(), 2);
+        Ok(())
+    }
 
     #[test]
     fn create_expense() -> crate::Result<()> {
