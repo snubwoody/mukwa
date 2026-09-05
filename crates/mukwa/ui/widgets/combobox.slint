@@ -64,6 +64,7 @@ export component ComboBox {
         }
 
         touch-area := TouchArea {
+            enabled: root.enabled;
             clicked => {
                 popup.show();
             }
@@ -83,7 +84,7 @@ export component ComboBox {
             background: white;
             border-color: Colors.neutral50;
             border-width: 1px;
-            border-radius: 4px;
+            border-radius: 8px;
             clip: true;
 
             VerticalLayout {
@@ -108,14 +109,14 @@ export component ComboBox {
 
     popup := PopupWindow {
         width: max(root.width,250px);
-        y: layout.height;
+        y: layout.height + 8px;
         height: min(content.preferred-height,250px);
         close-policy: close-on-click-outside;
         forward-focus: popup-fs;
 
         popup-background := Rectangle {
             background: white;
-            border-radius: 12px;
+            border-radius: 8px;
             border-width: 1px;
             border-color: Colors.neutral50;
         }
@@ -144,9 +145,13 @@ export component ComboBox {
             max-height: 250px;
             content-height: content.preferred-height;
             content := VerticalLayout {
+                padding: 8px;
+                spacing: 4px;
+
                 for option[i] in options: Rectangle {
                     background: current-index == i ? Colors.neutral50 : white;
                     height: 24px;
+                    border-radius: 4px;
 
                     states [
                         hovered when inner-touch-area.has-hover: {
