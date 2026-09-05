@@ -1,3 +1,7 @@
+## unreleased
+
+- Fixed category text field not working
+
 ## 0.1.1 - 2026-08-30
 
 - Fixed transfers not showing on the receiving account.
