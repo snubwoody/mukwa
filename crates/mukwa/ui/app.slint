@@ -133,7 +133,7 @@ component AccountSection inherits VerticalLayout {
         content := VerticalLayout {
             padding-left: 16px;
 
-            for account in accounts: AccountListItem{
+            for account in accounts: AccountListItem {
                 account: account;
                 active-account-id: active-account-id;
                 select-account(account-id) => select-account(account-id);

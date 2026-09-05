@@ -925,7 +925,10 @@ fn delete_account_deletes_associated_transactions() -> mukwa_core::Result<()> {
 
     service.create_expense().account(account.id).submit()?;
     service.create_income().account(account.id).submit()?;
-    service.create_transfer().accounts(account.id,account2.id).submit()?;
+    service
+        .create_transfer()
+        .accounts(account.id, account2.id)
+        .submit()?;
 
     let transactions = service.fetch_accounts()?;
     assert_eq!(transactions.len(), 3);
