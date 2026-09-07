@@ -58,6 +58,7 @@ export component ComboBox {
                 return reject;
             }
             if (event.text == Key.Space || event.text == Key.Return) {
+                popup.show();
                 return accept;
             }
             return reject;
@@ -82,7 +83,7 @@ export component ComboBox {
 
         Rectangle {
             background: white;
-            border-color: Colors.neutral50;
+            border-color: focus-scope.has-focus ? Colors.borderAccent : Colors.neutral50;
             border-width: 1px;
             border-radius: 8px;
             clip: true;
@@ -177,6 +178,4 @@ export component ComboBox {
             }
         }
     }
-
-    if focus-scope.has-focus: FocusBorder { }
 }
