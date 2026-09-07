@@ -33,37 +33,57 @@ fn extract_test_function(source: &str) -> String{
     function
 }
 
+#[derive(Debug)]
+struct TestCase {
+    source: String,
+    name: String,
+}
+
 fn main() {
     // TODO: could use async for more performant IO like cargo nextest
     let cases_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("cases");
-    let source = fs::read_to_string(cases_dir.join("button.slint")).unwrap();
-    let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
-    dbg!(&out_dir);
 
-    let mut diag = BuildDiagnostics::default();
-    let syntax_node = parser::parse(source.clone(),None,&mut diag);
-    let mut compiler_config = CompilerConfiguration::new(OutputFormat::Rust);
-    compiler_config.debug_info = true;
+    let mut test_cases = vec![];
+    for entry in fs::read_dir(&cases_dir).unwrap(){
+        let entry = entry.unwrap();
+        // TODO: add recursive function for dirs
 
-    let (root_component,diag,loader) = smol::block_on(compile_syntax_node(syntax_node,diag,compiler_config));
-
-    if diag.has_errors(){
-        diag.print_warnings_and_exit_on_error();
-        // TODO: maybe return an error here
-    } else {
-        diag.print();
+        let file_name = entry.file_name();
+        let name: Vec<&str> = file_name.to_str().unwrap().split(".").collect();
+        let source = fs::read_to_string(entry.path()).unwrap();
+        let case = TestCase{
+            source,
+            name: String::from(name[0])
+        };
+        test_cases.push(case);
     }
 
-    let mut file = File::create(out_dir.join("test.rs")).unwrap();
-    //let mut file = File::create("test.rs").unwrap();
-    //let mut output = Vec::new();
-    generator::generate(OutputFormat::Rust,&mut file,None,&root_component,&loader.compiler_config).unwrap();
-    //dbg!(output);
+    let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
 
-    let test_function = extract_test_function(&source);
-    dbg!(&test_function);
+    for case in test_cases{
+        let mut diag = BuildDiagnostics::default();
 
-    write!(file,"\n#[test]\nfn test_button(){{\ni_slint_backend_testing::init_no_event_loop();\n{}}}",test_function).unwrap();
+        let syntax_node = parser::parse(case.source.clone(),None,&mut diag);
+        let mut compiler_config = CompilerConfiguration::new(OutputFormat::Rust);
+        compiler_config.debug_info = true;
+
+        let (root_component,diag,loader) = smol::block_on(compile_syntax_node(syntax_node,diag,compiler_config));
+
+
+        if diag.has_errors(){
+            diag.print_warnings_and_exit_on_error();
+            // TODO: maybe return an error here
+        } else {
+            diag.print();
+        }
+
+        let mut file = File::create(out_dir.join(format!("{}.rs",&case.name))).unwrap();
+        generator::generate(OutputFormat::Rust,&mut file,None,&root_component,&loader.compiler_config).unwrap();
+
+        let test_function = extract_test_function(&case.source);
+
+        write!(file,"\n#[test]\nfn test_{}(){{\ni_slint_backend_testing::init_no_event_loop();\n{}}}",case.name,test_function).unwrap();
+    }
     //panic!();
 }
 
