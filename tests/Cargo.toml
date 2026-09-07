@@ -10,6 +10,7 @@ slint.workspace = true
 git = "https://github.com/snubwoody/slint.git"
 branch = "mukwa"
 version = "1.17.0"
+features = ["internal"]
 
 [build-dependencies]
 smol = "2.0.2"
