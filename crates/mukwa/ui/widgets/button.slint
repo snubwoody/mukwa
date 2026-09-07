@@ -68,7 +68,7 @@ export component Button inherits Rectangle {
         width: 0; // Do not react on clicks
 
         key-pressed(event) => {
-            if (event.text == Key.Space || event.text == Key.Escape) {
+            if (event.text == Key.Space || event.text == Key.Return) {
                 clicked();
                 return accept;
             }
