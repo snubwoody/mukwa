@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-fn main() {
-}
+include!(concat!(env!("OUT_DIR"), "/test.rs"));
