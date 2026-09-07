@@ -5330,6 +5330,7 @@ dependencies = [
  "i-slint-backend-testing",
  "i-slint-compiler",
  "lucide-slint",
+ "mukwa",
  "slint",
  "smol",
 ]

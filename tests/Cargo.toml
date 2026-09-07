@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 slint.workspace = true
+mukwa = {path = "../crates/mukwa"}
 
 [dependencies.i-slint-backend-testing]
 git = "https://github.com/snubwoody/slint.git"

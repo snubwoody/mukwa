@@ -1,0 +1,29 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { SpendingPage } from "spending-page.slint";
+import { Date, CalendarState } from "widgets/calendar.slint";
+export { Date, CalendarState } from "widgets/calendar.slint";
+
+export component TestCase inherits Window {
+    out property <Date> current-date <=> spending-page.current-date;
+
+    pure callback increment-month <=> CalendarState.increment-month;
+
+    spending-page := SpendingPage {
+
+    }
+}
+
+/*
+use slint::{platform::Key,SharedString};
+let instance = TestCase::new().unwrap();
+let calendar_state = instance.global::<CalendarState>();
+mukwa::setup_calendar_state(&calendar_state);
+
+let mut result = i_slint_backend_testing::ElementHandle::find_by_accessible_label(&instance, "Next month").collect::<Vec<_>>();
+assert_eq!(result.len(), 1);
+let next_month_button = result.pop().unwrap();
+next_month_button.invoke_accessible_default_action();
+
+*/
