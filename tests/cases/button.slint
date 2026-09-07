@@ -1,0 +1,45 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { Button } from "widgets/button.slint";
+
+export component TestCase inherits Rectangle {
+    in-out property <bool> button-a-clicked: false;
+    in-out property <bool> button-b-clicked: false;
+    out property <bool> button-b-focused <=> button-b.has-focus;
+
+    public function focus-button-b() {
+        button-b.focus();
+    }
+
+    button-a := Button {
+        clicked => {
+            button-a-clicked = true;
+        }
+    }
+
+    button-b := Button {
+        clicked => {
+            button-b-clicked = true;
+        }
+    }
+}
+
+/*
+use slint::{platform::Key,SharedString};
+let instance = TestCase::new().unwrap();
+assert!(!instance.get_button_a_clicked());
+
+let mut result = i_slint_backend_testing::ElementHandle::find_by_element_id(&instance, "TestCase::button-a").collect::<Vec<_>>();
+assert_eq!(result.len(), 1);
+let button = result.pop().unwrap();
+
+button.invoke_accessible_default_action();
+assert!(instance.get_button_a_clicked());
+
+instance.invoke_focus_button_b();
+assert!(instance.get_button_b_focused());
+assert!(!instance.get_button_b_clicked());
+i_slint_backend_testing::send_keyboard_string_sequence(&instance, &SharedString::from(Key::Return));
+assert!(instance.get_button_b_clicked());
+*/

@@ -4,7 +4,8 @@ members = [
     "crates/core",
     "crates/mukwa",
     "crates/utils",
-    "benches"
+    "benches",
+    "tests"
 ]
 
 [workspace.package]
@@ -33,3 +34,5 @@ git = "https://github.com/snubwoody/slint.git"
 branch = "mukwa"
 version = "1.17.0"
 features = ["backend-winit", "renderer-skia", "log"]
+
+

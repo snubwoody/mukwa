@@ -1,0 +1,97 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { ComboBox } from "widgets.slint";
+
+export component TestCase inherits Rectangle {
+    out property <int> combobox-current-index <=> combobox.current-index;
+    out property <string> combobox-current-value <=> combobox.current-value;
+    out property <string> selected-value;
+
+    public function move-selection-down() {
+        combobox.move-selection-down();
+    }
+
+    public function move-selection-up() {
+        combobox.move-selection-up();
+    }
+
+    public function select(index: int) {
+        combobox.select(index);
+    }
+
+    public function open() {
+        combobox.open();
+    }
+
+    combobox := ComboBox {
+        options: [
+            { value: "bread", text: "Bread"},
+            { value: "samp", text: "Samp"},
+        ];
+
+        changed(value) => {
+            selected-value = value;
+        }
+    }
+}
+
+/*
+use i_slint_backend_testing::{AccessibleRole,ElementHandle};
+use slint::{platform::Key,SharedString};
+
+let instance = TestCase::new().unwrap();
+assert_eq!(instance.get_combobox_current_value(), "bread");
+assert_eq!(instance.get_combobox_current_index(), 0);
+
+instance.invoke_move_selection_down();
+assert_eq!(instance.get_combobox_current_index(), 1);
+assert_eq!(instance.get_combobox_current_value(), "samp");
+
+instance.invoke_move_selection_down();
+assert_eq!(instance.get_combobox_current_index(), 1);
+assert_eq!(instance.get_combobox_current_value(), "samp");
+
+instance.invoke_move_selection_up();
+assert_eq!(instance.get_combobox_current_index(), 0);
+assert_eq!(instance.get_combobox_current_value(), "bread");
+
+instance.invoke_move_selection_up();
+assert_eq!(instance.get_combobox_current_index(), 0);
+assert_eq!(instance.get_combobox_current_value(), "bread");
+
+instance.invoke_select(1);
+assert_eq!(instance.get_combobox_current_index(), 1);
+assert_eq!(instance.get_combobox_current_value(), "samp");
+
+let mut result = ElementHandle::find_by_element_id(&instance, "TestCase::combobox").collect::<Vec<_>>();
+assert_eq!(result.len(), 1);
+let combobox = result.pop().unwrap();
+
+assert_eq!(combobox.accessible_role().unwrap(), AccessibleRole::Combobox);
+assert!(!combobox.accessible_expanded().unwrap());
+assert!(combobox.accessible_expandable().unwrap());
+
+instance.invoke_select(0);
+instance.invoke_open();
+assert!(combobox.accessible_expanded().unwrap());
+
+i_slint_backend_testing::send_keyboard_string_sequence(&instance, &SharedString::from(Key::DownArrow));
+assert_eq!(instance.get_combobox_current_index(), 1);
+assert_eq!(instance.get_combobox_current_value(), "samp");
+
+i_slint_backend_testing::send_keyboard_string_sequence(&instance, &SharedString::from(Key::UpArrow));
+assert_eq!(instance.get_combobox_current_index(), 0);
+assert_eq!(instance.get_combobox_current_value(), "bread");
+
+assert_eq!(instance.get_selected_value(), "");
+i_slint_backend_testing::send_keyboard_string_sequence(&instance, &SharedString::from(Key::Return));
+assert_eq!(instance.get_selected_value(), "bread");
+assert!(!combobox.accessible_expanded().unwrap());
+
+instance.invoke_select(-5);
+assert_eq!(instance.get_combobox_current_index(), 0);
+
+instance.invoke_select(9999);
+assert_eq!(instance.get_combobox_current_index(), 1);
+*/

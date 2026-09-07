@@ -1,0 +1,23 @@
+[package]
+name = "tests"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+slint.workspace = true
+
+[dependencies.i-slint-backend-testing]
+git = "https://github.com/snubwoody/slint.git"
+branch = "mukwa"
+version = "1.17.0"
+features = ["internal"]
+
+[build-dependencies]
+smol = "2.0.2"
+lucide-slint = "1.24.0"
+
+[build-dependencies.i-slint-compiler]
+git = "https://github.com/snubwoody/slint.git"
+branch = "mukwa"
+version = "1.17.0"
+features = ["rust","display-diagnostics"]

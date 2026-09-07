@@ -33,7 +33,7 @@ export component ComboBox {
     }
 
     public function select(index: int) {
-        current-index = index;
+        current-index = Math.min(Math.max(index,0),options.length - 1);
     }
 
     public function move-selection-up() {
@@ -133,8 +133,11 @@ export component ComboBox {
                 } else if (event.text == Key.DownArrow) {
                     root.move-selection-down();
                     return accept;
-                } else if (event.text == Key.Return || event.text == Key.Escape) {
+                } else if (event.text == Key.Return) {
                     changed(options[current-index].value);
+                    popup.close();
+                    return accept;
+                } else if (event.text == Key.Escape){
                     popup.close();
                     return accept;
                 }
