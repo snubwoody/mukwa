@@ -1,0 +1,13 @@
+[package]
+name = "tests"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+
+[build-dependencies]
+
+[build-dependencies.i-slint-compiler]
+git = "https://github.com/snubwoody/slint.git"
+branch = "mukwa"
+version = "1.17.0"

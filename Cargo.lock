@@ -5265,6 +5265,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "tests"
+version = "0.1.2"
+dependencies = [
+ "i-slint-compiler",
+]
+
+[[package]]
 name = "text-size"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -5,7 +5,7 @@ members = [
     "crates/mukwa",
     "crates/utils",
     "benches"
-]
+, "tests"]
 
 [workspace.package]
 version = "0.1.2"

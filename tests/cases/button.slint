@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+export component TestCase inherits Rectangle {
+    in-out property <int> result: 0;
+    callback action;
+
+    action => {
+        debug("Hello world");
+        result = 1;
+    }
+}
+
+/*
+let instance = TestCase::new().unwrap();
+assert_eq!(instance.get_result(),1);
+*/
