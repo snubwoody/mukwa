@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+use std::collections::HashMap;
 use std::io::Write;
 use std::fs;
 use std::fs::File;
@@ -18,7 +19,6 @@ fn extract_test_function(source: &str) -> String{
         }
 
         if line == "*/"{
-            in_comment = false;
             break;
         }
 
@@ -59,13 +59,19 @@ fn main() {
     }
 
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    let include_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join("crates/mukwa/ui");
+    dbg!(&include_path);
 
     for case in test_cases{
         let mut diag = BuildDiagnostics::default();
 
         let syntax_node = parser::parse(case.source.clone(),None,&mut diag);
+        let library = HashMap::from([("lucide".to_string(), PathBuf::from(lucide_slint::lib()))]);
         let mut compiler_config = CompilerConfiguration::new(OutputFormat::Rust);
         compiler_config.debug_info = true;
+        compiler_config.include_paths = vec![include_path.clone()];
+        compiler_config.library_paths = library;
+
 
         let (root_component,diag,loader) = smol::block_on(compile_syntax_node(syntax_node,diag,compiler_config));
 
@@ -84,6 +90,5 @@ fn main() {
 
         write!(file,"\n#[test]\nfn test_{}(){{\ni_slint_backend_testing::init_no_event_loop();\n{}}}",case.name,test_function).unwrap();
     }
-    //panic!();
 }
 

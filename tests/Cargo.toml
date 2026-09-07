@@ -13,6 +13,7 @@ version = "1.17.0"
 
 [build-dependencies]
 smol = "2.0.2"
+lucide-slint = "1.24.0"
 
 [build-dependencies.i-slint-compiler]
 git = "https://github.com/snubwoody/slint.git"

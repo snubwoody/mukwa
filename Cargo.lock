@@ -5309,6 +5309,7 @@ version = "0.1.2"
 dependencies = [
  "i-slint-backend-testing",
  "i-slint-compiler",
+ "lucide-slint",
  "slint",
  "smol",
 ]

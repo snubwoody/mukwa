@@ -1,19 +1,26 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-export component TestCase inherits Rectangle {
-    in-out property <int> result: 0;
-    callback action;
+import { Button } from "widgets/button.slint";
 
-    action => {
-        debug("Hello world");
-        result = 1;
+export component TestCase inherits Rectangle {
+    in-out property <bool> button-clicked: false;
+
+    button := Button {
+        clicked => {
+            button-clicked = true;
+        }
     }
 }
 
 /*
 let instance = TestCase::new().unwrap();
-assert_eq!(instance.get_result(),0);
-instance.invoke_action();
-assert_eq!(instance.get_result(),1);
+assert_eq!(instance.get_button_clicked(),false);
+
+let mut result = i_slint_backend_testing::ElementHandle::find_by_element_id(&instance, "TestCase::button").collect::<Vec<_>>();
+assert_eq!(result.len(), 1);
+let button = result.pop().unwrap();
+
+button.invoke_accessible_default_action();
+assert_eq!(instance.get_button_clicked(),true);
 */
