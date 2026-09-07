@@ -69,12 +69,12 @@ assert_eq!(result.len(), 1);
 let combobox = result.pop().unwrap();
 
 assert_eq!(combobox.accessible_role().unwrap(), AccessibleRole::Combobox);
-assert_eq!(combobox.accessible_expanded().unwrap(), false);
-assert_eq!(combobox.accessible_expandable().unwrap(), true);
+assert!(!combobox.accessible_expanded().unwrap());
+assert!(combobox.accessible_expandable().unwrap());
 
 instance.invoke_select(0);
 instance.invoke_open();
-assert_eq!(combobox.accessible_expanded().unwrap(), true);
+assert!(combobox.accessible_expanded().unwrap());
 
 i_slint_backend_testing::send_keyboard_string_sequence(&instance, &SharedString::from(Key::DownArrow));
 assert_eq!(instance.get_combobox_current_index(), 1);
@@ -87,7 +87,7 @@ assert_eq!(instance.get_combobox_current_value(), "bread");
 assert_eq!(instance.get_selected_value(), "");
 i_slint_backend_testing::send_keyboard_string_sequence(&instance, &SharedString::from(Key::Return));
 assert_eq!(instance.get_selected_value(), "bread");
-assert_eq!(combobox.accessible_expanded().unwrap(), false);
+assert!(!combobox.accessible_expanded().unwrap());
 
 instance.invoke_select(-5);
 assert_eq!(instance.get_combobox_current_index(), 0);

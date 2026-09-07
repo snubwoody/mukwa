@@ -88,7 +88,7 @@ fn main() {
             diag.print();
         }
 
-        let mut file = File::create(out_dir.join(format!("{}.rs", &case.name))).unwrap();
+        let mut file = File::create(out_dir.join(format!("{}.rs", case.name))).unwrap();
         generator::generate(
             OutputFormat::Rust,
             &mut file,

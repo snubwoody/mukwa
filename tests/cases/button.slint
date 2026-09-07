@@ -28,18 +28,18 @@ export component TestCase inherits Rectangle {
 /*
 use slint::{platform::Key,SharedString};
 let instance = TestCase::new().unwrap();
-assert_eq!(instance.get_button_a_clicked(),false);
+assert!(!instance.get_button_a_clicked());
 
 let mut result = i_slint_backend_testing::ElementHandle::find_by_element_id(&instance, "TestCase::button-a").collect::<Vec<_>>();
 assert_eq!(result.len(), 1);
 let button = result.pop().unwrap();
 
 button.invoke_accessible_default_action();
-assert_eq!(instance.get_button_a_clicked(),true);
+assert!(instance.get_button_a_clicked());
 
 instance.invoke_focus_button_b();
-assert_eq!(instance.get_button_b_focused(), true);
-assert_eq!(instance.get_button_b_clicked(),false);
+assert!(instance.get_button_b_focused());
+assert!(!instance.get_button_b_clicked());
 i_slint_backend_testing::send_keyboard_string_sequence(&instance, &SharedString::from(Key::Return));
-assert_eq!(instance.get_button_b_clicked(),true);
+assert!(instance.get_button_b_clicked());
 */
