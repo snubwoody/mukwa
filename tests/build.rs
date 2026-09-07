@@ -40,6 +40,7 @@ struct TestCase {
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=../crates/mukwa/ui");
     // TODO: could use async for more performant IO like cargo nextest
     let cases_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("cases");
 
