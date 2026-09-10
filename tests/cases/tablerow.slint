@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { TableRow } from "tableview.slint";
+
+export component TestCase inherits Rectangle {
+    in-out property <bool> is-editing <=> table-row.is-editing;
+    
+    table-row := TableRow{
+
+    }
+}
+
+/*
+let instance = TestCase::new();
+
+*/
