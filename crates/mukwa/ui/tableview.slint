@@ -14,6 +14,13 @@ export component TableCell inherits Rectangle {
     callback clicked();
     callback right-clicked();
 
+    accessible-role: button;
+
+    accessible-action-default => {
+        is-editing = true;
+        clicked();
+    }
+
     // TODO: add focus-scope
     // TODO: pass focus onto child
     touch-area := TouchArea {

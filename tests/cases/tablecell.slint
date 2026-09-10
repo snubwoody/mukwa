@@ -1,0 +1,51 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { TableCell } from "tableview.slint";
+
+export component TestCase inherits Rectangle {
+    out property <bool> a-clicked: false;
+    out property <bool> a-is-editing <=> table-cell-a.is-editing;
+    out property <bool> b-clicked: false;
+    out property <bool> b-is-editing <=> table-cell-b.is-editing;
+
+    table-cell-a := TableCell{
+        clicked => {
+            a-clicked = true;
+        }
+    }
+    
+    table-cell-b := TableCell{
+        clicked => {
+            b-clicked = true;
+        }
+    }
+}
+
+/*
+use i_slint_backend_testing::ElementHandle;
+
+let instance = TestCase::new().unwrap();
+
+let mut result = ElementHandle::find_by_element_id(&instance, "TestCase::table-cell-a").collect::<Vec<_>>();
+assert_eq!(result.len(), 1);
+let table_cell_a = result.pop().unwrap();
+
+let mut result = ElementHandle::find_by_element_id(&instance, "TestCase::table-cell-a").collect::<Vec<_>>();
+assert_eq!(result.len(), 1);
+let table_cell_b = result.pop().unwrap();
+
+assert!(!instance.get_a_is_editing());
+table_cell_a.invoke_accessible_default_action();
+assert!(instance.get_a_clicked());
+assert!(instance.get_a_is_editing());
+
+let origin = table_cell_b.absolute_position();
+let size = table_cell_b.size();
+
+assert!(!instance.get_b_is_editing());
+assert!(!instance.get_b_clicked());
+i_slint_backend_testing::send_mouse_click(&instance, origin.x + size.width/2.0, origin.y + size.height/2.0);
+assert!(instance.get_b_is_editing());
+assert!(instance.get_b_clicked());
+*/
