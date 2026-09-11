@@ -3,7 +3,7 @@
 
 use jiff::Zoned;
 use jiff::civil::date;
-use mukwa_core::Result;
+use mukwa_core::{Error, Result};
 use mukwa_core::migrator::Migrator;
 use mukwa_core::service::{AccountType, Category, CreateBudgetOpts, Service, TransactionType};
 use mukwa_core::{Money, create_test_db};
@@ -127,6 +127,22 @@ fn create_category_group() -> mukwa_core::Result<()> {
             Ok(())
         },
     )?;
+    Ok(())
+}
+
+#[test]
+fn cannot_delete_meta_category_group() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let groups = service.fetch_category_groups()?;
+    assert_eq!(groups.len(),1);
+    let credit_payments = groups.iter().find(|group|group.is_meta).unwrap();
+    let result = service.delete_category_group(credit_payments.id);
+    assert!(result.is_err());
+    assert_eq!(result.err().unwrap().to_string(),"Meta category groups cannot be deleted");
+
+    // Make sure it hasn't been deleted
+    let groups = service.fetch_category_groups()?;
+    assert_eq!(groups.len(),1);
     Ok(())
 }
 
