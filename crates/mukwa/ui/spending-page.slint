@@ -81,6 +81,7 @@ component CategoryItem inherits VerticalLayout {
 
                     InlineTextField {
                         text: category.title;
+                        enabled: category.account-id.is-empty;
                         accepted(value) => State.update-category(category.id, value);
                     }
 
