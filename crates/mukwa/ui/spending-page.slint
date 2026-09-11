@@ -282,6 +282,7 @@ component CategoryGroupItem {
                 InlineTextField {
                     text: category-group.title;
                     font-weight: FontWeight.semi-bold;
+                    enabled: !category-group.is-meta;
                     accepted(value) => State.update-category-group(category-group.id, value);
                 }
 
