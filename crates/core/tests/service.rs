@@ -60,7 +60,11 @@ fn left_to_assign_excludes_transfers_to_credit_accounts() -> Result<()> {
     let left_to_assign = service.left_to_assign()?;
     assert_eq!(left_to_assign, Money::new(500));
 
-    service.create_transfer().accounts(cash_account.id,credit_account.id).amount(Money::new(100)).submit()?;
+    service
+        .create_transfer()
+        .accounts(cash_account.id, credit_account.id)
+        .amount(Money::new(100))
+        .submit()?;
     let left_to_assign = service.left_to_assign()?;
     assert_eq!(left_to_assign, Money::new(400));
     Ok(())
@@ -156,33 +160,42 @@ fn create_category_group() -> mukwa_core::Result<()> {
 fn cannot_delete_meta_category_group() -> Result<()> {
     let service = Service::open_in_memory()?;
     let groups = service.fetch_category_groups()?;
-    assert_eq!(groups.len(),1);
-    let credit_payments = groups.iter().find(|group|group.is_meta).unwrap();
+    assert_eq!(groups.len(), 1);
+    let credit_payments = groups.iter().find(|group| group.is_meta).unwrap();
     let result = service.delete_category_group(credit_payments.id);
     assert!(result.is_err());
-    assert_eq!(result.err().unwrap().to_string(),"Meta category groups cannot be deleted");
+    assert_eq!(
+        result.err().unwrap().to_string(),
+        "Meta category groups cannot be deleted"
+    );
 
     // Make sure it hasn't been deleted
     let groups = service.fetch_category_groups()?;
-    assert_eq!(groups.len(),1);
+    assert_eq!(groups.len(), 1);
     Ok(())
 }
 
 #[test]
 fn cannot_delete_meta_category() -> Result<()> {
     let service = Service::open_in_memory()?;
-    service.create_account("",AccountType::Credit)?;
+    service.create_account("", AccountType::Credit)?;
     service.check_credit_account_categories()?;
 
     let categories = service.fetch_categories()?;
-    let category = categories.iter().find(|category|category.account_id.is_some()).unwrap();
+    let category = categories
+        .iter()
+        .find(|category| category.account_id.is_some())
+        .unwrap();
     let result = service.delete_category(category.id);
     assert!(result.is_err());
-    assert_eq!(result.err().unwrap().to_string(),"Meta categories cannot be deleted");
+    assert_eq!(
+        result.err().unwrap().to_string(),
+        "Meta categories cannot be deleted"
+    );
 
     // Make sure it hasn't been deleted
     let categories = service.fetch_categories()?;
-    assert_eq!(categories.len(),1);
+    assert_eq!(categories.len(), 1);
     Ok(())
 }
 
@@ -328,6 +341,25 @@ fn total_spent() -> mukwa_core::Result<()> {
 
     let total = service.total_spent(category.id, date)?;
     assert_eq!(total, Money::new(650));
+    Ok(())
+}
+
+#[test]
+fn total_spent_credit_payments() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let cash_account = service.create_account("", AccountType::Cash)?;
+    let credit_account = service.create_account("", AccountType::Credit)?;
+
+    service
+        .create_transfer()
+        .amount(Money::new(500))
+        .accounts(cash_account.id, credit_account.id)
+        .submit()?;
+    service.check_credit_account_categories()?;
+    let categories = service.fetch_categories()?;
+    let category = &categories[0];
+    let total = service.total_spent(category.id, Zoned::now().date())?;
+    assert_eq!(total, Money::new(500));
     Ok(())
 }
 

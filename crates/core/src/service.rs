@@ -557,7 +557,7 @@ impl Service {
     /// Deletes a category from the database
     pub fn delete_category(&self, id: Uuid) -> crate::Result<()> {
         let category = self.get_category(id)?;
-        if category.account_id.is_some(){
+        if category.account_id.is_some() {
             return Err(Error::new("Meta categories cannot be deleted"));
         }
 
@@ -571,7 +571,7 @@ impl Service {
     /// Deletes a category group from the database
     pub fn delete_category_group(&self, id: Uuid) -> crate::Result<()> {
         let group = self.get_category_group(id)?;
-        if group.is_meta{
+        if group.is_meta {
             return Err(Error::new("Meta category groups cannot be deleted"));
         }
 
@@ -596,8 +596,26 @@ impl Service {
         Ok(transactions)
     }
 
+    fn credit_payments(&self, account_id: Uuid, month: Date) -> crate::Result<Money> {
+        let transactions = self.fetch_transactions()?;
+        let total: Money = transactions
+            .iter()
+            .filter(|t| t.transaction_type() == TransactionType::Transfer)
+            .filter(|t| t.date.month() == month.month() && t.date.year() == month.year())
+            .filter(|t| t.sender_id.is_some() && t.receiver_id.unwrap_or_default() == account_id)
+            .map(|t| t.amount)
+            .sum();
+
+        Ok(total)
+    }
+
     /// Calculates the total amount spent in the category in a specific month.
     pub fn total_spent(&self, category_id: Uuid, month: Date) -> crate::Result<Money> {
+        let category = self.get_category(category_id)?;
+        if let Some(account_id) = category.account_id {
+            return self.credit_payments(account_id, month);
+        }
+
         let connection = self.connection();
         let sql = "SELECT * FROM transactions WHERE category_id = ?1";
         let mut stmt = connection.prepare_cached(sql)?;
@@ -1101,22 +1119,23 @@ impl Service {
 
         for transaction in transactions {
             // Subtract money transferred from cash accounts to credit accounts (credit payments)
-            if transaction.transaction_type() == TransactionType::Transfer{
+            if transaction.transaction_type() == TransactionType::Transfer {
                 let sender_id = transaction.sender_id.unwrap();
                 let receiver_id = transaction.receiver_id.unwrap();
-                if cash_accounts.contains_key(&sender_id) && credit_accounts.contains_key(&receiver_id){
+                if cash_accounts.contains_key(&sender_id)
+                    && credit_accounts.contains_key(&receiver_id)
+                {
                     total_cash -= transaction.amount;
                 }
                 continue;
             }
 
             // Add money deposited into cash accounts
-            if transaction.transaction_type() == TransactionType::Income {
-                if let Some(account_id) = transaction.receiver_id
-                    && cash_accounts.contains_key(&account_id)
-                {
-                    total_cash += transaction.amount;
-                }
+            if transaction.transaction_type() == TransactionType::Income
+                && let Some(account_id) = transaction.receiver_id
+                && cash_accounts.contains_key(&account_id)
+            {
+                total_cash += transaction.amount;
             }
         }
 

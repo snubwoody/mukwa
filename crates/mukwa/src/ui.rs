@@ -105,7 +105,10 @@ impl From<mukwa_core::service::Category> for Category {
             id: value.id.to_shared_string(),
             title: value.title.to_shared_string(),
             group_id: value.group_id.to_shared_string(),
-            account_id: value.account_id.map(|id|id.to_shared_string()).unwrap_or_default()
+            account_id: value
+                .account_id
+                .map(|id| id.to_shared_string())
+                .unwrap_or_default(),
         }
     }
 }
@@ -115,7 +118,7 @@ impl From<mukwa_core::service::CategoryGroup> for CategoryGroup {
         Self {
             id: value.id.to_shared_string(),
             title: value.title.to_shared_string(),
-            is_meta: value.is_meta
+            is_meta: value.is_meta,
         }
     }
 }
@@ -125,7 +128,7 @@ impl From<&mukwa_core::service::CategoryGroup> for CategoryGroup {
         Self {
             id: value.id.to_shared_string(),
             title: value.title.to_shared_string(),
-            is_meta: value.is_meta
+            is_meta: value.is_meta,
         }
     }
 }
@@ -136,7 +139,10 @@ impl From<&mukwa_core::service::Category> for Category {
             id: value.id.to_shared_string(),
             title: value.title.to_shared_string(),
             group_id: value.group_id.to_shared_string(),
-            account_id: value.account_id.map(|id|id.to_shared_string()).unwrap_or_default()
+            account_id: value
+                .account_id
+                .map(|id| id.to_shared_string())
+                .unwrap_or_default(),
         }
     }
 }
