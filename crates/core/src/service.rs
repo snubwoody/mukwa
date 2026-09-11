@@ -556,6 +556,11 @@ impl Service {
 
     /// Deletes a category from the database
     pub fn delete_category(&self, id: Uuid) -> crate::Result<()> {
+        let category = self.get_category(id)?;
+        if category.account_id.is_some(){
+            return Err(Error::new("Meta categories cannot be deleted"));
+        }
+
         let connection = self.connection();
         let sql = "DELETE FROM categories WHERE id = ?";
         let mut stmt = connection.prepare_cached(sql)?;
@@ -843,6 +848,13 @@ impl Service {
         let mut stmt = connection.prepare_cached("SELECT * FROM category_groups WHERE id = ?")?;
         let mut rows = stmt.query_and_then([id.to_string()], |row| CategoryGroup::try_from(row))?;
         rows.next().ok_or(Error::new("Category group not found"))?
+    }
+
+    pub fn get_category(&self, id: Uuid) -> crate::Result<Category> {
+        let connection = self.connection();
+        let mut stmt = connection.prepare_cached("SELECT * FROM categories WHERE id = ?")?;
+        let mut rows = stmt.query_and_then([id.to_string()], |row| Category::try_from(row))?;
+        rows.next().ok_or(Error::new("Category not found"))?
     }
 
     pub fn get_budget(&self, id: Uuid) -> crate::Result<Budget> {
