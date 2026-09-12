@@ -104,10 +104,20 @@ export component AnalyticsPage inherits HorizontalLayout {
                 font-size: FontSize.heading-sm;
             }
 
-            MonthSwitch {
-                current-date: current-date;
-                changed(date) => {
-                    current-date = date
+            HorizontalLayout {
+                spacing: 8px;
+                cross-axis-alignment: center;
+                IconButton {
+                    icon: IconSet.ListFilter;
+                    theme: ghost;
+                    accessible-label: @tr("Filter");
+                }
+
+                MonthSwitch {
+                    current-date: current-date;
+                    changed(date) => {
+                        current-date = date
+                    }
                 }
             }
         }

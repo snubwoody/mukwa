@@ -395,13 +395,12 @@ export component SpendingPage inherits VerticalLayout {
                 font-weight: FontWeight.semi-bold;
 
                 function helper-text() -> string {
-                    if Api.money-to-float(State.left-to-assign()) == 0{
+                    if Api.money-to-float(State.left-to-assign()) == 0 {
                         return @tr("Fully budgeted");
                     }
-                    if Api.money-to-float(State.left-to-assign()) < 0{
+                    if Api.money-to-float(State.left-to-assign()) < 0 {
                         return @tr("Overbudgeted");
                     }
-
                     return @tr("Ready to budget");
                 }
             }
