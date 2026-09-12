@@ -1,5 +1,8 @@
 name: Release
 on:
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 concurrency:
   cancel-in-progress: true
@@ -7,7 +10,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
 jobs:
-  bundle-linux:
+  bundle-appimage:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -34,8 +37,22 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mukwa-upload-${{ runner.os }}
+          name: mukwa-upload-${{ runner.os }}-appimage
           path: build/*.AppImage
+  bundle-snap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: Swatinem/rust-cache@v2
+      - run: sudo snap install snapcraft --classic
+      - name: Setup lxd and build
+        run: |
+          sudo snap install lxd
+          getent group lxd | grep -qwF "$USER" || sudo usermod -aG lxd "$USER"
+          newgrp lxd
+          sudo lxd init --auto
+          cd crates/mukwa/resources
+          sudo -E -u "$USER" snapcraft pack
   bundle-windows:
     runs-on: windows-latest
     permissions:
@@ -54,8 +71,9 @@ jobs:
     permissions:
       contents: write
     needs:
-      - bundle-linux
+      - bundle-appimage
       - bundle-windows
+      - bundle-snap
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

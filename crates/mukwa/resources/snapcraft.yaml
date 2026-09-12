@@ -1,0 +1,46 @@
+name: mukwa
+title: Mukwa
+base: core24
+version: "0.1.2"
+summary: A free personal finance app.
+license: GPL-3.0+
+description: |
+  Mukwa is a free, privacy focused personal finance app, designed to help you track your spending and
+  manage your budgets.
+grade: devel
+confinement: devmode
+source-code: https://github.com/snubwoody/mukwa
+issues: https://github.com/snubwoody/mukwa/issues
+parts:
+  mukwa:
+    plugin: rust
+    source: https://github.com/snubwoody/mukwa/archive/refs/tags/v0.1.2.tar.gz
+    build-packages:
+      - xinput
+      - libxcursor-dev
+      - libxkbcommon-x11-dev
+      - libfontconfig1-dev
+      - pkg-config
+      - libx11-dev
+    stage-packages:
+     - libfontconfig1
+     - libx11-6
+     - libxcursor1
+     - libxrandr2
+     - libxi6
+     - libxkbcommon0
+     - libxkbcommon-x11-0-
+    # override-build: |
+      # rustup default stable
+      # cargo build --release --package mukwa
+      # mkdir -p "$CRAFT_PART_INSTALL/bin"
+      # cp target/release/mukwa "$CRAFT_PART_INSTALL/bin/mukwa"
+    # organize:
+     # crates/mukwa/resources/app-icon.svg: usr/share/icons/hicolor/scalable/mukwa.svg
+     # crates/mukwa/resources/mukwa.desktop: usr/share/applications/mukwa.desktop
+     # crates/mukwa/resources/mukwa.metainfo.xml: usr/share/applications/mukwa.metainfo.xml
+apps:
+  mukwa:
+    command: mukwa
+    # desktop: usr/share/applications/mukwa.desktop
+    common-id: com.wakunguma.Mukwa
