@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::path::Path;
 use std::rc::Rc;
+use tracing::info;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq, Default)]
@@ -67,12 +68,14 @@ pub struct Category {
     pub id: Uuid,
     pub title: String,
     pub group_id: Uuid,
+    pub account_id: Option<Uuid>,
 }
 
 #[derive(PartialOrd, PartialEq, Debug, Default, Clone)]
 pub struct CategoryGroup {
     pub id: Uuid,
     pub title: String,
+    pub is_meta: bool,
 }
 
 #[derive(PartialOrd, PartialEq, Debug, Clone, Copy, Eq, Ord)]
@@ -116,11 +119,15 @@ impl<'a> TryFrom<&Row<'a>> for Category {
         let id: String = value.get("id")?;
         let title: String = value.get("title")?;
         let group_id: String = value.get("group_id")?;
+        let account_id = value
+            .get::<_, Option<String>>("account_id")?
+            .map(|id| Uuid::parse_str(&id).unwrap());
 
         Ok(Category {
             id: Uuid::parse_str(&id)?,
             title: title.to_string(),
             group_id: Uuid::parse_str(&group_id)?,
+            account_id,
         })
     }
 }
@@ -131,10 +138,12 @@ impl<'a> TryFrom<&Row<'a>> for CategoryGroup {
     fn try_from(value: &Row<'a>) -> Result<Self, Self::Error> {
         let id: String = value.get("id")?;
         let title: String = value.get("title")?;
+        let is_meta: bool = value.get("is_meta")?;
 
         Ok(CategoryGroup {
             id: Uuid::parse_str(&id)?,
             title: title.to_string(),
+            is_meta,
         })
     }
 }
@@ -547,6 +556,11 @@ impl Service {
 
     /// Deletes a category from the database
     pub fn delete_category(&self, id: Uuid) -> crate::Result<()> {
+        let category = self.get_category(id)?;
+        if category.account_id.is_some() {
+            return Err(Error::new("Meta categories cannot be deleted"));
+        }
+
         let connection = self.connection();
         let sql = "DELETE FROM categories WHERE id = ?";
         let mut stmt = connection.prepare_cached(sql)?;
@@ -556,6 +570,11 @@ impl Service {
 
     /// Deletes a category group from the database
     pub fn delete_category_group(&self, id: Uuid) -> crate::Result<()> {
+        let group = self.get_category_group(id)?;
+        if group.is_meta {
+            return Err(Error::new("Meta category groups cannot be deleted"));
+        }
+
         let connection = self.connection();
         let sql = "DELETE FROM category_groups WHERE id = ?";
         let mut stmt = connection.prepare_cached(sql)?;
@@ -577,8 +596,26 @@ impl Service {
         Ok(transactions)
     }
 
+    fn credit_payments(&self, account_id: Uuid, month: Date) -> crate::Result<Money> {
+        let transactions = self.fetch_transactions()?;
+        let total: Money = transactions
+            .iter()
+            .filter(|t| t.transaction_type() == TransactionType::Transfer)
+            .filter(|t| t.date.month() == month.month() && t.date.year() == month.year())
+            .filter(|t| t.sender_id.is_some() && t.receiver_id.unwrap_or_default() == account_id)
+            .map(|t| t.amount)
+            .sum();
+
+        Ok(total)
+    }
+
     /// Calculates the total amount spent in the category in a specific month.
     pub fn total_spent(&self, category_id: Uuid, month: Date) -> crate::Result<Money> {
+        let category = self.get_category(category_id)?;
+        if let Some(account_id) = category.account_id {
+            return self.credit_payments(account_id, month);
+        }
+
         let connection = self.connection();
         let sql = "SELECT * FROM transactions WHERE category_id = ?1";
         let mut stmt = connection.prepare_cached(sql)?;
@@ -824,6 +861,20 @@ impl Service {
         rows.next().ok_or(Error::new("Transaction not found"))?
     }
 
+    pub fn get_category_group(&self, id: Uuid) -> crate::Result<CategoryGroup> {
+        let connection = self.connection();
+        let mut stmt = connection.prepare_cached("SELECT * FROM category_groups WHERE id = ?")?;
+        let mut rows = stmt.query_and_then([id.to_string()], |row| CategoryGroup::try_from(row))?;
+        rows.next().ok_or(Error::new("Category group not found"))?
+    }
+
+    pub fn get_category(&self, id: Uuid) -> crate::Result<Category> {
+        let connection = self.connection();
+        let mut stmt = connection.prepare_cached("SELECT * FROM categories WHERE id = ?")?;
+        let mut rows = stmt.query_and_then([id.to_string()], |row| Category::try_from(row))?;
+        rows.next().ok_or(Error::new("Category not found"))?
+    }
+
     pub fn get_budget(&self, id: Uuid) -> crate::Result<Budget> {
         let connection = self.connection();
         let mut stmt = connection.prepare_cached("SELECT * FROM budgets WHERE id = ?")?;
@@ -1049,7 +1100,6 @@ impl Service {
     }
 
     fn total_assignable(&self) -> crate::Result<Money> {
-        // TODO: what happens to money moved to a credit account?
         let cash_accounts: HashMap<Uuid, Account> = self
             .fetch_accounts()?
             .into_iter()
@@ -1057,15 +1107,32 @@ impl Service {
             .map(|account| (account.id, account))
             .collect();
 
+        let credit_accounts: HashMap<Uuid, Account> = self
+            .fetch_accounts()?
+            .into_iter()
+            .filter(|account| account.account_type == AccountType::Credit)
+            .map(|account| (account.id, account))
+            .collect();
+
         let mut total_cash = Money::ZERO;
         let transactions = self.fetch_transactions()?;
 
         for transaction in transactions {
-            if transaction.transaction_type() != TransactionType::Income {
+            // Subtract money transferred from cash accounts to credit accounts (credit payments)
+            if transaction.transaction_type() == TransactionType::Transfer {
+                let sender_id = transaction.sender_id.unwrap();
+                let receiver_id = transaction.receiver_id.unwrap();
+                if cash_accounts.contains_key(&sender_id)
+                    && credit_accounts.contains_key(&receiver_id)
+                {
+                    total_cash -= transaction.amount;
+                }
                 continue;
             }
 
-            if let Some(account_id) = transaction.receiver_id
+            // Add money deposited into cash accounts
+            if transaction.transaction_type() == TransactionType::Income
+                && let Some(account_id) = transaction.receiver_id
                 && cash_accounts.contains_key(&account_id)
             {
                 total_cash += transaction.amount;
@@ -1073,6 +1140,48 @@ impl Service {
         }
 
         Ok(total_cash)
+    }
+
+    /// Checks for missing categories for credit accounts.
+    pub fn check_credit_account_categories(&self) -> crate::Result<()> {
+        let groups = self.fetch_category_groups()?;
+        let credit_group = groups
+            .iter()
+            .find(|group| group.is_meta)
+            .ok_or(Error::new("Credit payments group does not exist"))?;
+
+        let accounts = self.fetch_accounts()?;
+        let iter = accounts
+            .iter()
+            .filter(|account| account.account_type == AccountType::Credit);
+        let categories = self.fetch_categories()?;
+
+        let connection = self.connection();
+        let sql =
+            "INSERT INTO categories(id,title,group_id,account_id) VALUES(?1,?2,?3,?4) RETURNING *";
+        let mut stmt = connection.prepare_cached(sql)?;
+
+        for account in iter {
+            let exists = categories
+                .iter()
+                .find(|c| c.account_id.unwrap_or_default() == account.id)
+                .is_some();
+            if exists {
+                continue;
+            }
+
+            let params = params![
+                Uuid::now_v7().to_string(),
+                account.name,
+                credit_group.id.to_string(),
+                account.id.to_string()
+            ];
+            let mut rows = stmt.query_and_then(params, |row| Category::try_from(row))?;
+
+            let _ = rows.next().unwrap()?;
+            info!("Created category for credit account {}", account.id);
+        }
+        Ok(())
     }
 }
 
@@ -1137,6 +1246,40 @@ mod test {
         let total_assignable = service.total_assignable()?;
         assert_eq!(total_assignable, Money::new(30));
 
+        Ok(())
+    }
+
+    #[test]
+    fn create_missing_credit_categories() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let groups = service.fetch_category_groups()?;
+        let credit_group = &groups[0];
+        let credit_account = service.create_account("", AccountType::Credit)?;
+        service.create_account("", AccountType::Cash)?;
+        service.check_credit_account_categories()?;
+
+        let categories = service.fetch_categories()?;
+        assert_eq!(categories.len(), 1);
+
+        let category = &categories[0];
+        assert_eq!(category.group_id, credit_group.id);
+        assert_eq!(category.account_id.unwrap(), credit_account.id);
+        Ok(())
+    }
+
+    #[test]
+    fn create_missing_credit_categories_skips_existing_categories() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        service.create_account("", AccountType::Credit)?;
+        service.create_account("", AccountType::Credit)?;
+        service.check_credit_account_categories()?;
+
+        let categories = service.fetch_categories()?;
+        assert_eq!(categories.len(), 2);
+
+        service.check_credit_account_categories()?;
+        let categories = service.fetch_categories()?;
+        assert_eq!(categories.len(), 2);
         Ok(())
     }
 

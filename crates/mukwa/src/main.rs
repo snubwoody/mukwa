@@ -6,7 +6,7 @@
 
 mod settings;
 mod state;
-pub mod ui;
+mod ui;
 
 pub use mukwa_core::error::{Error, Result};
 use mukwa_core::{Currency, Money};
@@ -115,6 +115,8 @@ impl App {
         connection.pragma_update(None, "journal_mode", "WAL")?;
         let service = Service::new(connection);
         let main_window = ui::MainWindow::new()?;
+
+        service.check_credit_account_categories()?;
 
         let settings_dir = if cfg!(debug_assertions) {
             PathBuf::from(".mukwa")

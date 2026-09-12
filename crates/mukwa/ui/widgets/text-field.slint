@@ -53,12 +53,13 @@ export component InlineTextField {
     in property <string> field-text: text;
     property <bool> active: false;
     in property <InputType> input-type: InputType.text;
+    in property <bool> enabled: true;
     callback accepted(string);
 
     Rectangle {
         TouchArea {
             clicked => {
-                if (!active) {
+                if (!active && enabled) {
                     active = true;
                 }
             }

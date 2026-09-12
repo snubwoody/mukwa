@@ -788,11 +788,13 @@ mod test {
     #[test]
     fn create_category_group_adds_to_list() -> crate::Result<()> {
         let service = Service::open_in_memory()?;
+        let groups = service.fetch_category_groups()?;
+        let len = groups.len();
         let mut state = AppState::new(service)?;
         state.create_category_group("")?;
         state.create_category_group("")?;
 
-        assert_eq!(state.category_groups().iter().len(), 2);
+        assert_eq!(state.category_groups().iter().len(), len + 2);
         Ok(())
     }
 

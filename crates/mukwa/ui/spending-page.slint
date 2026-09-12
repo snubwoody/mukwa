@@ -81,6 +81,7 @@ component CategoryItem inherits VerticalLayout {
 
                     InlineTextField {
                         text: category.title;
+                        enabled: category.account-id.is-empty;
                         accepted(value) => State.update-category(category.id, value);
                     }
 
@@ -282,12 +283,15 @@ component CategoryGroupItem {
                 InlineTextField {
                     text: category-group.title;
                     font-weight: FontWeight.semi-bold;
+                    enabled: !category-group.is-meta;
                     accepted(value) => State.update-category-group(category-group.id, value);
                 }
 
                 category-button := IconButton {
                     icon: IconSet.Plus;
                     theme: ghost;
+                    enabled: !category-group.is-meta;
+                    visible: !category-group.is-meta;
                     clicked => {
                         category-popup.show();
                     }
