@@ -1,0 +1,54 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { IconSet, IconDisplay } from "@lucide";
+import { Colors } from "../colors.slint";
+
+export component Checkbox inherits Rectangle {
+    in-out property <bool> checked: false;
+    in-out property <bool> enabled: true;
+
+    width: 20px;
+    height: 20px;
+    border-width: 1px;
+    border-color: Colors.borderNeutral;
+    border-radius: 4px;
+    background: checked ? Colors.accent : transparent;
+
+    accessible-role: checkbox;
+    accessible-checkable: true;
+    accessible-checked: checked;
+
+    animate background { duration: 250ms; }
+
+    callback toggled();
+
+    public function toggle() {
+        checked = !checked;
+    }
+
+    accessible-action-default => {
+        if (enabled) {
+            toggle();
+            toggled();
+        }
+    }
+
+    TouchArea {
+        width: parent.width;
+        height: parent.height;
+        clicked => {
+            if (enabled) {
+                toggle();
+                toggled();
+            }
+        }
+    }
+
+    if checked: IconDisplay {
+        icon: IconSet.Check;
+        size: 14px;
+        stroke-width: 2;
+        stroke: white;
+    }
+}
