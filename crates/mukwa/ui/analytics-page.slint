@@ -6,8 +6,9 @@ import { FontSize } from "theme.slint";
 import { State, Api } from "globals.slint";
 import { Settings } from "settings.slint";
 import { IconButton, Button, PrimaryButton } from "widgets.slint";
-import { IconSet } from "@lucide";
+import { IconSet, IconDisplay } from "@lucide";
 import { Date, CalendarState } from "widgets/calendar.slint";
+import { Checkbox } from "widgets.slint";
 
 export struct PieChartSlice {
     fill: color,
@@ -86,6 +87,47 @@ component MonthSwitch inherits HorizontalLayout {
     }
 }
 
+component FilterAnalytics {
+    IconButton {
+        icon: IconSet.ListFilter;
+        theme: ghost;
+        accessible-label: @tr("Filter");
+        clicked => {
+            filter-popup.show();
+        }
+    }
+
+    // TODO: split by group
+    filter-popup := PopupWindow {
+//        width: 100px;
+//        height: 100px;
+        close-policy: close-on-click-outside;
+
+        Rectangle {
+            background: white;
+            border-radius: 8px;
+            border-color: Colors.borderNeutral;
+            border-width: 1px;
+        }
+
+        VerticalLayout {
+            padding: 12px;
+            spacing: 12px;
+            for category in State.categories: HorizontalLayout{
+                spacing: 4px;
+                cross-axis-alignment: center;
+
+                Checkbox { }
+                Text {
+                    text: category.title;
+                    color: Colors.textBody;
+                }
+            }
+        }
+
+    }
+}
+
 // TODO: wrap Path in TouchArea
 export component AnalyticsPage inherits HorizontalLayout {
     property <[PieChartSlice]> pie-chart-slices: AnalyticsApi.draw-pie-chart(500px, 500px,current-date);
@@ -107,11 +149,8 @@ export component AnalyticsPage inherits HorizontalLayout {
             HorizontalLayout {
                 spacing: 8px;
                 cross-axis-alignment: center;
-                IconButton {
-                    icon: IconSet.ListFilter;
-                    theme: ghost;
-                    accessible-label: @tr("Filter");
-                }
+
+                FilterAnalytics { }
 
                 MonthSwitch {
                     current-date: current-date;

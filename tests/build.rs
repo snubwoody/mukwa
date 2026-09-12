@@ -67,7 +67,6 @@ fn main() {
         .parent()
         .unwrap()
         .join("crates/mukwa/ui");
-    dbg!(&include_path);
 
     for case in test_cases {
         let mut diag = BuildDiagnostics::default();
