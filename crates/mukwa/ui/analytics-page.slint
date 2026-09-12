@@ -95,6 +95,17 @@ export component AnalyticsPage inherits HorizontalLayout {
         spacing: 24px;
         padding: 24px;
 
+        filter-popup := PopupWindow {
+            Rectangle {
+                background: white;
+            }
+
+            Text {
+                text: "Filter";
+                color: Colors.textBody;
+            }
+        }
+
         HorizontalLayout {
             alignment: space-between;
 
@@ -111,6 +122,9 @@ export component AnalyticsPage inherits HorizontalLayout {
                     icon: IconSet.ListFilter;
                     theme: ghost;
                     accessible-label: @tr("Filter");
+                    clicked => {
+                        filter-popup.show();
+                    }
                 }
 
                 MonthSwitch {
