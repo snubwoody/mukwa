@@ -1,0 +1,33 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { Checkbox } from "widgets/checkbox.slint";
+
+export component TestCase inherits Rectangle {
+    out property <bool> checked <=> checkbox.checked;
+    out property <string> toggle-state;
+
+    // TODO: add focus scope and test focus
+    checkbox := Checkbox {
+        toggled => {
+            toggle-state += "1";
+        }
+    }
+}
+
+/*
+use slint::{platform::Key,SharedString};
+let instance = TestCase::new().unwrap();
+assert!(!instance.get_checked());
+
+let mut result = i_slint_backend_testing::ElementHandle::find_by_element_id(&instance, "TestCase::checkbox").collect::<Vec<_>>();
+assert_eq!(result.len(), 1);
+let checkbox = result.pop().unwrap();
+
+checkbox.invoke_accessible_default_action();
+assert!(instance.get_checked());
+assert_eq!(instance.get_toggle_state(),"1");
+checkbox.invoke_accessible_default_action();
+assert!(!instance.get_checked());
+assert_eq!(instance.get_toggle_state(),"11");
+*/
