@@ -13,7 +13,6 @@ dirs.workspace = true
 rust-embed.workspace = true
 toml.workspace = true
 serde.workspace = true
-fontdb.workspace = true
 tiny-skia.workspace = true
 image.workspace = true
 slint.workspace = true
