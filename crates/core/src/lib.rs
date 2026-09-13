@@ -6,6 +6,7 @@ pub mod fmt;
 pub mod migrator;
 mod money;
 pub mod plot;
+pub mod ofx;
 pub mod service;
 
 pub use error::{Error, Result};
