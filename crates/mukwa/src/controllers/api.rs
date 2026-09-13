@@ -3,13 +3,27 @@ use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::Money;
 use mukwa_core::fmt::CurrencyFormatter;
-use slint::{ComponentHandle, DataTransfer, ToSharedString};
+use slint::{ComponentHandle, DataTransfer, ModelRc, ToSharedString, VecModel};
 use std::str::FromStr;
 use native_dialog::DialogBuilder;
 use tracing::{info, warn};
 
 pub fn bind(window: &ui::MainWindow) {
     let api = window.global::<ui::Api>();
+
+    api.on_read_csv(|data| {
+        let path = data.file_paths().unwrap().next().unwrap();
+        let mut reader = csv::Reader::from_path(path).unwrap();
+        // let mut records = vec![];
+        let model = VecModel::default();
+        for result in reader.records() {
+            let record = result.unwrap();
+            let cells: Vec<_> = record.iter().map(|s| s.to_shared_string()).collect();
+            let inner_model = VecModel::from(cells);
+            model.push(ModelRc::new(inner_model));
+        }
+        ModelRc::new(model)
+    });
 
     api.on_open_csv(|| {
         let result = DialogBuilder::file()
