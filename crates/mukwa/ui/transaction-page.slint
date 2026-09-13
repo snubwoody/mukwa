@@ -473,6 +473,7 @@ export component TransactionPage inherits VerticalLayout {
     in property <[Transaction]> transactions;
     in property <string> active-account-id;
     property <bool> new-transaction-active: false;
+    property <data-transfer> csv-data;
 
     VerticalLayout {
         padding: 12px;
@@ -497,7 +498,7 @@ export component TransactionPage inherits VerticalLayout {
     }
 
     import-csv-dialog := ImportCsvDialog {
-
+        data: csv-data;
     }
 
     HorizontalLayout {
@@ -515,8 +516,8 @@ export component TransactionPage inherits VerticalLayout {
             // TODO: cancel if no file if found
             accessible-label: @tr("Import CSV file");
             clicked => {
+                csv-data = Api.open-csv();
                 import-csv-dialog.show();
-                //Api.open-csv();
             }
         }
 

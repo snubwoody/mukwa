@@ -12,6 +12,26 @@ export component ImportCsvDialog inherits PopupWindow {
     width: Api.window-size().width * 0.80;
     height: Api.window-size().height * 0.85;
     close-policy: close-on-click-outside;
+    in property <data-transfer> data;
+    property <[[string]]> records;
+    property <int> date-column-index: min(0,records[0].length);
+    property <int> payee-column-index: min(1,records[0].length);
+    property <int> category-column-index: min(2,records[0].length);
+    property <int> note-column-index: min(3,records[0].length);
+    property <int> outflow-column-index: min(4,records[0].length);
+    property <int> inflow-column-index: min(5,records[0].length);
+    property <[string]> columns: [
+        @tr("Date"),
+        @tr("Payee"),
+        @tr("Category"),
+        @tr("Note"),
+        @tr("Outflow"),
+        @tr("Inflow")
+    ];
+
+    init => {
+        records = Api.read-csv(data);
+    }
 
     Rectangle {
         background: white;
@@ -24,45 +44,55 @@ export component ImportCsvDialog inherits PopupWindow {
         padding: 36px;
 
         Table {
+            property <int> length;
             TableRow {
+                for column in columns: TableCell {
+                    Text {
+                        text: column;
+                        color: Colors.textBody;
+                    }
+                }
+            }
+
+            for record in records: TableRow {
                 TableCell {
                     Text {
-                        text: @tr("Date");
+                        text: record[date-column-index];
                         color: Colors.textBody;
                     }
                 }
 
                 TableCell {
                     Text {
-                        text: @tr("Payee");
+                        text: record[payee-column-index];
                         color: Colors.textBody;
                     }
                 }
 
                 TableCell {
                     Text {
-                        text: @tr("Category");
+                        text: record[category-column-index];
                         color: Colors.textBody;
                     }
                 }
 
                 TableCell {
                     Text {
-                        text: @tr("Note");
+                        text: record[note-column-index];
                         color: Colors.textBody;
                     }
                 }
 
                 TableCell {
                     Text {
-                        text: @tr("Outflow");
+                        text: record[outflow-column-index];
                         color: Colors.textBody;
                     }
                 }
 
                 TableCell {
                     Text {
-                        text: @tr("Inflow");
+                        text: record[inflow-column-index];
                         color: Colors.textBody;
                     }
                 }
