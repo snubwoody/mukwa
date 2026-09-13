@@ -3,13 +3,30 @@ use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::Money;
 use mukwa_core::fmt::CurrencyFormatter;
-use slint::{ComponentHandle, DataTransfer, ModelRc, ToSharedString, VecModel};
+use slint::{ComponentHandle, DataTransfer, Model, ModelRc, ToSharedString, VecModel};
 use std::str::FromStr;
 use native_dialog::DialogBuilder;
 use tracing::{info, warn};
+use crate::ui::ComboBoxItem;
 
 pub fn bind(window: &ui::MainWindow) {
     let api = window.global::<ui::Api>();
+
+    // FIXME: panics on unequal lengths
+    api.on_csv_combobox_options(|records| {
+        let mut index = 0;
+        let mut combobox_items = vec![];
+        if let Some(record) = records.iter().next() {
+            for (index, cell) in record.iter().enumerate() {
+                let item = ComboBoxItem {
+                    text: cell.clone(),
+                    value: index.to_shared_string(),
+                };
+                combobox_items.push(item);
+            }
+        }
+        ModelRc::new(VecModel::from(combobox_items))
+    });
 
     api.on_read_csv(|data| {
         let path = data.file_paths().unwrap().next().unwrap();
