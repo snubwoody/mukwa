@@ -1,0 +1,72 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { Colors } from "colors.slint";
+import { Table, TableRow, TableCell } from "tableview.slint";
+import { Api } from "globals.slint";
+
+export component ImportCsvDialog inherits PopupWindow {
+    // FIXME: absolute position not working, based on parent
+    x: Api.window-size().width * 0.5 - self.width * 0.5;
+    y: Api.window-size().height * 0.5 - self.height * 0.5;
+    width: Api.window-size().width * 0.80;
+    height: Api.window-size().height * 0.85;
+    close-policy: close-on-click-outside;
+
+    Rectangle {
+        background: white;
+        border-color: Colors.borderNeutral;
+        border-width: 1px;
+        border-radius: 24px;
+    }
+
+    VerticalLayout {
+        padding: 36px;
+
+        Table {
+            TableRow {
+                TableCell {
+                    Text {
+                        text: @tr("Date");
+                        color: Colors.textBody;
+                    }
+                }
+
+                TableCell {
+                    Text {
+                        text: @tr("Payee");
+                        color: Colors.textBody;
+                    }
+                }
+
+                TableCell {
+                    Text {
+                        text: @tr("Category");
+                        color: Colors.textBody;
+                    }
+                }
+
+                TableCell {
+                    Text {
+                        text: @tr("Note");
+                        color: Colors.textBody;
+                    }
+                }
+
+                TableCell {
+                    Text {
+                        text: @tr("Outflow");
+                        color: Colors.textBody;
+                    }
+                }
+
+                TableCell {
+                    Text {
+                        text: @tr("Inflow");
+                        color: Colors.textBody;
+                    }
+                }
+            }
+        }
+    }
+}
