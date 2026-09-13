@@ -30,6 +30,7 @@ import { Calendar, Date } from "widgets/calendar.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
 import { Settings } from "settings.slint";
 import { IconSet } from "@lucide";
+import { ImportCsvDialog } from "import-csv.slint";
 
 component DateCell inherits TableCell {
     in property <Transaction> transaction;
@@ -495,6 +496,10 @@ export component TransactionPage inherits VerticalLayout {
         }
     }
 
+    import-csv-dialog := ImportCsvDialog {
+
+    }
+
     HorizontalLayout {
         alignment: end;
         cross-axis-alignment: center;
@@ -510,7 +515,8 @@ export component TransactionPage inherits VerticalLayout {
             // TODO: cancel if no file if found
             accessible-label: @tr("Import CSV file");
             clicked => {
-                Api.open-csv();
+                import-csv-dialog.show();
+                //Api.open-csv();
             }
         }
 
