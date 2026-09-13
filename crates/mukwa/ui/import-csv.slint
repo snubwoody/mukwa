@@ -44,11 +44,13 @@ export component ImportCsvDialog inherits PopupWindow {
         padding: 36px;
 
         Table {
-            property <int> length;
+            property <int> length: 6;
             TableRow {
                 for column in columns: TableCell {
+                    width: parent.width / length;
                     Text {
                         text: column;
+                        font-weight: FontWeight.semi-bold;
                         color: Colors.textBody;
                     }
                 }
@@ -56,6 +58,7 @@ export component ImportCsvDialog inherits PopupWindow {
 
             for record in records: TableRow {
                 TableCell {
+                    width: parent.width / length;
                     Text {
                         text: record[date-column-index];
                         color: Colors.textBody;
@@ -63,6 +66,7 @@ export component ImportCsvDialog inherits PopupWindow {
                 }
 
                 TableCell {
+                    width: parent.width / length;
                     Text {
                         text: record[payee-column-index];
                         color: Colors.textBody;
@@ -70,6 +74,7 @@ export component ImportCsvDialog inherits PopupWindow {
                 }
 
                 TableCell {
+                    width: parent.width / length;
                     Text {
                         text: record[category-column-index];
                         color: Colors.textBody;
@@ -77,6 +82,7 @@ export component ImportCsvDialog inherits PopupWindow {
                 }
 
                 TableCell {
+                    width: parent.width / length;
                     Text {
                         text: record[note-column-index];
                         color: Colors.textBody;
@@ -84,6 +90,7 @@ export component ImportCsvDialog inherits PopupWindow {
                 }
 
                 TableCell {
+                    width: parent.width / length;
                     Text {
                         text: record[outflow-column-index];
                         color: Colors.textBody;
@@ -91,6 +98,7 @@ export component ImportCsvDialog inherits PopupWindow {
                 }
 
                 TableCell {
+                    width: parent.width / length;
                     Text {
                         text: record[inflow-column-index];
                         color: Colors.textBody;
