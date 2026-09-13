@@ -4,8 +4,21 @@
 import { Colors } from "colors.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
 import { Api } from "globals.slint";
-import { ComboBox } from "widgets.slint";
+import { ComboBox, PrimaryButton } from "widgets.slint";
 
+export struct ImportCsvRequest{
+    records: [[string]],
+    date-column-index: int,
+    payee-column-index: int,
+    category-column-index: int,
+    note-column-index: int,
+    outflow-column-index: int,
+    inflow-column-index: int,
+}
+
+export global ImportState {
+    callback import-csv(ImportCsvRequest);
+}
 export component ImportCsvDialog inherits PopupWindow {
     // FIXME: absolute position not working, based on parent
     x: Api.window-size().width * 0.5 - self.width * 0.5;
@@ -164,6 +177,20 @@ export component ImportCsvDialog inherits PopupWindow {
                         color: Colors.textBody;
                     }
                 }
+            }
+        }
+
+        PrimaryButton {
+            text: @tr("Import");
+            clicked => {
+                ImportState.import-csv({
+                    records: records,
+                    date-column-index: date-column-index,
+                    payee-column-index: payee-column-index,
+                    category-column-index: category-column-index,
+                    note-column-index: note-column-index,
+                    date-column-index: date-column-index,
+                });
             }
         }
     }
