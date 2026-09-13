@@ -4,6 +4,7 @@
 import { Colors } from "colors.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
 import { Api } from "globals.slint";
+import { ComboBox } from "widgets.slint";
 
 export component ImportCsvDialog inherits PopupWindow {
     // FIXME: absolute position not working, based on parent
@@ -42,6 +43,65 @@ export component ImportCsvDialog inherits PopupWindow {
 
     VerticalLayout {
         padding: 36px;
+
+        // TODO: add none option
+            HorizontalLayout {
+            spacing: 16px;
+            ComboBox {
+                label: @tr("Date");
+                current-value: records[0][date-column-index];
+                options: Api.csv-combobox-options(records);
+                changed(value) => {
+                     // TODO: use max here and test it?
+                    date-column-index = self.current-index
+                }
+            }
+
+            ComboBox {
+                label: @tr("Payee");
+                current-value: records[0][payee-column-index];
+                options: Api.csv-combobox-options(records);
+                changed(value) => {
+                    payee-column-index = self.current-index
+                }
+            }
+
+            ComboBox {
+                label: @tr("Category");
+                current-value: records[0][category-column-index];
+                options: Api.csv-combobox-options(records);
+                changed(value) => {
+                    category-column-index = self.current-index
+                }
+            }
+
+            ComboBox {
+                label: @tr("Note");
+                current-value: records[0][note-column-index];
+                options: Api.csv-combobox-options(records);
+                changed(value) => {
+                    note-column-index = self.current-index
+                }
+            }
+
+            ComboBox {
+                label: @tr("Outflow");
+                current-value: records[0][outflow-column-index];
+                options: Api.csv-combobox-options(records);
+                changed(value) => {
+                    outflow-column-index = self.current-index
+                }
+            }
+
+            ComboBox {
+                label: @tr("Inflow");
+                current-value: records[0][inflow-column-index];
+                options: Api.csv-combobox-options(records);
+                changed(value) => {
+                    inflow-column-index = self.current-index
+                }
+            }
+        }
 
         Table {
             property <int> length: 6;
