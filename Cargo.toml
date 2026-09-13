@@ -28,11 +28,3 @@ serde = { version = "1.0.229", features = ["derive"] }
 fontdb = "0.24.0"
 tiny-skia = "0.12.0"
 image = "0.25.10"
-
-[workspace.dependencies.slint]
-git = "https://github.com/snubwoody/slint.git"
-branch = "mukwa"
-version = "1.17.0"
-features = ["backend-winit", "renderer-skia", "log"]
-
-

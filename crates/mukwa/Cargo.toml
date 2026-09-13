@@ -5,7 +5,6 @@ edition.workspace = true
 
 [dependencies]
 mukwa-core = {path = "../core"}
-slint.workspace = true
 jiff.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
@@ -17,6 +16,19 @@ uuid.workspace = true
 rusqlite.workspace = true
 fontdb.workspace = true
 tempfile.workspace = true
+
+# Skia can't be built in flatpak because the binaries cannot be downloaded
+[target.'cfg(target_os = "linux")'.dependencies.slint]
+git = "https://github.com/snubwoody/slint.git"
+branch = "mukwa"
+version = "1.17.0"
+features = ["backend-winit", "renderer-femtovg", "log"]
+
+[target.'cfg(not(target_os = "linux"))'.dependencies.slint]
+git = "https://github.com/snubwoody/slint.git"
+branch = "mukwa"
+version = "1.17.0"
+features = ["backend-winit", "renderer-skia", "log"]
 
 [dev-dependencies.i-slint-backend-testing]
 git = "https://github.com/snubwoody/slint.git"

@@ -16,7 +16,19 @@ serde.workspace = true
 fontdb.workspace = true
 tiny-skia.workspace = true
 image.workspace = true
-slint.workspace = true
+
+# Skia can't be built in flatpak because the binaries cannot be downloaded
+[target.'cfg(target_os = "linux")'.dependencies.slint]
+git = "https://github.com/snubwoody/slint.git"
+branch = "mukwa"
+version = "1.17.0"
+features = ["backend-winit", "renderer-femtovg", "log"]
+
+[target.'cfg(not(target_os = "linux"))'.dependencies.slint]
+git = "https://github.com/snubwoody/slint.git"
+branch = "mukwa"
+version = "1.17.0"
+features = ["backend-winit", "renderer-skia", "log"]
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.189"
