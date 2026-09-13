@@ -25,6 +25,14 @@ export global AnalyticsApi {
     pure callback draw-pie-chart(width: length, height: length, Date) -> [PieChartSlice];
 }
 
+// TODO: maybe support selecting the whole group
+export global AnalyticsState {
+    in-out property <[string]> excluded-categories;
+    
+    callback toggle-category(string);
+    callback is-excluded(string) -> bool;
+}
+
 component MonthSwitch inherits HorizontalLayout {
     spacing: 12px;
     cross-axis-alignment: center;

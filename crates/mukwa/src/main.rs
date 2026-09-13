@@ -91,6 +91,7 @@ fn main() {
 
 pub struct App {
     state: AppState,
+    analytics_state: AnalyticsState,
     main_window: MainWindow,
     settings: SettingsStore,
 }
@@ -114,7 +115,7 @@ impl App {
 
         connection.pragma_update(None, "journal_mode", "WAL")?;
         let service = Service::new(connection);
-        let main_window = ui::MainWindow::new()?;
+        let main_window = MainWindow::new()?;
 
         service.check_credit_account_categories()?;
 
@@ -135,6 +136,7 @@ impl App {
             state,
             main_window,
             settings,
+            analytics_state: AnalyticsState::new()
         };
 
         app.init_settings();
@@ -150,7 +152,7 @@ impl App {
     pub fn new_test() -> Result<Self> {
         let temp = tempdir()?;
         let service = Service::open_in_memory()?;
-        let main_window = ui::MainWindow::new()?;
+        let main_window = MainWindow::new()?;
 
         let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
         let state = AppState::new(service)?;
@@ -162,6 +164,7 @@ impl App {
             state,
             main_window,
             settings,
+            analytics_state: AnalyticsState::new()
         };
 
         app.init_settings();
@@ -986,6 +989,27 @@ impl App {
     pub fn run(&self) -> Result<()> {
         self.main_window.run()?;
         Ok(())
+    }
+}
+
+#[derive(Clone)]
+pub struct AnalyticsState{
+    excluded_categories: Rc<VecModel<SharedString>>,
+}
+
+impl AnalyticsState{
+    pub fn new() -> Self{
+        Self{
+            excluded_categories: Rc::new(VecModel::default())
+        }
+    }
+
+    pub fn toggle(&self, id: SharedString){
+
+    }
+
+    pub fn is_excluded(&self, id: SharedString) -> bool{
+        false
     }
 }
 
