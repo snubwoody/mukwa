@@ -3,12 +3,33 @@ use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::Money;
 use mukwa_core::fmt::CurrencyFormatter;
-use slint::{ComponentHandle, ToSharedString};
+use slint::{ComponentHandle, DataTransfer, ToSharedString};
 use std::str::FromStr;
-use tracing::warn;
+use native_dialog::DialogBuilder;
+use tracing::{info, warn};
 
 pub fn bind(window: &ui::MainWindow) {
     let api = window.global::<ui::Api>();
+
+    api.on_open_csv(|| {
+        let result = DialogBuilder::file()
+            .add_filter("CSV file", ["csv"])
+            .open_single_file()
+            .show()
+            .unwrap();
+        match result {
+            Some(path) => {
+                info!("Opened csv file at {:?}", path);
+                let mut data = DataTransfer::default();
+                data.set_file_paths([path]);
+                data
+            }
+            None => {
+                warn!("No csv file found");
+                DataTransfer::default()
+            }
+        }
+    });
 
     api.on_format_money_without_symbol({
         move |value| {

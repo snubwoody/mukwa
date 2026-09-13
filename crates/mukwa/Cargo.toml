@@ -17,6 +17,7 @@ uuid.workspace = true
 rusqlite.workspace = true
 fontdb.workspace = true
 tempfile.workspace = true
+native-dialog = "0.9.7"
 
 [dev-dependencies.i-slint-backend-testing]
 git = "https://github.com/snubwoody/slint.git"
