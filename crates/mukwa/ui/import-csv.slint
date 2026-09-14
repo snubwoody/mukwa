@@ -29,10 +29,7 @@ export global ImportCsvState {
 }
 
 export component ImportCsvDialog inherits PopupWindow {
-    // FIXME: absolute position not working, based on parent
-    x: Api.window-size().width * 0.5 - self.width * 0.5;
-    y: Api.window-size().height * 0.5 - self.height * 0.5;
-    width: Api.window-size().width * 0.80;
+    width: Api.window-size().width * 0.6;
     height: Api.window-size().height * 0.85;
     close-policy: close-on-click-outside;
     in property <data-transfer> data;

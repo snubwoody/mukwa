@@ -498,6 +498,8 @@ export component TransactionPage inherits VerticalLayout {
     }
 
     import-csv-dialog := ImportCsvDialog {
+        x: Api.window-size().width * 0.5 - self.width * 0.5 - root.absolute-position.x;
+        y: Api.window-size().height * 0.5 - self.height * 0.5;
         data: csv-data;
         account-id: active-account-id;
     }
