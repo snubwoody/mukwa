@@ -16,9 +16,27 @@ export struct ImportCsvRequest{
     inflow-column-index: int,
 }
 
-export global ImportState {
+export global ImportCsvState {
     callback import-csv(ImportCsvRequest);
+    in-out property <[[string]]> records;
+    in-out property <int> date-column-index;
+    in-out property <int> payee-column-index;
+    in-out property <int> category-column-index;
+    in-out property <int> note-column-index;
+    in-out property <int> outflow-column-index;
+    in-out property <int> inflow-column-index;
+
+    public function set-records(data:[[string]]) {
+        records = data;
+        date-column-index = min(0,ImportCsvState.records[0].length);
+        payee-column-index = min(1,ImportCsvState.records[0].length);
+        category-column-index = min(2,ImportCsvState.records[0].length);
+        note-column-index = min(3,ImportCsvState.records[0].length);
+        outflow-column-index = min(4,ImportCsvState.records[0].length);
+        inflow-column-index = min(5,ImportCsvState.records[0].length);
+    }
 }
+
 export component ImportCsvDialog inherits PopupWindow {
     // FIXME: absolute position not working, based on parent
     x: Api.window-size().width * 0.5 - self.width * 0.5;
@@ -27,13 +45,6 @@ export component ImportCsvDialog inherits PopupWindow {
     height: Api.window-size().height * 0.85;
     close-policy: close-on-click-outside;
     in property <data-transfer> data;
-    property <[[string]]> records;
-    property <int> date-column-index: min(0,records[0].length);
-    property <int> payee-column-index: min(1,records[0].length);
-    property <int> category-column-index: min(2,records[0].length);
-    property <int> note-column-index: min(3,records[0].length);
-    property <int> outflow-column-index: min(4,records[0].length);
-    property <int> inflow-column-index: min(5,records[0].length);
     property <[string]> columns: [
         @tr("Date"),
         @tr("Payee"),
@@ -44,7 +55,7 @@ export component ImportCsvDialog inherits PopupWindow {
     ];
 
     init => {
-        records = Api.read-csv(data);
+        ImportCsvState.set-records(Api.read-csv(data));
     }
 
     Rectangle {
@@ -62,56 +73,56 @@ export component ImportCsvDialog inherits PopupWindow {
             spacing: 16px;
             ComboBox {
                 label: @tr("Date");
-                current-value: records[0][date-column-index];
-                options: Api.csv-combobox-options(records);
+                current-value: ImportCsvState.records[0][ImportCsvState.date-column-index];
+                options: Api.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
                      // TODO: use max here and test it?
-                    date-column-index = self.current-index
+                    ImportCsvState.date-column-index = self.current-index
                 }
             }
 
             ComboBox {
                 label: @tr("Payee");
-                current-value: records[0][payee-column-index];
-                options: Api.csv-combobox-options(records);
+                current-value: ImportCsvState.records[0][ImportCsvState.payee-column-index];
+                options: Api.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
-                    payee-column-index = self.current-index
+                    ImportCsvState.payee-column-index = self.current-index
                 }
             }
 
             ComboBox {
                 label: @tr("Category");
-                current-value: records[0][category-column-index];
-                options: Api.csv-combobox-options(records);
+                current-value: ImportCsvState.records[0][ImportCsvState.category-column-index];
+                options: Api.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
-                    category-column-index = self.current-index
+                    ImportCsvState.category-column-index = self.current-index
                 }
             }
 
             ComboBox {
                 label: @tr("Note");
-                current-value: records[0][note-column-index];
-                options: Api.csv-combobox-options(records);
+                current-value: ImportCsvState.records[0][ImportCsvState.note-column-index];
+                options: Api.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
-                    note-column-index = self.current-index
+                    ImportCsvState.note-column-index = self.current-index
                 }
             }
 
             ComboBox {
                 label: @tr("Outflow");
-                current-value: records[0][outflow-column-index];
-                options: Api.csv-combobox-options(records);
+                current-value: ImportCsvState.records[0][ImportCsvState.outflow-column-index];
+                options: Api.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
-                    outflow-column-index = self.current-index
+                    ImportCsvState.outflow-column-index = self.current-index
                 }
             }
 
             ComboBox {
                 label: @tr("Inflow");
-                current-value: records[0][inflow-column-index];
-                options: Api.csv-combobox-options(records);
+                current-value: ImportCsvState.records[0][ImportCsvState.inflow-column-index];
+                options: Api.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
-                    inflow-column-index = self.current-index
+                    ImportCsvState.inflow-column-index = self.current-index
                 }
             }
         }
@@ -129,11 +140,11 @@ export component ImportCsvDialog inherits PopupWindow {
                 }
             }
 
-            for record in records: TableRow {
+            for record in ImportCsvState.records: TableRow {
                 TableCell {
                     width: parent.width / length;
                     Text {
-                        text: record[date-column-index];
+                        text: record[ImportCsvState.date-column-index];
                         color: Colors.textBody;
                     }
                 }
@@ -141,7 +152,7 @@ export component ImportCsvDialog inherits PopupWindow {
                 TableCell {
                     width: parent.width / length;
                     Text {
-                        text: record[payee-column-index];
+                        text: record[ImportCsvState.payee-column-index];
                         color: Colors.textBody;
                     }
                 }
@@ -149,7 +160,7 @@ export component ImportCsvDialog inherits PopupWindow {
                 TableCell {
                     width: parent.width / length;
                     Text {
-                        text: record[category-column-index];
+                        text: record[ImportCsvState.category-column-index];
                         color: Colors.textBody;
                     }
                 }
@@ -157,7 +168,7 @@ export component ImportCsvDialog inherits PopupWindow {
                 TableCell {
                     width: parent.width / length;
                     Text {
-                        text: record[note-column-index];
+                        text: record[ImportCsvState.note-column-index];
                         color: Colors.textBody;
                     }
                 }
@@ -165,7 +176,7 @@ export component ImportCsvDialog inherits PopupWindow {
                 TableCell {
                     width: parent.width / length;
                     Text {
-                        text: record[outflow-column-index];
+                        text: record[ImportCsvState.outflow-column-index];
                         color: Colors.textBody;
                     }
                 }
@@ -173,7 +184,7 @@ export component ImportCsvDialog inherits PopupWindow {
                 TableCell {
                     width: parent.width / length;
                     Text {
-                        text: record[inflow-column-index];
+                        text: record[ImportCsvState.inflow-column-index];
                         color: Colors.textBody;
                     }
                 }
@@ -183,14 +194,14 @@ export component ImportCsvDialog inherits PopupWindow {
         PrimaryButton {
             text: @tr("Import");
             clicked => {
-                ImportState.import-csv({
-                    records: records,
-                    date-column-index: date-column-index,
-                    payee-column-index: payee-column-index,
-                    category-column-index: category-column-index,
-                    note-column-index: note-column-index,
-                    date-column-index: date-column-index,
-                });
+//                ImportCsvState.import-csv({
+//                    records: records,
+//                    date-column-index: date-column-index,
+//                    payee-column-index: payee-column-index,
+//                    category-column-index: category-column-index,
+//                    note-column-index: note-column-index,
+//                    date-column-index: date-column-index,
+//                });
             }
         }
     }
