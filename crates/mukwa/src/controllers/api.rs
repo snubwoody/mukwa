@@ -2,15 +2,15 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use crate::ui;
+use crate::ui::ComboBoxItem;
 use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::Money;
 use mukwa_core::fmt::CurrencyFormatter;
+use native_dialog::DialogBuilder;
 use slint::{ComponentHandle, DataTransfer, Model, ModelRc, ToSharedString, VecModel};
 use std::str::FromStr;
-use native_dialog::DialogBuilder;
 use tracing::{info, warn};
-use crate::ui::ComboBoxItem;
 
 pub fn bind(window: &ui::MainWindow) {
     let api = window.global::<ui::Api>();
@@ -32,7 +32,7 @@ pub fn bind(window: &ui::MainWindow) {
     });
 
     api.on_read_csv(|data| {
-        if !data.has_file_paths(){
+        if !data.has_file_paths() {
             warn!("No csv files were chosen");
             return ModelRc::new(VecModel::default());
         }
@@ -140,9 +140,9 @@ pub fn bind(window: &ui::MainWindow) {
 }
 
 #[cfg(test)]
-mod test{
-    use crate::ui::MainWindow;
+mod test {
     use super::*;
+    use crate::ui::MainWindow;
 
     #[test]
     fn read_csv_return_default_if_empty() -> crate::Result<()> {

@@ -11,8 +11,8 @@ mod analytics;
 mod api;
 mod calendar;
 mod global;
-mod settings;
 mod import_csv;
+mod settings;
 
 pub fn bind_all(window: &MainWindow, state: &AppState, settings: &SettingsStore) {
     calendar::bind(window);
@@ -21,7 +21,7 @@ pub fn bind_all(window: &MainWindow, state: &AppState, settings: &SettingsStore)
     analytics::bind(window, state);
     global::bind(window, state);
     api::bind(window);
-    import_csv::bind(window);
+    import_csv::bind(window,state);
 
     bind_combobox_api(window);
 }

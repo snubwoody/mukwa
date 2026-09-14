@@ -6,7 +6,7 @@ import { Table, TableRow, TableCell } from "tableview.slint";
 import { Api } from "globals.slint";
 import { ComboBox, PrimaryButton } from "widgets.slint";
 
-export struct ImportCsvRequest{
+export struct ImportCsvRequest {
     records: [[string]],
     date-column-index: int,
     payee-column-index: int,
@@ -17,7 +17,7 @@ export struct ImportCsvRequest{
 }
 
 export global ImportCsvState {
-    callback import-csv(ImportCsvRequest);
+    callback import-transactions();
     in-out property <[[string]]> records;
     in-out property <int> date-column-index;
     in-out property <int> payee-column-index;
@@ -26,7 +26,7 @@ export global ImportCsvState {
     in-out property <int> outflow-column-index;
     in-out property <int> inflow-column-index;
 
-    public function set-records(data:[[string]]) {
+    public function set-records(data: [[string]]) {
         records = data;
         date-column-index = min(0,ImportCsvState.records[0].length);
         payee-column-index = min(1,ImportCsvState.records[0].length);
@@ -69,7 +69,7 @@ export component ImportCsvDialog inherits PopupWindow {
         padding: 36px;
 
         // TODO: add none option
-            HorizontalLayout {
+        HorizontalLayout {
             spacing: 16px;
             ComboBox {
                 label: @tr("Date");
@@ -191,17 +191,14 @@ export component ImportCsvDialog inherits PopupWindow {
             }
         }
 
-        PrimaryButton {
-            text: @tr("Import");
-            clicked => {
-//                ImportCsvState.import-csv({
-//                    records: records,
-//                    date-column-index: date-column-index,
-//                    payee-column-index: payee-column-index,
-//                    category-column-index: category-column-index,
-//                    note-column-index: note-column-index,
-//                    date-column-index: date-column-index,
-//                });
+        HorizontalLayout {
+            alignment: end;
+
+            PrimaryButton {
+                text: @tr("Import");
+                clicked => {
+                    ImportCsvState.import-transactions();
+                }
             }
         }
     }
