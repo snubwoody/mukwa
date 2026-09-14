@@ -29,6 +29,11 @@ pub fn bind(window: &ui::MainWindow) {
     });
 
     api.on_read_csv(|data| {
+        if !data.has_file_paths(){
+            warn!("No csv files were chosen");
+            return ModelRc::new(VecModel::default());
+        }
+
         let path = data.file_paths().unwrap().next().unwrap();
         let mut reader = csv::Reader::from_path(path).unwrap();
         // let mut records = vec![];
@@ -129,4 +134,20 @@ pub fn bind(window: &ui::MainWindow) {
             .unwrap_or_default()
             .inner() as f32
     });
+}
+
+#[cfg(test)]
+mod test{
+    use crate::ui::MainWindow;
+    use super::*;
+
+    #[test]
+    fn read_csv_return_default_if_empty() -> crate::Result<()> {
+        let window = MainWindow::new()?;
+        bind(&window);
+        let api = window.global::<ui::Api>();
+        let model = api.invoke_read_csv(DataTransfer::default());
+        assert_eq!(model.iter().len(), 0);
+        Ok(())
+    }
 }
