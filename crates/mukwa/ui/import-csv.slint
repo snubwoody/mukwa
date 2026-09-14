@@ -4,7 +4,9 @@
 import { Colors } from "colors.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
 import { Api } from "globals.slint";
-import { ComboBox, PrimaryButton } from "widgets.slint";
+import { ComboBox, PrimaryButton, IconButton } from "widgets.slint";
+import { FontSize } from "theme.slint";
+import { IconSet } from "@lucide";
 
 export global ImportCsvState {
     callback import-transactions();
@@ -45,7 +47,6 @@ export component ImportCsvDialog inherits PopupWindow {
     init => {
         ImportCsvState.set-records(Api.read-csv(data));
         ImportCsvState.account-id = account-id;
-        debug(account-id);
     }
 
     Rectangle {
@@ -57,6 +58,25 @@ export component ImportCsvDialog inherits PopupWindow {
 
     VerticalLayout {
         padding: 36px;
+        spacing: 20px;
+
+        HorizontalLayout {
+            cross-axis-alignment: center;
+            alignment: space-between;
+
+            Text {
+                text: @tr("Import transactions");
+                font-size: FontSize.body-lg;
+                font-weight: FontWeight.semi-bold;
+                color: Colors.textHeading;
+            }
+
+            IconButton {
+                icon: IconSet.X;
+                theme: ghost;
+                clicked => root.close();
+            }
+        }
 
         // TODO: add none option
         HorizontalLayout {
@@ -151,9 +171,18 @@ export component ImportCsvDialog inherits PopupWindow {
             alignment: end;
 
             PrimaryButton {
+                text: @tr("Cancel");
+                theme: ghost;
+                clicked => {
+                    root.close();
+                }
+            }
+
+            PrimaryButton {
                 text: @tr("Import");
                 clicked => {
                     ImportCsvState.import-transactions();
+                    root.close();
                 }
             }
         }
