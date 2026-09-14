@@ -6,22 +6,11 @@ import { Table, TableRow, TableCell } from "tableview.slint";
 import { Api } from "globals.slint";
 import { ComboBox, PrimaryButton } from "widgets.slint";
 
-export struct ImportCsvRequest {
-    records: [[string]],
-    date-column-index: int,
-    payee-column-index: int,
-    category-column-index: int,
-    note-column-index: int,
-    outflow-column-index: int,
-    inflow-column-index: int,
-}
-
 export global ImportCsvState {
     callback import-transactions();
     in-out property <[[string]]> records;
     in-out property <int> date-column-index;
     in-out property <int> payee-column-index;
-    in-out property <int> category-column-index;
     in-out property <int> note-column-index;
     in-out property <int> outflow-column-index;
     in-out property <int> inflow-column-index;
@@ -30,10 +19,9 @@ export global ImportCsvState {
         records = data;
         date-column-index = min(0,ImportCsvState.records[0].length);
         payee-column-index = min(1,ImportCsvState.records[0].length);
-        category-column-index = min(2,ImportCsvState.records[0].length);
-        note-column-index = min(3,ImportCsvState.records[0].length);
-        outflow-column-index = min(4,ImportCsvState.records[0].length);
-        inflow-column-index = min(5,ImportCsvState.records[0].length);
+        note-column-index = min(2,ImportCsvState.records[0].length);
+        outflow-column-index = min(3,ImportCsvState.records[0].length);
+        inflow-column-index = min(4,ImportCsvState.records[0].length);
     }
 }
 
@@ -48,7 +36,6 @@ export component ImportCsvDialog inherits PopupWindow {
     property <[string]> columns: [
         @tr("Date"),
         @tr("Payee"),
-        @tr("Category"),
         @tr("Note"),
         @tr("Outflow"),
         @tr("Inflow")
@@ -87,15 +74,6 @@ export component ImportCsvDialog inherits PopupWindow {
                 options: Api.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
                     ImportCsvState.payee-column-index = self.current-index
-                }
-            }
-
-            ComboBox {
-                label: @tr("Category");
-                current-value: ImportCsvState.records[0][ImportCsvState.category-column-index];
-                options: Api.csv-combobox-options(ImportCsvState.records);
-                changed(value) => {
-                    ImportCsvState.category-column-index = self.current-index
                 }
             }
 
@@ -153,14 +131,6 @@ export component ImportCsvDialog inherits PopupWindow {
                     width: parent.width / length;
                     Text {
                         text: record[ImportCsvState.payee-column-index];
-                        color: Colors.textBody;
-                    }
-                }
-
-                TableCell {
-                    width: parent.width / length;
-                    Text {
-                        text: record[ImportCsvState.category-column-index];
                         color: Colors.textBody;
                     }
                 }
