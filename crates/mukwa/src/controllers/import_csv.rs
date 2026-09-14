@@ -3,16 +3,71 @@
 
 use crate::state::AppState;
 use crate::ui;
-use crate::ui::{ImportCsvState, MainWindow};
+use crate::ui::{ComboBoxItem, ImportCsvState, MainWindow};
 use jiff::civil::Date;
 use mukwa_core::Money;
-use slint::{ComponentHandle, Global, Model, SharedString};
+use slint::{ComponentHandle, DataTransfer, Global, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::str::FromStr;
+use native_dialog::DialogBuilder;
 use tracing::{info, warn};
 use uuid::Uuid;
 
 pub fn bind(window: &MainWindow, app_state: &AppState) {
     let csv_state = window.global::<ui::ImportCsvState>();
+
+    // FIXME: panics on unequal lengths
+    csv_state.on_csv_combobox_options(|records| {
+        let mut combobox_items = vec![];
+        if let Some(record) = records.iter().next() {
+            for (index, cell) in record.iter().enumerate() {
+                let item = ComboBoxItem {
+                    text: cell.clone(),
+                    value: index.to_shared_string(),
+                };
+                combobox_items.push(item);
+            }
+        }
+        ModelRc::new(VecModel::from(combobox_items))
+    });
+
+    csv_state.on_read_csv(|data| {
+        if !data.has_file_paths() {
+            warn!("No csv files were chosen");
+            return ModelRc::new(VecModel::default());
+        }
+
+        let path = data.file_paths().unwrap().next().unwrap();
+        let mut reader = csv::Reader::from_path(path).unwrap();
+        // let mut records = vec![];
+        let model = VecModel::default();
+        for result in reader.records() {
+            let record = result.unwrap();
+            let cells: Vec<_> = record.iter().map(|s| s.to_shared_string()).collect();
+            let inner_model = VecModel::from(cells);
+            model.push(ModelRc::new(inner_model));
+        }
+        ModelRc::new(model)
+    });
+
+    csv_state.on_open_csv(|| {
+        let result = DialogBuilder::file()
+            .add_filter("CSV file", ["csv"])
+            .open_single_file()
+            .show()
+            .unwrap();
+        match result {
+            Some(path) => {
+                info!("Opened csv file at {:?}", path);
+                let mut data = DataTransfer::default();
+                data.set_file_paths([path]);
+                data
+            }
+            None => {
+                warn!("No csv file found");
+                DataTransfer::default()
+            }
+        }
+    });
 
     csv_state.on_import_transactions({
         let csv_state = csv_state.as_weak();
@@ -82,6 +137,7 @@ mod test{
 
     #[test]
     fn parse_expense() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
         let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let account = service.create_account("",AccountType::Cash)?;
@@ -107,6 +163,7 @@ mod test{
 
     #[test]
     fn parse_income() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
         let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let account = service.create_account("",AccountType::Cash)?;
@@ -132,6 +189,7 @@ mod test{
 
     #[test]
     fn parse_empty_records() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
         let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let account = service.create_account("",AccountType::Cash)?;
@@ -142,6 +200,17 @@ mod test{
         import_transactions(csv_state, &app_state)?;
 
         assert!(app_state.service().fetch_transactions()?.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn read_csv_return_default_if_empty() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        crate::controllers::api::bind(&window);
+        let csv_state = window.global::<ImportCsvState>();
+        let model = csv_state.invoke_read_csv(DataTransfer::default());
+        assert_eq!(model.iter().len(), 0);
         Ok(())
     }
 }

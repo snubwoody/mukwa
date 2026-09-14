@@ -2,73 +2,16 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use crate::ui;
-use crate::ui::ComboBoxItem;
 use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::Money;
 use mukwa_core::fmt::CurrencyFormatter;
-use native_dialog::DialogBuilder;
-use slint::{ComponentHandle, DataTransfer, Model, ModelRc, ToSharedString, VecModel};
+use slint::{ComponentHandle, ToSharedString};
 use std::str::FromStr;
-use tracing::{info, warn};
+use tracing::warn;
 
 pub fn bind(window: &ui::MainWindow) {
     let api = window.global::<ui::Api>();
-
-    // FIXME: panics on unequal lengths
-    api.on_csv_combobox_options(|records| {
-        let mut index = 0;
-        let mut combobox_items = vec![];
-        if let Some(record) = records.iter().next() {
-            for (index, cell) in record.iter().enumerate() {
-                let item = ComboBoxItem {
-                    text: cell.clone(),
-                    value: index.to_shared_string(),
-                };
-                combobox_items.push(item);
-            }
-        }
-        ModelRc::new(VecModel::from(combobox_items))
-    });
-
-    api.on_read_csv(|data| {
-        if !data.has_file_paths() {
-            warn!("No csv files were chosen");
-            return ModelRc::new(VecModel::default());
-        }
-
-        let path = data.file_paths().unwrap().next().unwrap();
-        let mut reader = csv::Reader::from_path(path).unwrap();
-        // let mut records = vec![];
-        let model = VecModel::default();
-        for result in reader.records() {
-            let record = result.unwrap();
-            let cells: Vec<_> = record.iter().map(|s| s.to_shared_string()).collect();
-            let inner_model = VecModel::from(cells);
-            model.push(ModelRc::new(inner_model));
-        }
-        ModelRc::new(model)
-    });
-
-    api.on_open_csv(|| {
-        let result = DialogBuilder::file()
-            .add_filter("CSV file", ["csv"])
-            .open_single_file()
-            .show()
-            .unwrap();
-        match result {
-            Some(path) => {
-                info!("Opened csv file at {:?}", path);
-                let mut data = DataTransfer::default();
-                data.set_file_paths([path]);
-                data
-            }
-            None => {
-                warn!("No csv file found");
-                DataTransfer::default()
-            }
-        }
-    });
 
     api.on_format_money_without_symbol({
         move |value| {
@@ -139,18 +82,3 @@ pub fn bind(window: &ui::MainWindow) {
     });
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::ui::MainWindow;
-
-    #[test]
-    fn read_csv_return_default_if_empty() -> crate::Result<()> {
-        let window = MainWindow::new()?;
-        bind(&window);
-        let api = window.global::<ui::Api>();
-        let model = api.invoke_read_csv(DataTransfer::default());
-        assert_eq!(model.iter().len(), 0);
-        Ok(())
-    }
-}
