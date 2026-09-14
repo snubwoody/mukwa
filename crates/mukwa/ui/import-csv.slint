@@ -11,8 +11,8 @@ import { IconSet } from "@lucide";
 
 export global ImportCsvState {
     callback import-transactions();
+    callback read-csv(data-transfer);
     pure callback open-csv() -> data-transfer;
-    pure callback read-csv(data-transfer) -> [[string]];
     pure callback csv-combobox-options([[string]]) -> [ComboBoxItem];
 
     in-out property <string> account-id;
@@ -47,7 +47,8 @@ export component ImportCsvDialog inherits PopupWindow {
     ];
 
     init => {
-        ImportCsvState.set-records(ImportCsvState.read-csv(data));
+        ImportCsvState.read-csv(data);
+        //ImportCsvState.set-records();
         ImportCsvState.account-id = account-id;
     }
 

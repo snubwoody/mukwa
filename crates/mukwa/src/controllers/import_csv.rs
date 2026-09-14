@@ -5,7 +5,7 @@ use crate::state::AppState;
 use crate::ui;
 use crate::ui::{ComboBoxItem, ImportCsvState, MainWindow};
 use jiff::civil::Date;
-use mukwa_core::Money;
+use mukwa_core::{Error, Money};
 use slint::{ComponentHandle, DataTransfer, Global, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::str::FromStr;
 use native_dialog::DialogBuilder;
@@ -13,7 +13,7 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 pub fn bind(window: &MainWindow, app_state: &AppState) {
-    let csv_state = window.global::<ui::ImportCsvState>();
+    let csv_state = window.global::<ImportCsvState>();
 
     // FIXME: panics on unequal lengths
     csv_state.on_csv_combobox_options(|records| {
@@ -30,23 +30,14 @@ pub fn bind(window: &MainWindow, app_state: &AppState) {
         ModelRc::new(VecModel::from(combobox_items))
     });
 
-    csv_state.on_read_csv(|data| {
-        if !data.has_file_paths() {
-            warn!("No csv files were chosen");
-            return ModelRc::new(VecModel::default());
-        }
 
-        let path = data.file_paths().unwrap().next().unwrap();
-        let mut reader = csv::Reader::from_path(path).unwrap();
-        // let mut records = vec![];
-        let model = VecModel::default();
-        for result in reader.records() {
-            let record = result.unwrap();
-            let cells: Vec<_> = record.iter().map(|s| s.to_shared_string()).collect();
-            let inner_model = VecModel::from(cells);
-            model.push(ModelRc::new(inner_model));
+    csv_state.on_read_csv({
+        let csv_state = csv_state.as_weak();
+        move |data| {
+            if let Err(err) = read_csv(data,&csv_state.unwrap()){
+                warn!("Failed to read csv: {err}")
+            }
         }
-        ModelRc::new(model)
     });
 
     csv_state.on_open_csv(|| {
@@ -80,6 +71,25 @@ pub fn bind(window: &MainWindow, app_state: &AppState) {
             }
         }
     });
+}
+
+fn read_csv(data: DataTransfer,csv_state: &ImportCsvState) -> crate::Result<()>{
+    if !data.has_file_paths() {
+        return Err(Error::new("No csv files were chosen"));
+    }
+
+    let path = data.file_paths().unwrap().next().unwrap();
+    let mut reader = csv::Reader::from_path(path).unwrap();
+    let model = VecModel::default();
+    for result in reader.records() {
+        let record = result.unwrap();
+        let cells: Vec<_> = record.iter().map(|s| s.to_shared_string()).collect();
+        let inner_model = VecModel::from(cells);
+        model.push(ModelRc::new(inner_model));
+    }
+    let records = ModelRc::new(model);
+    csv_state.set_records(records);
+    Ok(())
 }
 
 fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Result<()> {
@@ -122,6 +132,7 @@ fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Re
 mod test{
     use jiff::civil::date;
     use slint::{ModelRc, ToSharedString, VecModel};
+    use tempfile::tempdir;
     use mukwa_core::service::{AccountType, Service, TransactionType};
     use super::*;
 
@@ -204,13 +215,26 @@ mod test{
     }
 
     #[test]
-    fn read_csv_return_default_if_empty() -> crate::Result<()> {
+    fn read_empty_csv_returns_error() -> crate::Result<()> {
         i_slint_backend_testing::init_no_event_loop();
         let window = MainWindow::new()?;
-        crate::controllers::api::bind(&window);
         let csv_state = window.global::<ImportCsvState>();
-        let model = csv_state.invoke_read_csv(DataTransfer::default());
-        assert_eq!(model.iter().len(), 0);
+        let result = read_csv(DataTransfer::default(), &csv_state);
+        assert!(result.is_err());
+        assert_eq!(csv_state.get_records().iter().len(),0);
+        Ok(())
+    }
+
+    #[test]
+    fn read_csv_file() -> crate::Result<()> {
+        let temp = tempdir()?;
+        tempfile::tempfile();
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let csv_state = window.global::<ImportCsvState>();
+        let result = read_csv(DataTransfer::default(), &csv_state);
+        assert!(result.is_err());
+        assert_eq!(csv_state.get_records().iter().len(),0);
         Ok(())
     }
 }
