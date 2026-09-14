@@ -35,7 +35,6 @@ fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Re
     let inflow_index = state.get_inflow_column_index() as usize;
     let outflow_index = state.get_outflow_column_index() as usize;
     let note_index = state.get_note_column_index() as usize;
-    let payee_index = state.get_payee_column_index() as usize;
     let account_id = Uuid::parse_str(&state.get_account_id())?;
 
     let service = app_state.service();
@@ -48,7 +47,6 @@ fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Re
         let date = Date::strptime("%d/%m/%Y", &record[date_index])?;
         let note = &record[note_index];
 
-        // dbg!(date, note, outflow, note);
         if let Ok(outflow) = Money::from_str(&record[outflow_index]) {
             service.create_expense().account(account_id).date(date).amount(outflow).note(note).submit()?;
             continue;

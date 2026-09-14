@@ -37,7 +37,6 @@ export component ImportCsvDialog inherits PopupWindow {
     in property <string> account-id;
     property <[string]> columns: [
         @tr("Date"),
-        @tr("Payee"),
         @tr("Note"),
         @tr("Outflow"),
         @tr("Inflow")
@@ -73,15 +72,6 @@ export component ImportCsvDialog inherits PopupWindow {
             }
 
             ComboBox {
-                label: @tr("Payee");
-                current-value: ImportCsvState.records[0][ImportCsvState.payee-column-index];
-                options: Api.csv-combobox-options(ImportCsvState.records);
-                changed(value) => {
-                    ImportCsvState.payee-column-index = self.current-index
-                }
-            }
-
-            ComboBox {
                 label: @tr("Note");
                 current-value: ImportCsvState.records[0][ImportCsvState.note-column-index];
                 options: Api.csv-combobox-options(ImportCsvState.records);
@@ -110,7 +100,7 @@ export component ImportCsvDialog inherits PopupWindow {
         }
 
         Table {
-            property <int> length: 6;
+            property <int> length: 4;
             TableRow {
                 for column in columns: TableCell {
                     width: parent.width / length;
@@ -127,14 +117,6 @@ export component ImportCsvDialog inherits PopupWindow {
                     width: parent.width / length;
                     Text {
                         text: record[ImportCsvState.date-column-index];
-                        color: Colors.textBody;
-                    }
-                }
-
-                TableCell {
-                    width: parent.width / length;
-                    Text {
-                        text: record[ImportCsvState.payee-column-index];
                         color: Colors.textBody;
                     }
                 }
