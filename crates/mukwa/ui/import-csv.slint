@@ -8,6 +8,7 @@ import { ComboBox, PrimaryButton } from "widgets.slint";
 
 export global ImportCsvState {
     callback import-transactions();
+    in-out property <string> account-id;
     in-out property <[[string]]> records;
     in-out property <int> date-column-index;
     in-out property <int> payee-column-index;
@@ -33,6 +34,7 @@ export component ImportCsvDialog inherits PopupWindow {
     height: Api.window-size().height * 0.85;
     close-policy: close-on-click-outside;
     in property <data-transfer> data;
+    in property <string> account-id;
     property <[string]> columns: [
         @tr("Date"),
         @tr("Payee"),
@@ -43,6 +45,8 @@ export component ImportCsvDialog inherits PopupWindow {
 
     init => {
         ImportCsvState.set-records(Api.read-csv(data));
+        ImportCsvState.account-id = account-id;
+        debug(account-id);
     }
 
     Rectangle {
