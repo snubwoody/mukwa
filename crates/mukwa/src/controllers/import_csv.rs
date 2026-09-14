@@ -31,21 +31,19 @@ fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Re
     let state = state.as_weak();
     let state = state.unwrap();
     let date_index = state.get_date_column_index() as usize;
-    let category_index = state.get_category_column_index() as usize;
     let inflow_index = state.get_inflow_column_index() as usize;
     let outflow_index = state.get_outflow_column_index() as usize;
     let note_index = state.get_note_column_index() as usize;
     let payee_index = state.get_payee_column_index() as usize;
 
     let service = app_state.service();
-    let category = service.fetch_categories()?;
 
     // TODO: add header row option
     // TODO: add account-id
     // TODO: add date-format setting
+    // TODO: handle getting index that doesn't exist
     for record in state.get_records().iter() {
         let record: Vec<SharedString> = record.iter().collect();
-        // TODO: get index that doesn't exist
         let date = Date::strptime("%m/%d/%Y", &record[date_index])?;
         let note = &record[note_index];
 
