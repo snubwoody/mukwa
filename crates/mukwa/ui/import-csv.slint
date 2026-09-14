@@ -5,11 +5,16 @@ import { Colors } from "colors.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
 import { Api } from "globals.slint";
 import { ComboBox, PrimaryButton, IconButton } from "widgets.slint";
+import { ComboBoxItem } from "widgets/combobox.slint";
 import { FontSize } from "theme.slint";
 import { IconSet } from "@lucide";
 
 export global ImportCsvState {
     callback import-transactions();
+    pure callback open-csv() -> data-transfer;
+    pure callback read-csv(data-transfer) -> [[string]];
+    pure callback csv-combobox-options([[string]]) -> [ComboBoxItem];
+
     in-out property <string> account-id;
     in-out property <[[string]]> records;
     in-out property <int> date-column-index;
@@ -42,7 +47,7 @@ export component ImportCsvDialog inherits PopupWindow {
     ];
 
     init => {
-        ImportCsvState.set-records(Api.read-csv(data));
+        ImportCsvState.set-records(ImportCsvState.read-csv(data));
         ImportCsvState.account-id = account-id;
     }
 
@@ -81,7 +86,7 @@ export component ImportCsvDialog inherits PopupWindow {
             ComboBox {
                 label: @tr("Date");
                 current-value: ImportCsvState.records[0][ImportCsvState.date-column-index];
-                options: Api.csv-combobox-options(ImportCsvState.records);
+                options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
                      // TODO: use max here and test it?
                     ImportCsvState.date-column-index = self.current-index
@@ -91,7 +96,7 @@ export component ImportCsvDialog inherits PopupWindow {
             ComboBox {
                 label: @tr("Note");
                 current-value: ImportCsvState.records[0][ImportCsvState.note-column-index];
-                options: Api.csv-combobox-options(ImportCsvState.records);
+                options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
                     ImportCsvState.note-column-index = self.current-index
                 }
@@ -100,7 +105,7 @@ export component ImportCsvDialog inherits PopupWindow {
             ComboBox {
                 label: @tr("Outflow");
                 current-value: ImportCsvState.records[0][ImportCsvState.outflow-column-index];
-                options: Api.csv-combobox-options(ImportCsvState.records);
+                options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
                     ImportCsvState.outflow-column-index = self.current-index
                 }
@@ -109,7 +114,7 @@ export component ImportCsvDialog inherits PopupWindow {
             ComboBox {
                 label: @tr("Inflow");
                 current-value: ImportCsvState.records[0][ImportCsvState.inflow-column-index];
-                options: Api.csv-combobox-options(ImportCsvState.records);
+                options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
                     ImportCsvState.inflow-column-index = self.current-index
                 }

@@ -30,7 +30,7 @@ import { Calendar, Date } from "widgets/calendar.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
 import { Settings } from "settings.slint";
 import { IconSet } from "@lucide";
-import { ImportCsvDialog } from "import-csv.slint";
+import { ImportCsvDialog, ImportCsvState } from "import-csv.slint";
 
 component DateCell inherits TableCell {
     in property <Transaction> transaction;
@@ -518,7 +518,7 @@ export component TransactionPage inherits VerticalLayout {
             theme: ghost;
             accessible-label: @tr("Import CSV file");
             clicked => {
-                csv-data = Api.open-csv();
+                csv-data = ImportCsvState.open-csv();
                 import-csv-dialog.show();
             }
         }
