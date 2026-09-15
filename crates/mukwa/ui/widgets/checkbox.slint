@@ -1,0 +1,75 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { IconSet, IconDisplay } from "@lucide";
+import { Colors } from "../colors.slint";
+import { FocusBorder } from "focus-border.slint";
+
+export component Checkbox inherits Rectangle {
+    in-out property <bool> checked: false;
+    in-out property <bool> enabled: true;
+
+    width: 16px;
+    height: 16px;
+    border-width: 1px;
+    border-color: checked ? Colors.accent : Colors.borderNeutral;
+    border-radius: 4px;
+    background: checked ? Colors.accent : transparent;
+
+    accessible-role: checkbox;
+    accessible-checkable: true;
+    accessible-checked: checked;
+    accessible-enabled: enabled;
+    forward-focus: focus-scope;
+
+    animate background { duration: 150ms; }
+
+    callback toggled();
+
+    public function toggle() {
+        checked = !checked;
+    }
+
+    accessible-action-default => {
+        if (enabled) {
+            toggle();
+            toggled();
+        }
+    }
+
+    focus-scope := FocusScope {
+        key-pressed(event) => {
+            if !enabled {
+                return reject;
+            }
+            if event.text == Key.Space {
+                toggle();
+                toggled();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    TouchArea {
+        width: parent.width;
+        height: parent.height;
+        clicked => {
+            if (enabled) {
+                toggle();
+                toggled();
+            }
+        }
+    }
+
+    if checked: IconDisplay {
+        icon: IconSet.Check;
+        size: 12px;
+        stroke-width: 2;
+        stroke: white;
+    }
+
+    if focus-scope.has-focus: FocusBorder {
+        border-radius: parent.border-radius;
+    }
+}
