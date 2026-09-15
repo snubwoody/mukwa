@@ -54,22 +54,22 @@ assert!(!checkbox_a.accessible_checked().unwrap());
 
 instance.invoke_focus_a();
 i_slint_backend_testing::send_keyboard_string_sequence(&instance, &SharedString::from(Key::Space));
-assert_eq!(instance.get_checkbox_a_checked(), true);
+assert!(instance.get_checkbox_a_checked());
 assert_eq!(instance.get_checkbox_a_state(), "a");
 i_slint_backend_testing::send_keyboard_string_sequence(&instance, &SharedString::from(Key::Space));
-assert_eq!(instance.get_checkbox_a_checked(), false);
+assert!(!instance.get_checkbox_a_checked());
 assert_eq!(instance.get_checkbox_a_state(), "aa");
 
 instance.invoke_toggle_a();
-assert_eq!(instance.get_checkbox_a_checked(), true);
+assert!(instance.get_checkbox_a_checked());
 instance.invoke_toggle_a();
-assert_eq!(instance.get_checkbox_a_checked(), false);
+assert!(!instance.get_checkbox_a_checked());
 
 checkbox_a.invoke_accessible_default_action();
-assert_eq!(instance.get_checkbox_a_checked(), true);
+assert!(instance.get_checkbox_a_checked());
 assert_eq!(instance.get_checkbox_a_state(), "aaa");
 checkbox_a.invoke_accessible_default_action();
-assert_eq!(instance.get_checkbox_a_checked(), false);
+assert!(!instance.get_checkbox_a_checked());
 assert_eq!(instance.get_checkbox_a_state(), "aaaa");
 
 let mut result = ElementHandle::find_by_element_id(&instance, "TestCase::checkbox-b").collect::<Vec<_>>();
@@ -80,10 +80,10 @@ assert!(!checkbox_b.accessible_enabled().unwrap());
 
 instance.invoke_focus_b();
 i_slint_backend_testing::send_keyboard_string_sequence(&instance, &SharedString::from(Key::Space));
-assert_eq!(instance.get_checkbox_b_checked(), false);
+assert!(!instance.get_checkbox_b_checked());
 assert_eq!(instance.get_checkbox_b_state(), "");
 
 checkbox_b.invoke_accessible_default_action();
-assert_eq!(instance.get_checkbox_b_checked(), false);
+assert!(!instance.get_checkbox_b_checked());
 assert_eq!(instance.get_checkbox_b_state(), "");
 */
