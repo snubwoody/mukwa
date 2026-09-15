@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
 use crate::settings::SettingsStore;
 use crate::state::AppState;
 use crate::ui;
@@ -8,6 +11,7 @@ mod analytics;
 mod api;
 mod calendar;
 mod global;
+mod import_csv;
 mod settings;
 
 pub fn bind_all(window: &MainWindow, state: &AppState, settings: &SettingsStore) {
@@ -17,6 +21,7 @@ pub fn bind_all(window: &MainWindow, state: &AppState, settings: &SettingsStore)
     analytics::bind(window, state);
     global::bind(window, state);
     api::bind(window);
+    import_csv::bind(window,state);
 
     bind_combobox_api(window);
 }
