@@ -25,9 +25,9 @@ export {
     Api,
     CategoryGroup,
     AccountType,
-}from "globals.slint";
-export { Settings }from "settings.slint";
-export { AnalyticsApi, PieChartSlice }from "analytics-page.slint";
+} from "globals.slint";
+export { Settings } from "settings.slint";
+export { AnalyticsApi, PieChartSlice } from "analytics-page.slint";
 import {
     Button,
     TextField,
@@ -39,13 +39,15 @@ import {
 import { TransactionPage } from "transaction-page.slint";
 import { SpendingPage } from "spending-page.slint";
 import { ComboBoxItem } from "widgets/combobox.slint";
-export { ComboBoxApi }from "widgets/combobox.slint";
-export { Date, CalendarState }from "widgets/calendar.slint";
+export { ComboBoxApi } from "widgets/combobox.slint";
+export { Date, CalendarState } from "widgets/calendar.slint";
 import { Table } from "tableview.slint";
 import { IconDisplay, IconSet, Icon } from "@lucide";
 import { SettingsDialog, Settings } from "settings.slint";
 import { FontSize } from "theme.slint";
 import { AnalyticsPage } from "analytics-page.slint";
+import { IconButton } from "widgets/button.slint";
+import { TitleBar } from "titlebar.slint";
 
 enum Page {
     spending,
@@ -325,29 +327,47 @@ export component MainWindow inherits Window {
     icon: @image-url("../resources/icons/app-icon.png");
     default-font-family: Settings.font-family;
     default-font-size: FontSize.body;
+    no-frame: true;
 
-    HorizontalLayout {
-        Sidebar {
-            accounts: State.accounts;
-            current-page: active-page;
-            active-account-id: active-account-id;
-            select-page(page) => {
-                active-page = page;
-                active-account-id = "";
+    VerticalLayout {
+        TitleBar {
+            hidden => {
+                root.hide();
             }
-            select-account(id) => {
-                active-account-id = id;
-                active-page = Page.transactions;
+
+            closed => {
+                root.close();
             }
         }
 
-        if active-page == Page.spending: SpendingPage { }
+        Rectangle {
+            background: Colors.borderNeutral;
+            height: 1px;
+        }
 
-        if active-page == Page.analytics: AnalyticsPage { }
+        HorizontalLayout {
+            Sidebar {
+                accounts: State.accounts;
+                current-page: active-page;
+                active-account-id: active-account-id;
+                select-page(page) => {
+                    active-page = page;
+                    active-account-id = "";
+                }
+                select-account(id) => {
+                    active-account-id = id;
+                    active-page = Page.transactions;
+                }
+            }
 
-        if active-page == Page.transactions: TransactionPage {
-            active-account-id: active-account-id;
-            transactions: State.transactions;
+            if active-page == Page.spending: SpendingPage { }
+
+            if active-page == Page.analytics: AnalyticsPage { }
+
+            if active-page == Page.transactions: TransactionPage {
+                active-account-id: active-account-id;
+                transactions: State.transactions;
+            }
         }
     }
 }

@@ -1,0 +1,127 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { Colors } from "colors.slint";
+
+enum TitleBarButtonTheme{
+    windows,
+    windows-x
+}
+
+// #e81120
+export component TitleBarButton {
+    in-out property <TitleBarButtonTheme> theme;
+    in property <bool> enabled <=> touch-area.enabled;
+    out property <bool> has-focus: focus-scope.has-focus;
+
+    padding: 4px;
+    accessible-enabled: true;
+    accessible-role: button;
+    forward-focus: focus-scope;
+
+    callback clicked <=> touch-area.clicked;
+    accessible-action-default() => {
+        clicked()
+    }
+
+
+    function background-color(button-theme: TitleBarButtonTheme) -> color {
+        return transparent;
+    }
+
+    function hover-background-color(button-theme: TitleBarButtonTheme) -> color {
+        if (button-theme == TitleBarButtonTheme.windows) {
+            return Colors.neutral50;
+        }
+        if (button-theme == TitleBarButtonTheme.windows-x) {
+            return Colors.red500;
+        }
+        return transparent;
+    }
+
+    function icon-color(button-theme: TitleBarButtonTheme) -> color {
+        return Colors.textBody;
+    }
+
+    background := Rectangle {
+        background: touch-area.has-hover ? hover-background-color(theme) : background-color(theme);
+
+        animate background { duration: 250ms; }
+    }
+
+    HorizontalLayout {
+        padding: root.padding;
+
+        @children
+    }
+
+    touch-area := TouchArea {
+        width: parent.width;
+        height: parent.height;
+    }
+
+    focus-scope := FocusScope {
+        x: 0;
+        width: 0; // Do not react on clicks
+
+        key-pressed(event) => {
+            if (event.text == Key.Space || event.text == Key.Return) {
+                clicked();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    // if root.has-focus: FocusBorder {
+        // border-radius: background.border-radius;
+    // }
+}
+
+// TODO: extract and test this
+export component TitleBar inherits WindowMoveArea {
+    callback hidden();
+    callback minimized();
+    callback closed();
+
+    //height: 40px;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        cross-axis-alignment: center;
+        alignment: space-between;
+        Text {
+            text: "Mukwa";
+            color: Colors.textHeading;
+        }
+
+        HorizontalLayout {
+            TitleBarButton {
+                theme: windows;
+                Image {
+                    source: @image-url("assets/fluent_subtract.svg");
+                }
+
+                clicked => hidden();
+            }
+
+            TitleBarButton {
+                theme: windows;
+                Image {
+                    source: @image-url("assets/fluent_square_multiple.svg");
+                }
+
+                clicked => closed();
+            }
+
+            TitleBarButton {
+                theme: windows-x;
+                Image {
+                    source: @image-url("assets/fluent_dismiss.svg");
+                }
+
+                clicked => closed();
+            }
+        }
+    }
+}
