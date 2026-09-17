@@ -19,7 +19,6 @@ export component TitleBarButton {
     height: size;
     accessible-enabled: true;
     accessible-role: button;
-    forward-focus: focus-scope;
 
     callback clicked <=> touch-area.clicked;
     accessible-action-default() => {
@@ -61,23 +60,6 @@ export component TitleBarButton {
         width: parent.width;
         height: parent.height;
     }
-
-    focus-scope := FocusScope {
-        x: 0;
-        width: 0; // Do not react on clicks
-
-        key-pressed(event) => {
-            if (event.text == Key.Space || event.text == Key.Return) {
-                clicked();
-                return accept;
-            }
-            return reject;
-        }
-    }
-
-    // if root.has-focus: FocusBorder {
-        // border-radius: background.border-radius;
-    // }
 }
 
 // TODO: extract and test this
