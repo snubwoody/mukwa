@@ -13,8 +13,10 @@ export component TitleBarButton {
     in-out property <TitleBarButtonTheme> theme;
     in property <bool> enabled <=> touch-area.enabled;
     out property <bool> has-focus: focus-scope.has-focus;
+    in property <length> size: 36px;
 
-    padding: 4px;
+    width: size;
+    height: size;
     accessible-enabled: true;
     accessible-role: button;
     forward-focus: focus-scope;
@@ -31,10 +33,10 @@ export component TitleBarButton {
 
     function hover-background-color(button-theme: TitleBarButtonTheme) -> color {
         if (button-theme == TitleBarButtonTheme.windows) {
-            return Colors.neutral50;
+            return Colors.neutral100;
         }
         if (button-theme == TitleBarButtonTheme.windows-x) {
-            return Colors.red500;
+            return #e81120;
         }
         return transparent;
     }
@@ -50,8 +52,8 @@ export component TitleBarButton {
     }
 
     HorizontalLayout {
-        padding: root.padding;
-
+        alignment: center;
+        cross-axis-alignment: center;
         @children
     }
 
@@ -80,11 +82,14 @@ export component TitleBarButton {
 
 // TODO: extract and test this
 export component TitleBar inherits WindowMoveArea {
+    in property <bool> window-maximized;
     callback hidden();
-    callback minimized();
+    callback maximized();
     callback closed();
 
-    //height: 40px;
+    Rectangle {
+        background: Colors.neutral25;
+    }
 
     HorizontalLayout {
         padding-left: 12px;
@@ -92,35 +97,35 @@ export component TitleBar inherits WindowMoveArea {
         alignment: space-between;
         Text {
             text: "Mukwa";
+            font-weight: FontWeight.semi-bold;
             color: Colors.textHeading;
         }
 
         HorizontalLayout {
             TitleBarButton {
                 theme: windows;
+                clicked => hidden();
                 Image {
                     source: @image-url("assets/fluent_subtract.svg");
                 }
-
-                clicked => hidden();
             }
 
             TitleBarButton {
                 theme: windows;
+                clicked => maximized();
                 Image {
-                    source: @image-url("assets/fluent_square_multiple.svg");
+                    width: 12px;
+                    height: 12px;
+                    source: root.window-maximized ? @image-url("assets/fluent_square_multiple.svg") : @image-url("assets/fluent_square.svg");
                 }
-
-                clicked => closed();
             }
 
             TitleBarButton {
                 theme: windows-x;
+                clicked => closed();
                 Image {
                     source: @image-url("assets/fluent_dismiss.svg");
                 }
-
-                clicked => closed();
             }
         }
     }

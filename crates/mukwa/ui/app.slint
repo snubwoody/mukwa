@@ -332,8 +332,13 @@ export component MainWindow inherits Window {
 
     VerticalLayout {
         TitleBar {
+            window-maximized: root.maximized;
             hidden => {
                 root.hide();
+            }
+
+            maximized => {
+                Api.set-maximized(!root.maximized);
             }
 
             closed => {
@@ -342,7 +347,7 @@ export component MainWindow inherits Window {
         }
 
         Rectangle {
-            background: Colors.borderNeutral;
+            background: Colors.neutral50;
             height: 1px;
         }
 
