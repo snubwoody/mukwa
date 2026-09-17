@@ -327,10 +327,10 @@ export component MainWindow inherits Window {
     icon: @image-url("../resources/icons/app-icon.png");
     default-font-family: Settings.font-family;
     default-font-size: FontSize.body;
-    no-frame: true;
+    no-frame: Platform.os == windows ? true : false;
 
     VerticalLayout {
-        TitleBar {
+        if Platform.os == windows: TitleBar {
             window-maximized: root.maximized;
             hidden => {
                 root.hide();

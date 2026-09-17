@@ -8,11 +8,8 @@ enum TitleBarButtonTheme{
     windows-x
 }
 
-// #e81120
 export component TitleBarButton {
     in-out property <TitleBarButtonTheme> theme;
-    in property <bool> enabled <=> touch-area.enabled;
-    out property <bool> has-focus: focus-scope.has-focus;
     in property <length> size: 36px;
 
     width: size;
@@ -46,7 +43,6 @@ export component TitleBarButton {
 
     background := Rectangle {
         background: touch-area.has-hover ? hover-background-color(theme) : background-color(theme);
-
         animate background { duration: 250ms; }
     }
 
@@ -86,6 +82,7 @@ export component TitleBar inherits WindowMoveArea {
         HorizontalLayout {
             TitleBarButton {
                 theme: windows;
+                accessible-label: @tr("Minimize window");
                 clicked => hidden();
                 Image {
                     source: @image-url("assets/fluent_subtract.svg");
@@ -95,9 +92,10 @@ export component TitleBar inherits WindowMoveArea {
             TitleBarButton {
                 theme: windows;
                 clicked => maximized();
+                accessible-label: @tr("Maximize window");
                 Image {
-                    width: 12px;
-                    height: 12px;
+                    width: 16px;
+                    height: 16px;
                     source: root.window-maximized ? @image-url("assets/fluent_square_multiple.svg") : @image-url("assets/fluent_square.svg");
                 }
             }
@@ -105,6 +103,7 @@ export component TitleBar inherits WindowMoveArea {
             TitleBarButton {
                 theme: windows-x;
                 clicked => closed();
+                accessible-label: @tr("Close window");
                 Image {
                     source: @image-url("assets/fluent_dismiss.svg");
                 }
