@@ -329,6 +329,7 @@ export component MainWindow inherits Window {
     default-font-family: Settings.font-family;
     default-font-size: FontSize.body;
     no-frame: Platform.os == windows ? true : false;
+    resize-border-width: 4px;
 
     VerticalLayout {
         if Platform.os == windows: TitleBar {
