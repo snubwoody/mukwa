@@ -38,18 +38,27 @@ jobs:
           path: build/*.AppImage
   bundle-windows:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64,aarch64]
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v6
       - uses: Swatinem/rust-cache@v2
+      - uses: hustcer/setup-nu@v3
+        with:
+          version: 0.114.1
+      - run: rustup target add aarch64-pc-windows-msvc
+        if: ${{matrix.arch == 'aarch64'}}
       - name: Bundle app
-        run: scripts/bundle-windows.ps1
+        run: nu scripts/bundle-windows.nu ${{matrix.arch}}
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: mukwa-upload-${{ runner.os }}
-          path: build/*-Setup.exe
+          path: target/bundle/**/*-Setup.exe
   release:
     permissions:
       contents: write

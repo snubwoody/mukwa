@@ -14,10 +14,10 @@ PrivilegesRequired=lowest
 AppCopyright=Copyright (C) 2026 Wakunguma Kalimukwa
 AppPublisher=Wakunguma Kalimukwa
 AppPublisherURL=https://www.github.com/snubwoody/mukwa
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
+AppSupportURL=https://github.com/snubwoody/mukwa/discussions
+ArchitecturesAllowed={#ArchitecturesAllowed}
+ArchitecturesInstallIn64BitMode={#ArchitecturesAllowed}
 SetupIconFile={#ResourceDir}\app-icon.ico
-;TODO: compile for arm and x86_64
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\mukwa.exe"
