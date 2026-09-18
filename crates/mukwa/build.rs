@@ -9,12 +9,14 @@ fn main() {
     {
         use winresource::WindowsResource;
 
+        println!("cargo:rerun-if-changed=resources");
         let mut rc = WindowsResource::new();
         rc.set_icon("resources/icons/app-icon.ico");
         rc.set("ProductName", "Mukwa");
         rc.set("FileDescription", "Mukwa");
-        rc.set("LegalCopyright", "Copyright © 2026 Wakunguma Kalimuwka");
-        rc.set("CompanyName", "Wakunguma Kalimuwka");
+        rc.set("LegalCopyright", "Copyright © 2026 Wakunguma Kalimukwa");
+        rc.set("CompanyName", "Wakunguma Kalimukwa");
+        rc.set_manifest_file("resources/manifest.xml");
         rc.compile().unwrap()
     }
 }
