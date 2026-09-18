@@ -21,7 +21,6 @@ use rusqlite::Connection;
 use slint::ComponentHandle;
 use std::fs;
 use std::path::PathBuf;
-
 use tracing::{error, info};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::EnvFilter;
@@ -104,7 +103,23 @@ impl App {
 
         connection.pragma_update(None, "journal_mode", "WAL")?;
         let service = Service::new(connection);
-        let main_window = ui::MainWindow::new()?;
+        let main_window = MainWindow::new()?;
+
+        #[cfg(windows)]
+        {
+            use slint::winit_030::{
+                WinitWindowAccessor,
+                winit::platform::windows::{CornerPreference, WindowExtWindows},
+            };
+            let main_window_weak = main_window.as_weak();
+
+            slint::spawn_local(async move {
+                let main_window = main_window_weak.unwrap();
+                let handle = main_window.window().winit_window().await.unwrap();
+                handle.set_corner_preference(CornerPreference::Round);
+            })
+            .unwrap();
+        }
 
         service.check_credit_account_categories()?;
 

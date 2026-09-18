@@ -15,11 +15,12 @@ pub fn bind(main_window: &ui::MainWindow) {
 
     let window = main_window.clone_strong();
     api.on_set_maximized({
-        move |maximized|{
+        move |maximized| {
             let window = window.window();
             window.set_maximized(maximized);
             window.is_maximized()
-    }});
+        }
+    });
 
     api.on_format_money_without_symbol({
         move |value| {
