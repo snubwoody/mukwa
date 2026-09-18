@@ -1,6 +1,9 @@
 name: Release
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
 concurrency:
   cancel-in-progress: true
   group: release-mukwa
@@ -38,13 +41,17 @@ jobs:
           path: build/*.AppImage
   bundle-windows:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64,aarch64]
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v6
       - uses: Swatinem/rust-cache@v2
       - name: Bundle app
-        run: scripts/bundle-windows.ps1
+        run: scripts/bundle-windows.ps1 -Architecture ${{matrix.arch}}
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
