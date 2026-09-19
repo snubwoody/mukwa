@@ -54,7 +54,7 @@ pub fn bind(window: &MainWindow, app_state: &AppState) {
         move || {
             let csv_state = csv_state.unwrap();
             match import_transactions(csv_state, &app_state) {
-                Ok(_) => info!("Successfully imported transactions"),
+                Ok(len) => info!("Successfully imported {len} transactions"),
                 Err(err) => warn!("Failed to import transactions: {err}"),
             }
         }
@@ -101,7 +101,7 @@ fn read_csv(data: DataTransfer, csv_state: &ImportCsvState) -> crate::Result<()>
     Ok(())
 }
 
-fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Result<()> {
+fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Result<usize> {
     // TODO: ignore failures?
     let state = state.as_weak();
     let state = state.unwrap();
@@ -110,15 +110,16 @@ fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Re
     let outflow_index = state.get_outflow_column_index() as usize;
     let note_index = state.get_note_column_index() as usize;
     let account_id = Uuid::parse_str(&state.get_account_id())?;
+    let date_format = state.get_date_format();
 
     let service = app_state.service();
 
     // TODO: add header row option
-    // TODO: add date-format setting
     // TODO: handle getting index that doesn't exist
+    let mut len = 0;
     for record in state.get_records().iter() {
         let record: Vec<SharedString> = record.iter().collect();
-        let date = Date::strptime("%d/%m/%Y", &record[date_index])?;
+        let date = Date::strptime(&date_format, &record[date_index])?;
         let note = &record[note_index];
 
         if let Ok(outflow) = Money::from_str(&record[outflow_index]) {
@@ -142,11 +143,13 @@ fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Re
                 .submit()?;
             continue;
         }
+
+        len += 1;
     }
 
     app_state.load_transactions()?;
 
-    Ok(())
+    Ok(len)
 }
 
 #[cfg(test)]
@@ -190,6 +193,30 @@ mod test {
         assert_eq!(transaction.amount, Money::new(50));
         assert_eq!(transaction.sender_id.unwrap(), account.id);
         assert!(transaction.receiver_id.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn parse_date() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let account = service.create_account("", AccountType::Cash)?;
+        let app_state = AppState::new(service)?;
+        let csv_state = window.global::<ImportCsvState>();
+        let records = vec![vec!["2024/12/31", "50.00", ""]];
+
+        csv_state.set_date_column_index(0);
+        csv_state.set_outflow_column_index(1);
+        csv_state.set_note_column_index(2);
+        csv_state.set_date_format(SharedString::from("%Y/%m/%d"));
+        csv_state.set_account_id(account.id.to_shared_string());
+        csv_state.set_records(records_to_model(records));
+        import_transactions(csv_state, &app_state)?;
+
+        let transactions = app_state.service().fetch_transactions()?;
+        let transaction = &transactions[0];
+        assert_eq!(transaction.date, date(2024, 12, 31));
         Ok(())
     }
 

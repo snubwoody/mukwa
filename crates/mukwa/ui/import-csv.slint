@@ -22,6 +22,7 @@ export global ImportCsvState {
     in-out property <int> note-column-index;
     in-out property <int> outflow-column-index;
     in-out property <int> inflow-column-index;
+    in-out property <string> date-format: "%d/%m/%Y";
 
     public function set-records(data: [[string]]) {
         records = data;
@@ -43,7 +44,6 @@ export component ImportCsvDialog inherits PopupWindow {
 
     init => {
         ImportCsvState.read-csv(data);
-        //ImportCsvState.set-records();
         ImportCsvState.account-id = account-id;
     }
 
@@ -162,6 +162,34 @@ export component ImportCsvDialog inherits PopupWindow {
                         text: record[ImportCsvState.inflow-column-index];
                         color: Colors.textBody;
                     }
+                }
+            }
+        }
+
+        VerticalLayout {
+            alignment: start;
+            cross-axis-alignment: start;
+            spacing: 8px;
+
+            Text {
+                text: @tr("Options");
+                color: Colors.textHeading;
+                font-weight: FontWeight.medium;
+            }
+
+            ComboBox {
+                label: @tr("Date format");
+                options: [
+                    { text: "DD/MM/YYYY (31/12/2025)", value: "%d/%m/%Y" },
+                    { text: "MM/DD/YYYY (12/31/2025)", value: "%m/%d/%Y" },
+                    { text: "MM/DD/YY (12/31/25)", value: "%m/%d/%y" },
+                    { text: "DD/MM/YY (31/12/25)", value: "%d/%m/%y" },
+                    { text: "DD-MM-YYYY (31-12-2025)", value: "%d-%m-%Y" },
+                    { text: "YYYY-MM-DD (2025-12-31)", value: "%Y-%m-%d" },
+                    { text: "YYYY.MM.DD (2025.12.31)", value: "%Y.%m.%d" },
+                ];
+                changed(value) => {
+                    ImportCsvState.date-format = value;
                 }
             }
         }
