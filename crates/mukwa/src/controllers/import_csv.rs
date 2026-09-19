@@ -2,7 +2,6 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use crate::state::AppState;
-use crate::ui;
 use crate::ui::{ComboBoxItem, ImportCsvState, MainWindow};
 use jiff::civil::Date;
 use mukwa_core::{Error, Money};
@@ -133,7 +132,8 @@ mod test{
     use jiff::civil::date;
     use slint::{ModelRc, ToSharedString, VecModel};
     use tempfile::tempdir;
-    use mukwa_core::service::{AccountType, Service, TransactionType};
+    use mukwa_core::service::{AccountType, Service};
+    use crate::ui;
     use super::*;
 
     fn records_to_model(records: Vec<Vec<&str>>) -> ModelRc<ModelRc<SharedString>>{
@@ -227,8 +227,8 @@ mod test{
 
     #[test]
     fn read_csv_file() -> crate::Result<()> {
-        let temp = tempdir()?;
-        tempfile::tempfile();
+        let _temp = tempdir()?;
+        //tempfile::tempfile();
         i_slint_backend_testing::init_no_event_loop();
         let window = MainWindow::new()?;
         let csv_state = window.global::<ImportCsvState>();

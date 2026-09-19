@@ -182,7 +182,7 @@ mod test {
     #[test]
     fn total_spent_all_only_includes_expenses() -> Result<()> {
         i_slint_backend_testing::init_no_event_loop();
-        let mut app = App::new_test()?;
+        let app = App::new_test()?;
         app.state
             .service()
             .create_expense()
@@ -209,7 +209,7 @@ mod test {
     #[test]
     fn total_spent_all_filters_by_month() -> Result<()> {
         i_slint_backend_testing::init_no_event_loop();
-        let mut app = App::new_test()?;
+        let app = App::new_test()?;
         app.state
             .service()
             .create_expense()
@@ -240,7 +240,7 @@ mod test {
     fn draw_pie_chart_filters_by_date() -> Result<()> {
         i_slint_backend_testing::init_no_event_loop();
 
-        let mut app = App::new_test()?;
+        let app = App::new_test()?;
         let service = app.state.service();
         let group = service.create_category_group("")?;
         let category = service.create_category("Groceries", group.id)?;
@@ -280,7 +280,7 @@ mod test {
     fn draw_pie_chart_sorts_categories() -> Result<()> {
         i_slint_backend_testing::init_no_event_loop();
 
-        let mut app = App::new_test()?;
+        let app = App::new_test()?;
         let service = app.state.service();
         let group = service.create_category_group("")?;
         let groceries = service.create_category("Groceries", group.id)?;
