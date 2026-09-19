@@ -114,6 +114,9 @@ fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Re
 
     let service = app_state.service();
 
+    // TODO: create HashMap
+    let transactions = service.fetch_transactions()?;
+
     // TODO: add header row option
     // TODO: handle getting index that doesn't exist
     let mut len = 0;
