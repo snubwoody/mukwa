@@ -3,6 +3,7 @@
 
 import { Colors } from "../colors.slint";
 import { Button, PrimaryButton } from "button.slint";
+import { Checkbox } from "../widgets/checkbox.slint";
 
 export component TableCell inherits Rectangle {
     clip: true;
@@ -33,10 +34,16 @@ export component TableCell inherits Rectangle {
 
 export component TableRow {
     in-out property <bool> is-editing;
+    in-out property <bool> is-selected <=> checkbox.checked;
     callback confirmed();
     callback cancelled();
     callback clicked();
     callback right-clicked();
+    callback selected();
+
+    accessible-role: list-item;
+    accessible-item-selectable: true;
+    accessible-item-selected: is-selected;
 
     touch-area := TouchArea {
         clicked => {
@@ -81,6 +88,10 @@ export component TableRow {
                     padding-bottom: 8px;
                     padding-left: root.padding-left;
                     padding-right: root.padding-right;
+                    spacing: 8px;
+
+                    checkbox := Checkbox {}
+
                     @children
                 }
 
