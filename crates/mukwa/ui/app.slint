@@ -27,8 +27,8 @@ export {
     AccountType,
 } from "globals.slint";
 export { Settings } from "settings.slint";
-export { AnalyticsApi, PieChartSlice } from "analytics-page.slint";
-export { ImportCsvState } from "import-csv.slint";
+export { AnalyticsApi, PieChartSlice } from "pages/analytics-page.slint";
+export { ImportCsvState } from "pages/transaction/import-csv.slint";
 import {
     Button,
     TextField,
@@ -37,16 +37,16 @@ import {
     ContextMenu,
     ContextMenuItem,
 } from "widgets.slint";
-import { TransactionPage } from "transaction-page.slint";
-import { SpendingPage } from "spending-page.slint";
+import { TransactionPage } from "pages/transaction/transaction-page.slint";
+import { SpendingPage } from "pages/spending-page.slint";
 import { ComboBoxItem } from "widgets/combobox.slint";
 export { ComboBoxApi } from "widgets/combobox.slint";
 export { Date, CalendarState } from "widgets/calendar.slint";
-import { Table } from "tableview.slint";
+import { Table } from "widgets/tableview.slint";
 import { IconDisplay, IconSet, Icon } from "@lucide";
 import { SettingsDialog, Settings } from "settings.slint";
 import { FontSize } from "theme.slint";
-import { AnalyticsPage } from "analytics-page.slint";
+import { AnalyticsPage } from "pages/analytics-page.slint";
 
 enum Page {
     spending,

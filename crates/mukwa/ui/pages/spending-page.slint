@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-import { Colors } from "colors.slint";
-import { Date, CalendarState } from "widgets/calendar.slint";
+import { Colors } from "../colors.slint";
+import { Date, CalendarState } from "../widgets/calendar.slint";
 import {
     State,
     Category,
     CategoryGroup,
     Budget,
     Api,
-} from "globals.slint";
+} from "../globals.slint";
 import {
     Button,
     TextField,
@@ -19,10 +19,10 @@ import {
     InlineTextField,
     ContextMenu,
     ContextMenuItem,
-} from "widgets.slint";
+} from "../widgets.slint";
 import { IconSet } from "@lucide";
-import { Settings } from "settings.slint";
-import { FontSize } from "theme.slint";
+import { Settings } from "../settings.slint";
+import { FontSize } from "../theme.slint";
 
 component CategoryItem inherits VerticalLayout {
     in property <Date> current-date;
