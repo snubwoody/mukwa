@@ -23,11 +23,14 @@ import {
     PrimaryButton,
     ContextMenu,
     ContextMenuItem,
+    IconButton,
 } from "widgets.slint";
 import { FocusBorder } from "widgets/focus-border.slint";
 import { Calendar, Date } from "widgets/calendar.slint";
 import { Table, TableRow, TableCell } from "tableview.slint";
 import { Settings } from "settings.slint";
+import { IconSet } from "@lucide";
+import { ImportCsvDialog, ImportCsvState } from "import-csv.slint";
 
 component DateCell inherits TableCell {
     in property <Transaction> transaction;
@@ -470,6 +473,7 @@ export component TransactionPage inherits VerticalLayout {
     in property <[Transaction]> transactions;
     in property <string> active-account-id;
     property <bool> new-transaction-active: false;
+    property <data-transfer> csv-data;
 
     VerticalLayout {
         padding: 12px;
@@ -493,15 +497,34 @@ export component TransactionPage inherits VerticalLayout {
         }
     }
 
+    import-csv-dialog := ImportCsvDialog {
+        x: Api.window-size().width * 0.5 - self.width * 0.5 - root.absolute-position.x;
+        y: Api.window-size().height * 0.5 - self.height * 0.5;
+        data: csv-data;
+        account-id: active-account-id;
+    }
+
     HorizontalLayout {
         alignment: end;
+        cross-axis-alignment: center;
         padding-left: 16px;
         padding-right: 16px;
         padding-top: 8px;
         padding-bottom: 8px;
+        spacing: 8px;
+
+        if !active-account-id.is-empty: IconButton {
+            icon: IconSet.FileDown;
+            theme: ghost;
+            accessible-label: @tr("Import CSV file");
+            clicked => {
+                csv-data = ImportCsvState.open-csv();
+                import-csv-dialog.show();
+            }
+        }
 
         PrimaryButton {
-            text: @tr("Add transaction");
+            text: @tr("New");
             clicked => {
                 new-transaction-active = true;
             }

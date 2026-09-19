@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
 use crate::ui;
 use jiff::civil::Date;
 use jiff::{ToSpan, Zoned};

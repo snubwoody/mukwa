@@ -508,7 +508,7 @@ impl AppState {
         Ok(())
     }
 
-    pub(crate) fn load_transactions(&mut self) -> crate::Result<()> {
+    pub(crate) fn load_transactions(&self) -> crate::Result<()> {
         let transactions: Vec<ui::Transaction> = self
             .service
             .fetch_transactions()?

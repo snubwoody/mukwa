@@ -30,7 +30,7 @@ cp ($mukwa_dir)/resources/mukwa.desktop build/com.wakunguma.Mukwa.desktop
 cp ($mukwa_dir)/resources/icons/app-icon.svg build/mukwa.svg
 cp target/($target_triple)/release/mukwa build/mukwa
 
-./bin/linuxdeploy-($architecture).AppImage --appdir build/AppDir -e build/mukwa -d build/com.wakunguma.Mukwa.desktop --output appimage -i build/mukwa.svg
+./bin/linuxdeploy-($architecture).AppImage --appdir build/AppDir -e /usr/bin/zenity -e build/mukwa -d build/com.wakunguma.Mukwa.desktop --output appimage -i build/mukwa.svg
 
 mv Mukwa-($architecture).AppImage build/
 print "Successfully built AppImage"

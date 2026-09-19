@@ -1,5 +1,6 @@
 ## (unreleased)
 
+- Added support for importing transactions from CSV files.
 - Added automatic credit payments category group. Every credit account will get it's own category.
 
 ## 0.1.2 - 2026-09-04
