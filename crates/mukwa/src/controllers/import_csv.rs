@@ -4,6 +4,7 @@
 use crate::state::AppState;
 use crate::ui::{ComboBoxItem, ImportCsvState, MainWindow};
 use jiff::civil::Date;
+use mukwa_core::error::ErrorExt;
 use mukwa_core::{Error, Money};
 use native_dialog::DialogBuilder;
 use slint::{
@@ -41,23 +42,10 @@ pub fn bind(window: &MainWindow, app_state: &AppState) {
     });
 
     csv_state.on_open_csv(|| {
-        let result = DialogBuilder::file()
-            .add_filter("CSV file", ["csv"])
-            .open_single_file()
-            .show()
-            .unwrap();
-        match result {
-            Some(path) => {
-                info!("Opened csv file at {:?}", path);
-                let mut data = DataTransfer::default();
-                data.set_file_paths([path]);
-                data
-            }
-            None => {
-                warn!("No csv file found");
-                DataTransfer::default()
-            }
-        }
+        open_csv().unwrap_or_else(|err| {
+            warn!("{err}");
+            DataTransfer::default()
+        })
     });
 
     csv_state.on_import_transactions({
@@ -71,6 +59,27 @@ pub fn bind(window: &MainWindow, app_state: &AppState) {
             }
         }
     });
+}
+
+fn open_csv() -> crate::Result<DataTransfer> {
+    let result = DialogBuilder::file()
+        .add_filter("CSV file", ["csv"])
+        .open_single_file()
+        .show()
+        .context("Failed to open native dialog")?;
+
+    match result {
+        Some(path) => {
+            info!("Opened csv file at {:?}", path);
+            let mut data = DataTransfer::default();
+            data.set_file_paths([path]);
+            Ok(data)
+        }
+        None => {
+            warn!("No csv file found");
+            Ok(DataTransfer::default())
+        }
+    }
 }
 
 fn read_csv(data: DataTransfer, csv_state: &ImportCsvState) -> crate::Result<()> {
@@ -147,6 +156,8 @@ mod test {
     use jiff::civil::date;
     use mukwa_core::service::{AccountType, Service};
     use slint::{ModelRc, ToSharedString, VecModel};
+    use std::fs::File;
+    use std::io::Write;
     use tempfile::tempdir;
 
     fn records_to_model(records: Vec<Vec<&str>>) -> ModelRc<ModelRc<SharedString>> {
@@ -240,8 +251,11 @@ mod test {
 
     #[test]
     fn read_csv_file() -> crate::Result<()> {
-        let _temp = tempdir()?;
-        //tempfile::tempfile();
+        let temp = tempdir()?;
+        let path = temp.path().join("test.csv");
+        let file = File::create(&path)?;
+        write!(file, "100")?;
+
         i_slint_backend_testing::init_no_event_loop();
         let window = MainWindow::new()?;
         let csv_state = window.global::<ImportCsvState>();
