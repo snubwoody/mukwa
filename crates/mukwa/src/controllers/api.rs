@@ -81,4 +81,3 @@ pub fn bind(window: &ui::MainWindow) {
             .inner() as f32
     });
 }
-

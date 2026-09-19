@@ -21,7 +21,7 @@ pub fn bind_all(window: &MainWindow, state: &AppState, settings: &SettingsStore)
     analytics::bind(window, state);
     global::bind(window, state);
     api::bind(window);
-    import_csv::bind(window,state);
+    import_csv::bind(window, state);
 
     bind_combobox_api(window);
 }
