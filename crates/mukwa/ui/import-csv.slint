@@ -39,12 +39,7 @@ export component ImportCsvDialog inherits PopupWindow {
     close-policy: close-on-click-outside;
     in property <data-transfer> data;
     in property <string> account-id;
-    property <[string]> columns: [
-        @tr("Date"),
-        @tr("Note"),
-        @tr("Outflow"),
-        @tr("Inflow")
-    ];
+    property <[string]> columns: [@tr("Date"), @tr("Note"), @tr("Outflow"), @tr("Inflow")];
 
     init => {
         ImportCsvState.read-csv(data);
