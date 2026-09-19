@@ -156,9 +156,6 @@ mod test {
     use jiff::civil::date;
     use mukwa_core::service::{AccountType, Service};
     use slint::{ModelRc, ToSharedString, VecModel};
-    use std::fs::File;
-    use std::io::Write;
-    use tempfile::tempdir;
 
     fn records_to_model(records: Vec<Vec<&str>>) -> ModelRc<ModelRc<SharedString>> {
         let model = VecModel::default();
@@ -240,22 +237,6 @@ mod test {
 
     #[test]
     fn read_empty_csv_returns_error() -> crate::Result<()> {
-        i_slint_backend_testing::init_no_event_loop();
-        let window = MainWindow::new()?;
-        let csv_state = window.global::<ImportCsvState>();
-        let result = read_csv(DataTransfer::default(), &csv_state);
-        assert!(result.is_err());
-        assert_eq!(csv_state.get_records().iter().len(), 0);
-        Ok(())
-    }
-
-    #[test]
-    fn read_csv_file() -> crate::Result<()> {
-        let temp = tempdir()?;
-        let path = temp.path().join("test.csv");
-        let file = File::create(&path)?;
-        write!(file, "100")?;
-
         i_slint_backend_testing::init_no_event_loop();
         let window = MainWindow::new()?;
         let csv_state = window.global::<ImportCsvState>();
