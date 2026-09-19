@@ -1,34 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+import { Colors } from "../../colors.slint";
 import {
-    StandardListView,
-    VerticalBox,
-    ListView,
-    Palette,
-    LineEdit,
-} from "std-widgets.slint";
-import { Colors } from "colors.slint";
-import {
-    Account,
     Transaction,
     State,
     Api,
-} from "globals.slint";
-import { FontSize } from "theme.slint";
+} from "../../globals.slint";
+import { FontSize } from "../../theme.slint";
 import {
-    Button,
     ComboBox,
     TextField,
     PrimaryButton,
     ContextMenu,
     ContextMenuItem,
     IconButton,
-} from "widgets.slint";
-import { FocusBorder } from "widgets/focus-border.slint";
-import { Calendar, Date } from "widgets/calendar.slint";
-import { Table, TableRow, TableCell } from "tableview.slint";
-import { Settings } from "settings.slint";
+} from "../../widgets.slint";
+import { Calendar, Date } from "../../widgets/calendar.slint";
+import { Table, TableRow, TableCell } from "../../widgets/tableview.slint";
+import { Settings } from "../../settings.slint";
 import { IconSet } from "@lucide";
 import { ImportCsvDialog, ImportCsvState } from "import-csv.slint";
 
