@@ -72,10 +72,10 @@ export component ComboBox {
         }
     }
 
-    layout := VerticalLayout {
+    layout := FlexboxLayout {
         spacing: 8px;
-        alignment: start;
-
+        flex-direction: column;
+        flex-wrap: no-wrap;
         if label != "": Text {
             text: label;
             color: Colors.textBody;
@@ -88,12 +88,12 @@ export component ComboBox {
             border-radius: 8px;
             clip: true;
 
-            VerticalLayout {
+            FlexboxLayout {
                 padding-top: 4px;
                 padding-bottom: 4px;
                 padding-left: 8px;
                 padding-right: 8px;
-                alignment: start;
+                flex-wrap: no-wrap;
                 text := Text {
                     text: options[current-index].text;
                     color: Colors.textBody;

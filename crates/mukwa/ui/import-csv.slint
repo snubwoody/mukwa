@@ -79,13 +79,14 @@ export component ImportCsvDialog inherits PopupWindow {
         // TODO: add none option
         HorizontalLayout {
             spacing: 16px;
-            ComboBox {
+            cross-axis-alignment: start;
+            preferred-height: date-combobox.preferred-height;
+            date-combobox := ComboBox {
                 label: @tr("Date");
                 current-value: ImportCsvState.records[0][ImportCsvState.date-column-index];
                 options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
-                     // TODO: use max here and test it?
-                    ImportCsvState.date-column-index = self.current-index
+                    ImportCsvState.date-column-index = self.current-index // TODO: use max here and test it?
                 }
             }
 
