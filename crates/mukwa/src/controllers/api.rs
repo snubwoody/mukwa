@@ -10,8 +10,17 @@ use slint::{ComponentHandle, ToSharedString};
 use std::str::FromStr;
 use tracing::warn;
 
-pub fn bind(window: &ui::MainWindow) {
-    let api = window.global::<ui::Api>();
+pub fn bind(main_window: &ui::MainWindow) {
+    let api = main_window.global::<ui::Api>();
+
+    let window = main_window.clone_strong();
+    api.on_set_maximized({
+        move |maximized| {
+            let window = window.window();
+            window.set_maximized(maximized);
+            window.is_maximized()
+        }
+    });
 
     api.on_format_money_without_symbol({
         move |value| {
@@ -36,7 +45,7 @@ pub fn bind(window: &ui::MainWindow) {
     });
 
     api.on_window_size({
-        let window = window.as_weak();
+        let window = main_window.as_weak();
         move || {
             if let Some(window) = window.upgrade() {
                 let window = window.window();
@@ -49,7 +58,7 @@ pub fn bind(window: &ui::MainWindow) {
     });
 
     api.on_window_position({
-        let window = window.as_weak();
+        let window = main_window.as_weak();
         move || {
             if let Some(window) = window.upgrade() {
                 let window = window.window();

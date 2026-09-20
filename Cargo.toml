@@ -32,4 +32,4 @@ image = "0.25.10"
 [workspace.dependencies.slint]
 git = "https://github.com/snubwoody/slint.git"
 branch = "mukwa"
-features = ["backend-winit", "renderer-skia", "log"]
+features = ["backend-winit", "renderer-skia", "log","unstable-winit-030"]

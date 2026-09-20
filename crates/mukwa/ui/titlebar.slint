@@ -1,0 +1,109 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { Colors } from "colors.slint";
+
+enum TitleBarButtonTheme { windows, windows-x }
+
+export component TitleBarButton {
+    in-out property <TitleBarButtonTheme> theme;
+    in property <length> size: 36px;
+
+    width: size;
+    height: size;
+    accessible-enabled: true;
+    accessible-role: button;
+
+    callback clicked <=> touch-area.clicked;
+    accessible-action-default() => {
+        clicked()
+    }
+
+    function background-color(button-theme: TitleBarButtonTheme) -> color {
+        return transparent;
+    }
+
+    function hover-background-color(button-theme: TitleBarButtonTheme) -> color {
+        if (button-theme == TitleBarButtonTheme.windows) {
+            return Colors.neutral100;
+        }
+        if (button-theme == TitleBarButtonTheme.windows-x) {
+            return #e81120;
+        }
+        return transparent;
+    }
+
+    function icon-color(button-theme: TitleBarButtonTheme) -> color {
+        return Colors.textBody;
+    }
+
+    background := Rectangle {
+        background: touch-area.has-hover ? hover-background-color(theme) : background-color(theme);
+        animate background { duration: 250ms; }
+    }
+
+    HorizontalLayout {
+        alignment: center;
+        cross-axis-alignment: center;
+        @children
+    }
+
+    touch-area := TouchArea {
+        width: parent.width;
+        height: parent.height;
+    }
+}
+
+// TODO: extract and test this
+export component TitleBar inherits WindowMoveArea {
+    in property <bool> window-maximized;
+    callback hidden();
+    callback maximized();
+    callback closed();
+
+    Rectangle {
+        background: Colors.neutral25;
+    }
+
+    HorizontalLayout {
+        padding-left: 12px;
+        cross-axis-alignment: center;
+        alignment: space-between;
+        Text {
+            text: "Mukwa";
+            font-weight: FontWeight.semi-bold;
+            color: Colors.textHeading;
+        }
+
+        HorizontalLayout {
+            TitleBarButton {
+                theme: windows;
+                accessible-label: @tr("Minimize window");
+                clicked => hidden();
+                Image {
+                    source: @image-url("assets/fluent_subtract.svg");
+                }
+            }
+
+            TitleBarButton {
+                theme: windows;
+                clicked => maximized();
+                accessible-label: @tr("Maximize window");
+                Image {
+                    width: 16px;
+                    height: 16px;
+                    source: root.window-maximized ? @image-url("assets/fluent_square_multiple.svg") : @image-url("assets/fluent_square.svg");
+                }
+            }
+
+            TitleBarButton {
+                theme: windows-x;
+                clicked => closed();
+                accessible-label: @tr("Close window");
+                Image {
+                    source: @image-url("assets/fluent_dismiss.svg");
+                }
+            }
+        }
+    }
+}
