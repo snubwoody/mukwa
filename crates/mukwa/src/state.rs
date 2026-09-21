@@ -251,6 +251,14 @@ impl AppState {
         self.load_accounts()?;
         Ok(())
     }
+    pub fn confirm_transaction(&mut self, id: &str) -> crate::Result<()> {
+        let tid = Uuid::parse_str(id)?;
+        self.service.confirm_transaction(tid)?;
+        info!("Confirmed transaction {id}");
+        self.load_transactions()?;
+        self.load_accounts()?;
+        Ok(())
+    }
 
     pub fn delete_category(&mut self, id: &str) -> crate::Result<()> {
         let id = Uuid::parse_str(id)?;
@@ -509,12 +517,9 @@ impl AppState {
     }
 
     pub(crate) fn load_transactions(&self) -> crate::Result<()> {
-        let transactions: Vec<ui::Transaction> = self
-            .service
-            .fetch_transactions()?
-            .iter()
-            .map(|t| t.into())
-            .collect();
+        let mut transactions = self.service.fetch_transactions()?;
+        transactions.sort_by(|a, b| a.date.cmp(&b.date).reverse());
+        let transactions: Vec<ui::Transaction> = transactions.iter().map(|t| t.into()).collect();
         self.transactions.set_vec(transactions);
         Ok(())
     }

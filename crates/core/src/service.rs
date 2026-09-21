@@ -793,9 +793,7 @@ impl Service {
         let sql = "INSERT INTO unconfirmed_transactions(transaction_id) VALUES(?)";
         let mut stmt = connection.prepare_cached(sql)?;
 
-        stmt.execute(
-            [transaction_id.to_string()],
-        )?;
+        stmt.execute([transaction_id.to_string()])?;
         Ok(())
     }
 
@@ -804,9 +802,7 @@ impl Service {
         let sql = "DELETE FROM unconfirmed_transactions WHERE transaction_id = ?";
         let mut stmt = connection.prepare_cached(sql)?;
 
-        stmt.execute(
-            [transaction_id.to_string()],
-        )?;
+        stmt.execute([transaction_id.to_string()])?;
         Ok(())
     }
 

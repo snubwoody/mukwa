@@ -22,6 +22,52 @@ import { Settings } from "../../settings.slint";
 import { IconSet } from "@lucide";
 import { ImportCsvDialog, ImportCsvState } from "import-csv.slint";
 
+component ConfirmButton {
+    in property <Transaction> transaction;
+
+    popup := PopupWindow {
+        x: icon-btn.width + 4px;
+        close-policy: close-on-click-outside;
+        Rectangle {
+            background: white;
+            border-color: Colors.borderNeutral;
+            border-width: 1px;
+            border-radius: 8px;
+        }
+
+        VerticalLayout {
+            spacing: 8px;
+            padding: 16px;
+
+            PrimaryButton {
+                theme: ghost;
+                text: @tr("Confirm transaction");
+                clicked => {
+                    State.confirm-transaction(transaction.id);
+                    popup.close();
+                }
+            }
+
+            PrimaryButton {
+                text: @tr("Reject transaction");
+                theme: ghost;
+                clicked => {
+                    State.delete-transaction(transaction.id);
+                    popup.close();
+                }
+            }
+        }
+    }
+
+    icon-btn := IconButton {
+        icon: IconSet.Info;
+        theme: ghost;
+        clicked => {
+            popup.show();
+        }
+    }
+}
+
 component DateCell inherits TableCell {
     in property <Transaction> transaction;
     property <bool> is-unconfirmed: State.is-transaction-unconfirmed(transaction.id);
@@ -33,9 +79,8 @@ component DateCell inherits TableCell {
 
     HorizontalLayout {
         spacing: 8px;
-        if is-unconfirmed: IconButton {
-            icon: IconSet.Info;
-            theme: ghost;
+        if is-unconfirmed: ConfirmButton {
+            transaction: transaction;
         }
 
         Text {

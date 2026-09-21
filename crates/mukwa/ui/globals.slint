@@ -82,6 +82,7 @@ export global State {
     callback create-transaction(CreateTransactionOpts);
     callback duplicate-transaction(id: string);
     callback delete-transaction(id: string);
+    callback confirm-transaction(id: string);
     callback delete-category(id: string);
     callback delete-category-group(id: string);
     callback edit-budget(id: string, amount: string);
