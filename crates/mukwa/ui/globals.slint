@@ -83,6 +83,8 @@ export global State {
     callback duplicate-transaction(id: string);
     callback delete-transaction(id: string);
     callback confirm-transaction(id: string);
+    callback select-transaction(id: string);
+    callback deselect-transaction(id: string);
     callback delete-category(id: string);
     callback delete-category-group(id: string);
     callback edit-budget(id: string, amount: string);
@@ -103,6 +105,7 @@ export global State {
 
     pure callback category-to-transfer(id: string) -> data-transfer;
     pure callback is-transaction-unconfirmed(id: string) -> bool;
+    pure callback is-transaction-selected(id: string) -> bool;
     pure callback transfer-to-category(data-transfer) -> string;
     pure callback total-balance() -> string;
     pure callback total-spent-all(Date) -> string;
@@ -125,6 +128,7 @@ export global State {
     pure callback left-to-spend-in-group(id: string, date: Date) -> string;
 
     in-out property <[Transaction]> transactions;
+    in-out property <[string]> selected-transactions;
     in-out property <[Category]> categories;
     in-out property <[CategoryGroup]> category-groups;
     in-out property <[Budget]> budgets;

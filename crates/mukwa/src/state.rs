@@ -26,6 +26,7 @@ pub struct AppState {
     account_options: Rc<VecModel<ui::ComboBoxItem>>,
     category_options: Rc<VecModel<ui::ComboBoxItem>>,
     transactions: Rc<VecModel<ui::Transaction>>,
+    selected_transactions: Rc<VecModel<String>>,
 }
 
 impl AppState {
@@ -72,6 +73,7 @@ impl AppState {
             transactions: transactions_model,
             category_options: category_options_model,
             budgets: budget_model,
+            selected_transactions: Default::default()
         };
 
         state.load_accounts()?;
@@ -108,6 +110,20 @@ impl AppState {
 
     pub fn category_options(&self) -> Rc<VecModel<ui::ComboBoxItem>> {
         self.category_options.clone()
+    }
+
+    pub fn select_transaction(&self,id: &str)  {
+        self.selected_transactions.push(id.to_string());
+    }
+
+    pub fn deselect_transaction(&self,id: &str){
+        self.selected_transactions.push(id.to_string());
+        let selected_transactions: Vec<_> = self.selected_transactions.iter().filter(|s| *s != id).collect();
+        self.selected_transactions.set_vec(selected_transactions);
+    }
+
+    pub fn is_transaction_selected(&self, id: &str ) -> bool {
+        self.selected_transactions.iter().find(|s| *s == id).is_some()
     }
 
     /// Creates a new account.
@@ -915,6 +931,40 @@ mod test {
         let state = AppState::new(service)?;
         let total = state.left_to_spend(budget.id.to_string().as_str())?;
         assert_eq!(total, Money::ZERO);
+        Ok(())
+    }
+
+    #[test]
+    fn select_transaction() -> crate::Result<()> {
+        let state = AppState::new(Service::open_in_memory()?)?;
+        state.select_transaction("T1");
+        let id = state.selected_transactions.iter().next().unwrap();
+        assert_eq!(id, "T1");
+        Ok(())
+    }
+
+    #[test]
+    fn is_transaction_selected() -> crate::Result<()> {
+        let state = AppState::new(Service::open_in_memory()?)?;
+        state.select_transaction("T1");
+        state.select_transaction("T3");
+        assert!(state.is_transaction_selected("T1"));
+        assert!(!state.is_transaction_selected("T2"));
+        Ok(())
+    }
+
+    #[test]
+    fn deselect_transaction() -> crate::Result<()> {
+        let state = AppState::new(Service::open_in_memory()?)?;
+        state.select_transaction("T1");
+        state.select_transaction("T2");
+        state.select_transaction("T3");
+        state.deselect_transaction("T1");
+        state.deselect_transaction("afpoksafd");
+        let ids: Vec<String> = state.selected_transactions.iter().collect();
+        assert_eq!(ids.len(),2);
+        assert!(ids.contains(&"T2".to_string()));
+        assert!(ids.contains(&"T3".to_string()));
         Ok(())
     }
 }

@@ -367,6 +367,27 @@ pub fn bind(window: &MainWindow, state: &AppState) {
         }
     });
 
+    global_state.on_is_transaction_selected({
+        let mut state = state.clone();
+        move |id| {
+            state.is_transaction_selected(&id)
+        }
+    });
+
+    global_state.on_select_transaction({
+        let mut state = state.clone();
+        move |id| {
+            state.select_transaction(&id)
+        }
+    });
+
+    global_state.on_deselect_transaction({
+        let mut state = state.clone();
+        move |id| {
+            state.deselect_transaction(&id)
+        }
+    });
+
     global_state.on_edit_budget({
         let mut state = state.clone();
         move |id, amount| {

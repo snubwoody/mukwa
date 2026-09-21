@@ -669,7 +669,14 @@ export component TransactionPage inherits VerticalLayout {
             visible: active-account-id.is-empty ? true :
                 transaction.account-id == active-account-id || transaction.payee-id == active-account-id;
             height: self.visible ? self.preferred-height : 0;
-            is-selected: all-accounts-selected;
+            is-selected: all-accounts-selected || State.is-transaction-selected(transaction.id);
+            selected => {
+                if self.is-selected{
+                    State.deselect-transaction(transaction.id);
+                } else {
+                    State.select-transaction(transaction.id);
+                }
+            }
         }
     }
 }
