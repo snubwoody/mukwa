@@ -101,6 +101,7 @@ export global State {
     callback delete-account(string);
 
     pure callback category-to-transfer(id: string) -> data-transfer;
+    pure callback is-transaction-unconfirmed(id: string) -> bool;
     pure callback transfer-to-category(data-transfer) -> string;
     pure callback total-balance() -> string;
     pure callback total-spent-all(Date) -> string;

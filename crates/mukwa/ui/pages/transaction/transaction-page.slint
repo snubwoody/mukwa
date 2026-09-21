@@ -24,16 +24,24 @@ import { ImportCsvDialog, ImportCsvState } from "import-csv.slint";
 
 component DateCell inherits TableCell {
     in property <Transaction> transaction;
-
+    property <bool> is-unconfirmed: State.is-transaction-unconfirmed(transaction.id);
     callback changed(Date);
 
     clicked => {
         calendar-popup.show();
     }
 
-    Text {
-        text: State.format-date(transaction.date);
-        color: Colors.textBody;
+    HorizontalLayout {
+        spacing: 8px;
+        if is-unconfirmed: IconButton {
+            icon: IconSet.Info;
+            theme: ghost;
+        }
+
+        Text {
+            text: State.format-date(transaction.date);
+            color: Colors.textBody;
+        }
     }
 
     calendar-popup := PopupWindow {
@@ -244,7 +252,6 @@ component TransactionRow inherits TableRow {
         }
     }
 
-    // TODO: add icon showing direction or Transfer to and Transfer from
     PayeeCell {
         width: parent.width / length;
         transaction: transaction;
