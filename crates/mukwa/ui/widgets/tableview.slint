@@ -7,10 +7,14 @@ import { Button, PrimaryButton } from "button.slint";
 export component TableCell inherits Rectangle {
     clip: true;
     in-out property <bool> is-editing;
-    callback confirmed();
-    callback cancelled();
     callback clicked();
-    callback right-clicked();
+
+    accessible-role: button;
+
+    accessible-action-default => {
+        is-editing = true;
+        clicked();
+    }
 
     // TODO: add focus-scope
     // TODO: pass focus onto child
@@ -18,11 +22,6 @@ export component TableCell inherits Rectangle {
         clicked => {
             is-editing = true;
             clicked();
-        }
-        pointer-event(event) => {
-            if (event.button == PointerEventButton.right) {
-                //right-clicked();
-            }
         }
     }
 
