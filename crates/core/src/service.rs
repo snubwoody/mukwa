@@ -739,6 +739,23 @@ impl Service {
         Ok(category_groups)
     }
 
+    pub fn fetch_unconfirmed_transactions(&self) -> crate::Result<Vec<Uuid>> {
+        let connection = self.connection();
+        let sql = "SELECT transaction_id FROM unconfirmed_transactions";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows = stmt.query_and_then([], |row| {
+            let id: String = row.get(0)?;
+            let id = Uuid::parse_str(&id)?;
+            Ok::<_, Error>(id)
+        })?;
+
+        let mut ids = vec![];
+        for row in rows {
+            ids.push(row?);
+        }
+        Ok(ids)
+    }
+
     /// Creates a new [`Account`].
     pub fn create_account(&self, name: &str, account_type: AccountType) -> crate::Result<Account> {
         let account_type = match account_type {
@@ -768,6 +785,25 @@ impl Service {
         )?;
         let category = rows.next().unwrap()?;
         Ok(category)
+    }
+
+    /// Marks a transaction as unconfirmed
+    pub fn mark_as_unconfirmed(&self, transaction_id: Uuid) -> crate::Result<()> {
+        let connection = self.connection();
+        let sql = "INSERT INTO unconfirmed_transactions(transaction_id) VALUES(?)";
+        let mut stmt = connection.prepare_cached(sql)?;
+
+        stmt.execute([transaction_id.to_string()])?;
+        Ok(())
+    }
+
+    pub fn confirm_transaction(&self, transaction_id: Uuid) -> crate::Result<()> {
+        let connection = self.connection();
+        let sql = "DELETE FROM unconfirmed_transactions WHERE transaction_id = ?";
+        let mut stmt = connection.prepare_cached(sql)?;
+
+        stmt.execute([transaction_id.to_string()])?;
+        Ok(())
     }
 
     /// Creates a new [`CategoryGroup`].

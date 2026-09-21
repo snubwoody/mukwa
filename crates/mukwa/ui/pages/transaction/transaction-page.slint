@@ -19,21 +19,79 @@ import {
 import { Calendar, Date } from "../../widgets/calendar.slint";
 import { Table, TableRow, TableCell } from "../../widgets/tableview.slint";
 import { Settings } from "../../settings.slint";
-import { IconSet } from "@lucide";
+import { IconSet, IconDisplay } from "@lucide";
 import { ImportCsvDialog, ImportCsvState } from "import-csv.slint";
+
+component ConfirmButton {
+    in property <Transaction> transaction;
+
+    popup := PopupWindow {
+        x: icon-btn.width + 4px;
+        close-policy: close-on-click-outside;
+        Rectangle {
+            background: white;
+            border-color: Colors.borderNeutral;
+            border-width: 1px;
+            border-radius: 8px;
+        }
+
+        VerticalLayout {
+            spacing: 8px;
+            padding: 4px;
+
+            PrimaryButton {
+                theme: ghost;
+                text: @tr("Confirm transaction");
+                clicked => {
+                    State.confirm-transaction(transaction.id);
+                    popup.close();
+                }
+            }
+
+            PrimaryButton {
+                text: @tr("Reject transaction");
+                theme: ghost;
+                clicked => {
+                    State.delete-transaction(transaction.id);
+                    popup.close();
+                }
+            }
+        }
+    }
+
+    icon-btn := IconButton {
+        icon: IconSet.Info;
+        theme: ghost;
+        clicked => {
+            popup.show();
+        }
+    }
+}
 
 component DateCell inherits TableCell {
     in property <Transaction> transaction;
-
+    property <bool> is-unconfirmed: State.is-transaction-unconfirmed(transaction.id);
     callback changed(Date);
 
     clicked => {
         calendar-popup.show();
     }
 
-    Text {
-        text: State.format-date(transaction.date);
-        color: Colors.textBody;
+    HorizontalLayout {
+        spacing: 8px;
+        if is-unconfirmed: ConfirmButton {
+            transaction: transaction;
+        }
+
+        if !is-unconfirmed: Rectangle {
+            width: 20px;
+            height: 20px;
+        }
+
+        Text {
+            text: State.format-date(transaction.date);
+            color: Colors.textBody;
+        }
     }
 
     calendar-popup := PopupWindow {
@@ -244,7 +302,6 @@ component TransactionRow inherits TableRow {
         }
     }
 
-    // TODO: add icon showing direction or Transfer to and Transfer from
     PayeeCell {
         width: parent.width / length;
         transaction: transaction;
@@ -293,7 +350,6 @@ component TransactionRow inherits TableRow {
     }
 
     MoneyCell {
-        width: parent.width / length;
         amount: inflow();
 
         function inflow() -> string {
@@ -443,23 +499,83 @@ component NewTransactionRow inherits VerticalLayout {
     }
 }
 
+component TransactionTableHeader inherits TableRow {
+    in property <int> length;
+    in property <bool> show-account;
+    padding-left: 8px;
+    padding-right: 8px;
+
+    TableCell {
+        width: parent.width / length;
+
+        HorizontalLayout {
+            spacing: 8px;
+            cross-axis-alignment: center;
+
+            IconDisplay {
+                icon: IconSet.Info;
+                size: 14px;
+                stroke-width: 2;
+                stroke: Colors.textBody;
+            }
+
+            Text {
+                text: @tr("Date");
+                color: Colors.textBody;
+            }
+        }
+    }
+
+    if show-account: TableCell {
+        width: parent.width / length;
+        Text {
+            text: @tr("Account");
+            color: Colors.textBody;
+        }
+    }
+
+    TableCell {
+        width: parent.width / length;
+        Text {
+            text: @tr("Payee");
+            color: Colors.textBody;
+        }
+    }
+
+    TableCell {
+        width: parent.width / length;
+        Text {
+            text: @tr("Category");
+            color: Colors.textBody;
+        }
+    }
+
+    TableCell {
+        width: parent.width / length;
+        Text {
+            text: @tr("Note");
+            color: Colors.textBody;
+        }
+    }
+
+    TableCell {
+        width: parent.width / length;
+        Text {
+            text: @tr("Outflow");
+            color: Colors.textBody;
+        }
+    }
+
+    TableCell {
+        width: parent.width / length;
+        Text {
+            text: @tr("Inflow");
+            color: Colors.textBody;
+        }
+    }
+}
+
 export component TransactionPage inherits VerticalLayout {
-    in property <[string]> columns: active-account-id.is-empty ? [
-        @tr("Date"),
-        @tr("Account"),
-        @tr("Payee"),
-        @tr("Category"),
-        @tr("Note"),
-        @tr("Outflow"),
-        @tr("Inflow"),
-    ] : [
-        @tr("Date"),
-        @tr("Payee"),
-        @tr("Category"),
-        @tr("Note"),
-        @tr("Outflow"),
-        @tr("Inflow"),
-    ];
     in property <[Transaction]> transactions;
     in property <string> active-account-id;
     property <bool> new-transaction-active: false;
@@ -531,16 +647,9 @@ export component TransactionPage inherits VerticalLayout {
             background: Colors.neutral50;
         }
 
-        TableRow {
-            padding-left: 8px;
-            padding-right: 8px;
-            for column in columns: TableCell {
-                width: parent.width / length;
-                Text {
-                    text: column;
-                    color: Colors.textBody;
-                }
-            }
+        TransactionTableHeader {
+            length: length;
+            show-account: active-account-id.is-empty;
         }
 
         if new-transaction-active: NewTransactionRow {

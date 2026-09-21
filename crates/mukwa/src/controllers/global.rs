@@ -7,7 +7,7 @@ use crate::ui::MainWindow;
 use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::fmt::CurrencyFormatter;
-use mukwa_core::service::TransactionType;
+use mukwa_core::service::{Service, TransactionType};
 use mukwa_core::{Currency, Money, fmt};
 use slint::ModelExt;
 use slint::{
@@ -18,6 +18,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 use std::time::Instant;
 use tracing::warn;
+use uuid::Uuid;
 
 pub fn bind(window: &MainWindow, state: &AppState) {
     let instant = Instant::now();
@@ -85,6 +86,15 @@ pub fn bind(window: &MainWindow, state: &AppState) {
                 .inspect_err(|err| warn!("Error calculating left to assign: {err}"))
                 .unwrap_or_default()
                 .to_shared_string()
+        }
+    });
+
+    global_state.on_is_transaction_unconfirmed({
+        let state = state.clone();
+        move |id| {
+            is_transaction_unconfirmed(&id, &state.service())
+                .inspect_err(|err| warn!("{err}"))
+                .unwrap_or_default()
         }
     });
 
@@ -348,6 +358,15 @@ pub fn bind(window: &MainWindow, state: &AppState) {
         }
     });
 
+    global_state.on_confirm_transaction({
+        let mut state = state.clone();
+        move |id| {
+            if let Err(err) = state.confirm_transaction(&id) {
+                warn!("Failed to delete transaction: {err}");
+            }
+        }
+    });
+
     global_state.on_edit_budget({
         let mut state = state.clone();
         move |id, amount| {
@@ -499,4 +518,14 @@ pub fn bind(window: &MainWindow, state: &AppState) {
             }
         }
     })
+}
+
+fn is_transaction_unconfirmed(id: &str, service: &Service) -> crate::Result<bool> {
+    let unconfirmed_transactions: HashSet<Uuid> = service
+        .fetch_unconfirmed_transactions()?
+        .iter()
+        .copied()
+        .collect();
+    let id = Uuid::parse_str(id)?;
+    Ok(unconfirmed_transactions.contains(&id))
 }

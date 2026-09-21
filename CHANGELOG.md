@@ -1,8 +1,8 @@
 ## (unreleased)
 
-- Added support for importing transactions from CSV files.
+- Added support for importing transactions from CSV files. Transactions will need to be confirmed after being imported.
 - Added a custom title bar on Windows.
-- Added automatic credit payments category group. Every credit account will get it's own category.
+- Added automatic credit payments category group. Every credit account will get its own category.
 
 ## 0.1.2 - 2026-09-04
 

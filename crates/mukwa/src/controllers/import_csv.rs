@@ -123,24 +123,26 @@ fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Re
         let note = &record[note_index];
 
         if let Ok(outflow) = Money::from_str(&record[outflow_index]) {
-            service
+            let transaction = service
                 .create_expense()
                 .account(account_id)
                 .date(date)
                 .amount(outflow)
                 .note(note)
                 .submit()?;
+            service.mark_as_unconfirmed(transaction.id)?;
             continue;
         }
 
         if let Ok(inflow) = Money::from_str(&record[inflow_index]) {
-            service
+            let transaction = service
                 .create_income()
                 .account(account_id)
                 .date(date)
                 .amount(inflow)
                 .note(note)
                 .submit()?;
+            service.mark_as_unconfirmed(transaction.id)?;
             continue;
         }
 
@@ -243,6 +245,30 @@ mod test {
         assert_eq!(transaction.amount, Money::new(500));
         assert_eq!(transaction.receiver_id.unwrap(), account.id);
         assert!(transaction.sender_id.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn imported_transactions_are_unconfirmed() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let account = service.create_account("", AccountType::Cash)?;
+        let app_state = AppState::new(service)?;
+        let csv_state = window.global::<ImportCsvState>();
+        let records = vec![vec!["01/12/2024", "500.00", ""]];
+
+        csv_state.set_date_column_index(0);
+        csv_state.set_inflow_column_index(1);
+        csv_state.set_note_column_index(2);
+        csv_state.set_account_id(account.id.to_shared_string());
+        csv_state.set_records(records_to_model(records));
+        import_transactions(csv_state, &app_state)?;
+
+        let transactions = app_state.service().fetch_transactions()?;
+        let transaction = &transactions[0];
+        let unconfirmed_transactions = app_state.service().fetch_unconfirmed_transactions()?;
+        assert!(unconfirmed_transactions.contains(&transaction.id));
         Ok(())
     }
 
