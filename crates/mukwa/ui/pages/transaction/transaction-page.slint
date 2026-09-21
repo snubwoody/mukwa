@@ -580,6 +580,7 @@ export component TransactionPage inherits VerticalLayout {
     in property <string> active-account-id;
     property <bool> new-transaction-active: false;
     property <data-transfer> csv-data;
+    property <bool> all-accounts-selected: false;
 
     VerticalLayout {
         padding: 12px;
@@ -650,6 +651,7 @@ export component TransactionPage inherits VerticalLayout {
         TransactionTableHeader {
             length: length;
             show-account: active-account-id.is-empty;
+            is-selected <=> all-accounts-selected;
         }
 
         if new-transaction-active: NewTransactionRow {
@@ -667,6 +669,7 @@ export component TransactionPage inherits VerticalLayout {
             visible: active-account-id.is-empty ? true :
                 transaction.account-id == active-account-id || transaction.payee-id == active-account-id;
             height: self.visible ? self.preferred-height : 0;
+            is-selected: all-accounts-selected;
         }
     }
 }
