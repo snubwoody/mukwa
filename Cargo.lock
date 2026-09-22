@@ -609,7 +609,7 @@ checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
 
 [[package]]
 name = "benches"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "divan",
  "mukwa-core",
@@ -3315,7 +3315,7 @@ dependencies = [
 
 [[package]]
 name = "mukwa"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "csv",
  "fontdb",
@@ -3340,7 +3340,7 @@ dependencies = [
 
 [[package]]
 name = "mukwa-core"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "core-foundation 0.10.1",
  "core-foundation-sys",
@@ -5437,7 +5437,7 @@ dependencies = [
 
 [[package]]
 name = "tests"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "i-slint-backend-testing",
  "i-slint-compiler",
@@ -5932,7 +5932,7 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "utils"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "clap",
  "mukwa-core",
