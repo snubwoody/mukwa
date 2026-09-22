@@ -4,7 +4,12 @@
 import { Colors } from "../../colors.slint";
 import { Table, TableRow, TableCell } from "../../widgets/tableview.slint";
 import { Api } from "../../globals.slint";
-import { ComboBox, PrimaryButton, IconButton } from "../../widgets.slint";
+import {
+    ComboBox,
+    PrimaryButton,
+    IconButton,
+    Checkbox,
+} from "../../widgets.slint";
 import { ComboBoxItem } from "../../widgets/combobox.slint";
 import { FontSize } from "../../theme.slint";
 import { IconSet } from "@lucide";
@@ -23,6 +28,7 @@ export global ImportCsvState {
     in-out property <int> outflow-column-index;
     in-out property <int> inflow-column-index;
     in-out property <string> date-format: "%d/%m/%Y";
+    in-out property <bool> merge-existing-transactions;
 
     public function set-records(data: [[string]]) {
         records = data;
@@ -190,6 +196,19 @@ export component ImportCsvDialog inherits PopupWindow {
                 ];
                 changed(value) => {
                     ImportCsvState.date-format = value;
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                cross-axis-alignment: center;
+                Checkbox {
+                    checked <=> ImportCsvState.merge-existing-transactions;
+                }
+
+                Text {
+                    text: @tr("Merge existing transactions");
+                    color: Colors.textBody;
                 }
             }
         }

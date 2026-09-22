@@ -10,6 +10,7 @@ use native_dialog::DialogBuilder;
 use slint::{
     ComponentHandle, DataTransfer, Global, Model, ModelRc, SharedString, ToSharedString, VecModel,
 };
+use std::collections::HashMap;
 use std::str::FromStr;
 use tracing::{info, warn};
 use uuid::Uuid;
@@ -114,6 +115,12 @@ fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Re
 
     let service = app_state.service();
 
+    let mut transaction_map = HashMap::new();
+    let transactions = service.fetch_transactions()?;
+    for transaction in transactions {
+        transaction_map.insert((transaction.date, transaction.amount), transaction);
+    }
+
     // TODO: add header row option
     // TODO: handle getting index that doesn't exist
     let mut len = 0;
@@ -122,35 +129,42 @@ fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Re
         let date = Date::strptime(&date_format, &record[date_index])?;
         let note = &record[note_index];
 
-        if let Ok(outflow) = Money::from_str(&record[outflow_index]) {
-            let transaction = service
-                .create_expense()
-                .account(account_id)
-                .date(date)
-                .amount(outflow)
-                .note(note)
-                .submit()?;
-            service.mark_as_unconfirmed(transaction.id)?;
-            continue;
-        }
+        let transaction = match Money::from_str(&record[outflow_index]).is_ok() {
+            true => {
+                let amount = Money::from_str(&record[outflow_index])?;
+                if transaction_map.contains_key(&(date, amount)) {
+                    continue;
+                }
+                service
+                    .create_expense()
+                    .account(account_id)
+                    .date(date)
+                    .amount(amount)
+                    .note(note)
+                    .submit()?
+            }
+            false => {
+                let amount = Money::from_str(&record[inflow_index])?;
 
-        if let Ok(inflow) = Money::from_str(&record[inflow_index]) {
-            let transaction = service
-                .create_income()
-                .account(account_id)
-                .date(date)
-                .amount(inflow)
-                .note(note)
-                .submit()?;
-            service.mark_as_unconfirmed(transaction.id)?;
-            continue;
-        }
+                if transaction_map.contains_key(&(date, amount)) {
+                    continue;
+                }
 
+                service
+                    .create_income()
+                    .account(account_id)
+                    .date(date)
+                    .amount(amount)
+                    .note(note)
+                    .submit()?
+            }
+        };
+
+        service.mark_as_unconfirmed(transaction.id)?;
         len += 1;
     }
 
     app_state.load_transactions()?;
-
     Ok(len)
 }
 
@@ -269,6 +283,42 @@ mod test {
         let transaction = &transactions[0];
         let unconfirmed_transactions = app_state.service().fetch_unconfirmed_transactions()?;
         assert!(unconfirmed_transactions.contains(&transaction.id));
+        Ok(())
+    }
+
+    #[test]
+    fn merge_existing_transactions() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let account = service.create_account("", AccountType::Cash)?;
+        service
+            .create_expense()
+            .date(date(2024, 12, 31))
+            .amount(Money::new(500))
+            .submit()?;
+        let app_state = AppState::new(service)?;
+        let csv_state = window.global::<ImportCsvState>();
+        let records = vec![
+            vec!["31/12/2024", "500.00", ""],
+            vec!["31/12/2024", "400.00", ""],
+        ];
+
+        csv_state.set_date_column_index(0);
+        csv_state.set_outflow_column_index(1);
+        csv_state.set_note_column_index(2);
+        csv_state.set_account_id(account.id.to_shared_string());
+        csv_state.set_records(records_to_model(records));
+        import_transactions(csv_state, &app_state)?;
+
+        let transactions = app_state.service().fetch_transactions()?;
+        assert_eq!(transactions.len(), 2);
+
+        let unconfirmed_transactions = app_state.service().fetch_unconfirmed_transactions()?;
+        let transaction = &transactions[0];
+        let transaction2 = &transactions[1];
+        assert!(unconfirmed_transactions.contains(&transaction2.id));
+        assert!(!unconfirmed_transactions.contains(&transaction.id));
         Ok(())
     }
 
