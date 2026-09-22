@@ -10,7 +10,16 @@ This application is available on Windows and Linux. A macOS version is coming so
 
 ## Installation
 
-The application binaries can be installed from the GitHub [releases](https://github.com/snubwoody/mukwa/releases) page.
+Download the app via an installer:
+
+- [Windows (EXE)](https://github.com/snubwoody/mukwa/releases/latest/download/Mukwa-x86_64-Setup.exe)
+- [Linux (AppImage)](https://github.com/snubwoody/mukwa/releases/latest/download/Mukwa-x86_64.AppImage)
+
+The app is also available on [Winget](https://winstall.app/apps/Wakunguma.Mukwa):
+
+```powershell
+winget install -e --id Wakunguma.Mukwa
+```
 
 ## Contributing and Developing
 
