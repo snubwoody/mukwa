@@ -1,8 +1,9 @@
-## (unreleased)
+## 0.2.0 - 2026-09-21
 
-- Added support for importing transactions from CSV files. Transactions will need to be confirmed after being imported.
+- Added support for importing transactions from CSV files.
 - Added a custom title bar on Windows.
-- Added automatic credit payments category group. Every credit account will get its own category.
+- Added a "Credit payments" auto category group. Every credit account will get its own category in the "Credit payments" group for tracking payments.
+- The spending page now displays how much money is available to assign.
 
 ## 0.1.2 - 2026-09-04
 
