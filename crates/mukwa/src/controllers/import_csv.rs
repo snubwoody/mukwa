@@ -122,30 +122,30 @@ fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Re
         let date = Date::strptime(&date_format, &record[date_index])?;
         let note = &record[note_index];
 
-        if let Ok(outflow) = Money::from_str(&record[outflow_index]) {
-            let transaction = service
-                .create_expense()
-                .account(account_id)
-                .date(date)
-                .amount(outflow)
-                .note(note)
-                .submit()?;
-            service.mark_as_unconfirmed(transaction.id)?;
-            continue;
-        }
+        let transaction = match Money::from_str(&record[outflow_index]).is_ok() {
+            true => {
+                let amount = Money::from_str(&record[outflow_index])?;
+                service
+                    .create_expense()
+                    .account(account_id)
+                    .date(date)
+                    .amount(amount)
+                    .note(note)
+                    .submit()?
+            }
+            false => {
+                let amount = Money::from_str(&record[inflow_index])?;
+                service
+                    .create_income()
+                    .account(account_id)
+                    .date(date)
+                    .amount(amount)
+                    .note(note)
+                    .submit()?
+            }
+        };
 
-        if let Ok(inflow) = Money::from_str(&record[inflow_index]) {
-            let transaction = service
-                .create_income()
-                .account(account_id)
-                .date(date)
-                .amount(inflow)
-                .note(note)
-                .submit()?;
-            service.mark_as_unconfirmed(transaction.id)?;
-            continue;
-        }
-
+        service.mark_as_unconfirmed(transaction.id)?;
         len += 1;
     }
 
