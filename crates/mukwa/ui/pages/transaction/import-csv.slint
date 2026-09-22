@@ -28,7 +28,8 @@ export global ImportCsvState {
     in-out property <int> outflow-column-index;
     in-out property <int> inflow-column-index;
     in-out property <string> date-format: "%d/%m/%Y";
-    in-out property <bool> merge-existing-transactions;
+    in-out property <bool> merge-existing-transactions: true;
+    in-out property <bool> has-header-row: false;
 
     public function set-records(data: [[string]]) {
         records = data;
@@ -208,6 +209,19 @@ export component ImportCsvDialog inherits PopupWindow {
 
                 Text {
                     text: @tr("Merge existing transactions");
+                    color: Colors.textBody;
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                cross-axis-alignment: center;
+                Checkbox {
+                    checked <=> ImportCsvState.has-header-row;
+                }
+
+                Text {
+                    text: @tr("Has header row");
                     color: Colors.textBody;
                 }
             }
