@@ -637,6 +637,24 @@ export component TransactionPage inherits VerticalLayout {
         }
     }
 
+    VerticalLayout {
+        alignment: center;
+        cross-axis-alignment: center;
+        spacing: 12px;
+
+        Text {
+            text: "Create your first account.";
+            font-weight: FontWeight.semi-bold;
+            color: Colors.textBody;
+        }
+
+        PrimaryButton {
+            text: @tr("Create account");
+        }
+    }
+
+
+
     Table {
         width: 100%;
         property <int> length: active-account-id.is-empty ? 7 : 6;
@@ -659,6 +677,22 @@ export component TransactionPage inherits VerticalLayout {
                 new-transaction-active = false;
             }
         }
+
+            VerticalLayout {
+                alignment: center;
+                cross-axis-alignment: center;
+                spacing: 12px;
+
+                Text {
+                    text: "Create your first account.";
+                    font-weight: FontWeight.semi-bold;
+                    color: Colors.textBody;
+                }
+
+                PrimaryButton {
+                    text: @tr("Create account");
+                }
+            }
 
         for transaction[index] in transactions: TransactionRow {
             transaction: transaction;
