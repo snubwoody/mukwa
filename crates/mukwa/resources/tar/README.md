@@ -27,42 +27,27 @@ The following runtime dependencies are required:
 
 - `zenity`
 - `libstdc++`
-- `libfreetype`
-- `libfontconfig`
+- `freetype2`
+- `fontconfig`
 - `libm`
-- `libc`
+- `glibc`
 - `libz`
-- `libbz2`
-- `libpng16`
-- `libbrotlidec`
-- `libexpat`
-- `libbrotlicommon`
+- `bzip2`
+- `libpng`
+- `brotli`
+- `expat`
 
-You may already have these dependencies installed but if you run into errors, there are commands to install the 
-dependencies for some popular Linux distros. 
-
-```bash
-# Arch-based distros
-make install-deps-arch
-
-# Debian-based distros 
-make install-deps-deb
-
-# Fedora-based distros
-make install-deps-fedora
-```
-
-You could as well just install them manually from your terminal.
+You may already have these dependencies installed but install them if you run into errors.
 
 ## Uninstalling
 
-There is also `uninstall` command which deletes all the files installed by the `install` command. 
+There is an `uninstall` command which deletes all the files installed by the `install` command. 
 
 ```bash
 sudo make uninstall
 ```
 
-The `uninstall` command only removes the app but not the application data. If you want to get rid of the app data 
+The `uninstall` command only removes the app and not the application data. If you want to get rid of the app data 
 run the `clean` command.
 
 ```bash

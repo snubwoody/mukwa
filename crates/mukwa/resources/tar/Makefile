@@ -5,15 +5,6 @@ install:
 	install share/metainfo/com.wakunguma.Mukwa.metainfo.xml /usr/share/metainfo/com.wakunguma.Mukwa.metainfo.xml -m 0644
 	install share/icons/hicolor/scalable/mukwa.svg /usr/share/icons/hicolor/scalable/apps/mukwa.svg -m 0644
 
-install-deps-arch:
-	sudo pacman -Syu zenity xinput
-
-install-deps-deb:
-	sudo apt install zenity
-
-install-deps-fedora:
-	sudo rpm install zenity
-
 # Uninstall the application
 uninstall:
 	rm -rf /usr/local/bin/mukwa
