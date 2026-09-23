@@ -593,6 +593,7 @@ export component TransactionPage inherits VerticalLayout {
     in property <string> active-account-id;
     property <bool> new-transaction-active: false;
     property <data-transfer> csv-data;
+    callback create-account();
 
     VerticalLayout {
         padding: 12px;
@@ -688,6 +689,26 @@ export component TransactionPage inherits VerticalLayout {
             active-account-id: active-account-id;
             closed => {
                 new-transaction-active = false;
+            }
+        }
+
+        if State.accounts.length == 0: VerticalLayout {
+            alignment: center;
+            cross-axis-alignment: center;
+            spacing: 12px;
+            padding: 48px;
+
+            Text {
+                text: @tr("Create your first account. You can import transactions or add them manually.");
+                wrap: word-wrap;
+                max-width: 350px;
+                horizontal-alignment: center;
+                color: Colors.textBody;
+            }
+
+            PrimaryButton {
+                text: @tr("Create account");
+                clicked => create-account();
             }
         }
 
