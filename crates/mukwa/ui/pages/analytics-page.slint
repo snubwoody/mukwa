@@ -24,6 +24,10 @@ export global AnalyticsApi {
     pure callback draw-pie-chart(width: length, height: length, Date) -> [PieChartSlice];
 }
 
+export global AnalyticsState {
+    in-out property <[string]> excluded-categories;
+}
+
 component MonthSwitch inherits HorizontalLayout {
     spacing: 12px;
     cross-axis-alignment: center;
