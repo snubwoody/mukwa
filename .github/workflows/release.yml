@@ -1,16 +1,13 @@
 name: Release
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
 concurrency:
   cancel-in-progress: true
   group: release-mukwa
 env:
   CARGO_TERM_COLOR: always
 jobs:
-  bundle-linux:
+  bundle-appimage:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -38,8 +35,36 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mukwa-upload-${{ runner.os }}
+          name: mukwa-upload-${{ runner.os }}-appimage
           path: build/*.AppImage
+  bundle-tarball:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: Swatinem/rust-cache@v2
+      - uses: hustcer/setup-nu@v3
+        with:
+          version: 0.114.1
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install libx11-xcb-dev \
+          xinput \
+          libxcursor-dev \
+          zenity \
+          libxkbcommon-x11-dev \
+          libfontconfig1-dev \
+          pkg-config \
+          libx11-dev
+      - name: Bundle app
+        run: nu scripts/bundle-tarball.nu
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mukwa-upload-${{ runner.os }}-tarball
+          path: target/bundle/**/*.tar.gz
   bundle-windows:
     runs-on: windows-latest
     strategy:
@@ -67,7 +92,8 @@ jobs:
     permissions:
       contents: write
     needs:
-      - bundle-linux
+      - bundle-appimage
+      - bundle-tarball
       - bundle-windows
     runs-on: ubuntu-latest
     steps:
