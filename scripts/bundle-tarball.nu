@@ -7,7 +7,6 @@ cargo build -p mukwa -r --target ($target_triple)
 
 let dirs = [
     "build"
-    "build/bin"
     "build/lib"
     "build/share"
     "build/share/applications"
@@ -19,41 +18,25 @@ let dirs = [
 
 print ""
 for $dir in $dirs {
-    print $"Creating directory ($dir)"
+    print $"Creating directory (ansi purple)($dir)(ansi reset)"
     mkdir $dir
 }
 print ""
 
-let resource_dir = "crates/mukwa/resources"
-cp target/($target_triple)/release/mukwa build/bin
-cp ($resource_dir)/mukwa.desktop build/share/applications/com.wakunguma.Mukwa.desktop
-cp ($resource_dir)/mukwa.metainfo.xml build/share/metainfo/com.wakunguma.Mukwa.metainfo.xml
-cp ($resource_dir)/icons/app-icon.svg build/share/icons/hicolor/scalable/mukwa.svg
-cp ($resource_dir)/tar/Makefile build/
-cp ($resource_dir)/tar/README.md build/
-cp LICENSE build
-
-let excluded_libs = [
-    "libz",
-    "libc",
-    "libstdc++",
-    "libm",
-    "libgcc_s",
-    "libbz2",
-    "libexpat"
-]
-
-let libs = ldd build/bin/mukwa
-| lines
-| str trim
-| where { |it| $excluded_libs | all {|el| not ($it | str contains $el)}} # Filter excluded libraries
-| parse "{name} => {path} ({addr})"
-
-for $lib in $libs {
-    print $"Copying (ansi purple)($lib.path)(ansi reset) to build/lib"
-    cp $lib.path build/lib
+def copy [origin: string, destination: string] {
+    print $"Copying (ansi green)($origin)(ansi reset) to (ansi purple)($destination)(ansi reset)"
+    cp $origin $destination
 }
 
-print ""
+let resource_dir = "crates/mukwa/resources"
+copy target/($target_triple)/release/mukwa build/bin
+copy ($resource_dir)/mukwa.desktop build/share/applications/com.wakunguma.Mukwa.desktop
+copy ($resource_dir)/mukwa.metainfo.xml build/share/metainfo/com.wakunguma.Mukwa.metainfo.xml
+copy ($resource_dir)/icons/app-icon.svg build/share/icons/hicolor/scalable/mukwa.svg
+copy ($resource_dir)/tar/Makefile build/
+copy ($resource_dir)/tar/README.md build/
+copy LICENSE build
+
+print "\nCreating tarball"
 mkdir target/bundle/($target_triple)
 tar -czvf target/bundle/($target_triple)/mukwa-v($version)-x86_64.tar.gz -C build .
