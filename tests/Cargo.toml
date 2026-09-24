@@ -5,11 +5,16 @@ edition.workspace = true
 
 [dependencies]
 slint.workspace = true
+smol = "2.0.2"
 
 [dependencies.i-slint-backend-testing]
 git = "https://github.com/snubwoody/slint.git"
 branch = "mukwa"
 features = ["internal"]
+
+[dependencies.i-slint-core]
+git = "https://github.com/snubwoody/slint.git"
+branch = "mukwa"
 
 [build-dependencies]
 smol = "2.0.2"

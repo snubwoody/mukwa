@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { AccountCell } from "pages/transaction/transaction-page.slint";
+
+export component TestCase inherits Rectangle {
+    out property <bool> is-editing <=> account-cell.is-editing;
+    out property <string> selected;
+
+    account-cell := AccountCell {
+        options: [
+            {value: "A1",text: "Account 1"},
+            {value: "A2",text: "Account 2"},
+        ];
+        changed(value) => {
+            selected = value;
+        }
+    }
+}
+
+/*
+use i_slint_backend_testing::ElementHandle;
+use slint::{platform::Key,SharedString};
+use i_slint_core::items::PointerEventButton;
+
+let instance = TestCase::new().unwrap();
+let account_cell = ElementHandle::find_by_element_id(&instance, "TestCase::account_cell").next().unwrap();
+assert!(!instance.get_is_editing());
+account_cell.mock_single_click(PointerEventButton::Left);
+assert!(instance.get_is_editing());
+
+i_slint_backend_testing::send_keyboard_string_sequence(&instance, &SharedString::from(Key::DownArrow));
+i_slint_backend_testing::send_keyboard_string_sequence(&instance, &SharedString::from(Key::Return));
+assert_eq!(instance.get_selected(),"A2");
+*/
