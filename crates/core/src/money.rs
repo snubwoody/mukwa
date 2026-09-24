@@ -40,7 +40,7 @@ impl Money {
         Self(scaled)
     }
 
-    /// Returns the inner `i64`.
+    /// Returns the inner value.
     pub fn inner(&self) -> i64 {
         self.0
     }
@@ -61,9 +61,7 @@ impl Money {
         Self(value)
     }
 
-    /// Creates a `Money` from an `i64`.
-    ///
-    /// There is possible loss of precision when parsing floats.
+    /// Creates a `Money` from an `f64`. There is possible loss of precision when parsing floats.
     ///
     /// ## Panics
     ///
@@ -148,7 +146,7 @@ impl FromStr for Money {
             return Ok(Self::new(value));
         }
 
-        // This is lossy but the loss of precision is acceptable for now
+        // This might be lossy but the loss of precision is acceptable for now
         let value: f64 = s.parse()?;
         Ok(Self::from_f64(value))
     }
@@ -160,6 +158,7 @@ impl std::iter::Sum for Money {
     }
 }
 
+/// Generates currency information.
 macro_rules! generate_currencies {
     ($($code:ident;$name:expr;$symbol:expr;$precision:expr),+) => {
         impl Currency{
@@ -195,7 +194,7 @@ pub struct Currency {
     /// The local currency symbol.
     ///
     /// This is the symbol used for display in the respective countries,
-    /// for example `USD` and `CAD` all `$` as opposed to `US$` and `CA$`.
+    /// for example `USD` and `CAD` are `$` as opposed to `US$` and `CA$`.
     symbol: Option<&'static str>,
     /// The number of digits after the decimal.
     precision: Option<u8>,
@@ -217,25 +216,24 @@ impl Currency {
     }
 
     /// Returns the name of the currency, e.g. "South African Rand".
-    pub fn name(&self) -> &str {
+    pub const fn name(&self) -> &str {
         self.name
     }
 
     /// Returns the ISO 4217 currency code, e.g. "ZAR".
-    pub fn code(&self) -> &str {
+    pub const fn code(&self) -> &str {
         self.code
     }
 
     /// Returns the local symbol of the currency. If there is no symbol, it will return the currency code.
-    pub fn symbol(&self) -> &str {
+    pub const fn symbol(&self) -> &str {
         match &self.symbol {
             Some(symbol) => symbol,
             None => self.code,
         }
     }
 
-    /// Returns the number of digits after the decimal point. This returns an `Option` because not every
-    /// currency has subunits.
+    /// Returns the number of digits after the decimal point.
     pub fn precision(&self) -> Option<u8> {
         self.precision
     }
