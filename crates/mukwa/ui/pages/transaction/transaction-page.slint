@@ -10,6 +10,7 @@ import {
 import { FontSize } from "../../theme.slint";
 import {
     ComboBox,
+    ComboBoxItem,
     TextField,
     PrimaryButton,
     ContextMenu,
@@ -121,8 +122,10 @@ component DateCell inherits TableCell {
     }
 }
 
-component AccountCell inherits TableCell {
+export component AccountCell inherits TableCell {
     in property <Transaction> transaction;
+    in property <[ComboBoxItem]> options;
+    in property <string> current-value;
 
     callback changed(string);
 
@@ -133,8 +136,8 @@ component AccountCell inherits TableCell {
 
     if self.is-editing: ComboBox {
         width: 100%;
-        options: State.account-options;
-        current-value: transaction.account-id;
+        options: options;
+        current-value: current-value;
         init => {
             self.open();
         }
@@ -297,6 +300,8 @@ component TransactionRow inherits TableRow {
     if active-account-id == "": AccountCell {
         width: parent.width / length;
         transaction: transaction;
+        options: State.account-options;
+        current-value: transaction.account-id;
         changed(value) => {
             State.set-transaction-account(transaction.id,value);
         }

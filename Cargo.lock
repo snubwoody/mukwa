@@ -5441,6 +5441,7 @@ version = "0.2.0"
 dependencies = [
  "i-slint-backend-testing",
  "i-slint-compiler",
+ "i-slint-core",
  "lucide-slint",
  "slint",
  "smol",

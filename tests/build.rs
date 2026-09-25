@@ -44,13 +44,11 @@ struct TestCase {
 fn main() {
     println!("cargo:rerun-if-changed=../crates/mukwa/ui");
     println!("cargo:rerun-if-changed=cases");
-    // TODO: could use async for more performant IO like cargo nextest
     let cases_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("cases");
 
     let mut test_cases = vec![];
     for entry in fs::read_dir(&cases_dir).unwrap() {
         let entry = entry.unwrap();
-        // TODO: add recursive function for dirs
 
         let file_name = entry.file_name();
         let name: Vec<&str> = file_name.to_str().unwrap().split(".").collect();
@@ -67,7 +65,6 @@ fn main() {
         .parent()
         .unwrap()
         .join("crates/mukwa/ui");
-    dbg!(&include_path);
 
     for case in test_cases {
         let mut diag = BuildDiagnostics::default();
@@ -101,11 +98,8 @@ fn main() {
 
         let test_function = extract_test_function(&case.source);
 
-        write!(
-            file,
-            "\n#[test]\nfn test_{}(){{\ni_slint_backend_testing::init_no_event_loop();\n{}}}",
-            case.name, test_function
-        )
-        .unwrap();
+        writeln!(file, "\n#[test]\nfn test_{}(){{", case.name).unwrap();
+        writeln!(file, "i_slint_backend_testing::init_no_event_loop();").unwrap();
+        writeln!(file, "smol::block_on(async {{\n{}}})\n}}", test_function).unwrap();
     }
 }
