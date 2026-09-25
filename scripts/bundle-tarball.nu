@@ -1,6 +1,5 @@
 let target_triple = "x86_64-unknown-linux-gnu"
-let version = open Cargo.toml | get workspace.package.version
-let bundle_name = $"mukwa-($version)-x86_64"
+let bundle_name = $"mukwa-x86_64"
 let bundle_dir = $"build/($bundle_name)"
 print $"Bundling (ansi green)x86_64(ansi reset) Linux (ansi purple).tar.gz(ansi reset)"
 
@@ -40,4 +39,4 @@ copy LICENSE ($bundle_dir)
 
 print "\nCreating tarball"
 mkdir target/bundle/($target_triple)
-tar -czvf target/bundle/($target_triple)/mukwa-($version)-x86_64.tar.gz -C build $bundle_name
+tar -czvf target/bundle/($target_triple)/mukwa-x86_64.tar.gz -C build $bundle_name
