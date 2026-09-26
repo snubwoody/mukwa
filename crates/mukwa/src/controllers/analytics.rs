@@ -188,6 +188,7 @@ mod test {
 
     #[test]
     fn filter_category_adds_category() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
         let window = MainWindow::new()?;
         let analytics = window.global::<AnalyticsApi>();
         filter_category(&analytics, SharedString::from("C1"))?;
@@ -198,6 +199,7 @@ mod test {
 
     #[test]
     fn filter_category_removes_category() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
         let window = MainWindow::new()?;
         let analytics = window.global::<AnalyticsApi>();
 
@@ -218,6 +220,7 @@ mod test {
 
     #[test]
     fn draw_simple_pie_chart() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
         let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let group = service.create_category_group("")?;
@@ -261,6 +264,7 @@ mod test {
 
     #[test]
     fn draw_pie_chart_with_filter() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
         let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let group = service.create_category_group("")?;
@@ -296,6 +300,7 @@ mod test {
 
     #[test]
     fn draw_pie_chart_with_all_categories_filtered() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
         let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let group = service.create_category_group("")?;
