@@ -4,6 +4,7 @@
 import { Colors } from "../colors.slint";
 import { ListView, ScrollView } from "std-widgets.slint";
 import { FocusBorder } from "./focus-border.slint";
+import { FontSize } from "../theme.slint";
 
 export struct ComboBoxItem {
     value: string,
@@ -149,33 +150,66 @@ export component ComboBox {
             max-height: 250px;
             content-height: content.preferred-height;
             content := VerticalLayout {
-                padding: 8px;
-                spacing: 4px;
+                padding: 12px;
+                spacing: 8px;
 
-                for option[i] in options: Rectangle {
-                    background: current-index == i ? Colors.neutral50 : white;
-                    height: 24px;
-                    border-radius: 4px;
-
-                    states [
-                        hovered when inner-touch-area.has-hover: {
-                            background: Colors.neutral50;
-                            in {
-                                animate background { duration: 150ms; }
-                            }
-                        }
-                    ]
-                    inner-touch-area := TouchArea {
-                        clicked => {
-                            root.select(i);
-                            changed(options[current-index].value);
-                            popup.close();
-                        }
-                    }
+                VerticalLayout {
+                    spacing: 8px;
 
                     Text {
-                        text: option.text;
-                        color: Colors.textBody;
+                        text: @tr("Selected");
+                        color: Colors.textMuted;
+                        font-size: FontSize.caption;
+                    }
+
+                    Rectangle {
+                        height: 24px;
+
+                        Text {
+                            text: options[current-index].text;
+                            color: Colors.textBody;
+                        }
+                    }
+                }
+
+                VerticalLayout {
+                    spacing: 8px;
+                    Text {
+                        text: @tr("Change selection");
+                        color: Colors.textMuted;
+                        font-size: FontSize.caption;
+                    }
+
+                    VerticalLayout {
+                        spacing: 4px;
+
+                        for option[i] in options: Rectangle {
+                            background: current-index == i ? Colors.neutral50 : white;
+                            visible: current-index != i;
+                            height: current-index == i ? 0px : 24px;
+                            border-radius: 4px;
+
+                            states [
+                                hovered when inner-touch-area.has-hover: {
+                                    background: Colors.neutral50;
+                                    in {
+                                        animate background { duration: 150ms; }
+                                    }
+                                }
+                            ]
+                            inner-touch-area := TouchArea {
+                                clicked => {
+                                    root.select(i);
+                                    changed(options[current-index].value);
+                                    popup.close();
+                                }
+                            }
+
+                            Text {
+                                text: option.text;
+                                color: Colors.textBody;
+                            }
+                        }
                     }
                 }
             }
