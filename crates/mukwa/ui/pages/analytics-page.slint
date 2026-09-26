@@ -215,6 +215,7 @@ export component AnalyticsPage inherits HorizontalLayout {
                 Rectangle {
                     width: 500px;
                     height: 500px;
+
                     for slice in pie-chart-slices: Rectangle {
                         Path {
                             width: 100%;
@@ -241,6 +242,25 @@ export component AnalyticsPage inherits HorizontalLayout {
                             color: Colors.textMuted;
                             font-size: FontSize.caption;
                             font-weight: FontWeight.light;
+                        }
+                    }
+
+                    VerticalLayout {
+                        width: parent.width;
+                        height: parent.height;
+                        alignment: center;
+                        cross-axis-alignment: center;
+                        spacing: 4px;
+                        Text {
+                            text: @tr("Total spent");
+                            color: Colors.textBody;
+                        }
+
+                        Text {
+                            text: State.format-money(State.total-spent-all(current-date), Settings.currency-code);
+                            color: Colors.textHeading;
+                            font-size: FontSize.heading;
+                            font-weight: FontWeight.medium;
                         }
                     }
                 }
