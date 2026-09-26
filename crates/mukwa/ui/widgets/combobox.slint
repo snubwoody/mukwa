@@ -154,17 +154,17 @@ export component ComboBox {
                 spacing: 8px;
 
                 VerticalLayout {
-                    spacing: 8px;
-
+                    spacing: 4px;
                     Text {
                         text: @tr("Selected");
                         color: Colors.textMuted;
                         font-size: FontSize.caption;
                     }
 
-                    Rectangle {
-                        height: 24px;
-
+                    HorizontalLayout {
+                        //height: 24px;
+                        cross-axis-alignment: center;
+                        padding: 8px;
                         Text {
                             text: options[current-index].text;
                             color: Colors.textBody;
@@ -173,7 +173,7 @@ export component ComboBox {
                 }
 
                 VerticalLayout {
-                    spacing: 8px;
+                    spacing: 4px;
                     Text {
                         text: @tr("Change selection");
                         color: Colors.textMuted;
@@ -205,9 +205,13 @@ export component ComboBox {
                                 }
                             }
 
-                            Text {
-                                text: option.text;
-                                color: Colors.textBody;
+                            HorizontalLayout {
+                                cross-axis-alignment: center;
+                                padding: 8px;
+                                Text {
+                                    text: option.text;
+                                    color: Colors.textBody;
+                                }
                             }
                         }
                     }
