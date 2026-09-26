@@ -18,9 +18,14 @@ pub fn bind(window: &ui::MainWindow, state: &AppState) {
     let analytics = window.global::<AnalyticsApi>();
 
     analytics.on_is_category_filtered({
-       let analytics = analytics.as_weak();
-        move |id|{
-            !analytics.unwrap().get_filtered_categories().iter().find(|category_id|category_id == &id).is_some()
+        let analytics = analytics.as_weak();
+        move |id| {
+            !analytics
+                .unwrap()
+                .get_filtered_categories()
+                .iter()
+                .find(|category_id| category_id == &id)
+                .is_some()
         }
     });
 

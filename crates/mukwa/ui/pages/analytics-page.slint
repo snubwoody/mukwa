@@ -90,7 +90,6 @@ component MonthSwitch inherits HorizontalLayout {
     }
 }
 
-// TODO: hide when there are no categories
 component CategoryFilter {
     callback filter-category(string);
     in property <[string]> filters;
@@ -175,7 +174,7 @@ export component AnalyticsPage inherits HorizontalLayout {
                 cross-axis-alignment: center;
                 spacing: 12px;
 
-                CategoryFilter {
+                if State.categories.length > 0: CategoryFilter {
                     filters: AnalyticsApi.filtered-categories;
                     filter-category(value) => {
                         AnalyticsApi.filter-category(value);
