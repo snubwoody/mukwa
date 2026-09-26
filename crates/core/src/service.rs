@@ -679,7 +679,7 @@ impl Service {
             let budget = row?;
 
             let is_same_month =
-                budget.month == month.month().into() && budget.year == month.year().into();
+                budget.month == month.month() as i64 && budget.year == month.year() as i64;
 
             if !is_same_month {
                 continue;

@@ -10,3 +10,5 @@ rusqlite.workspace = true
 clap.workspace = true
 tracing-appender.workspace = true
 mukwa-core = {path = "../core"}
+octocrab = "0.54.2"
+smol.workspace = true

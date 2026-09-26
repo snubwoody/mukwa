@@ -5,7 +5,7 @@ edition.workspace = true
 
 [dependencies]
 slint.workspace = true
-smol = "2.0.2"
+smol.workspace = true
 
 [dependencies.i-slint-backend-testing]
 git = "https://github.com/snubwoody/slint.git"
