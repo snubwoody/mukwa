@@ -5,7 +5,7 @@ edition.workspace = true
 
 [dependencies]
 slint.workspace = true
-smol = "2.0.2"
+smol.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 
