@@ -5,6 +5,7 @@ import { Colors } from "../colors.slint";
 import { ListView, ScrollView } from "std-widgets.slint";
 import { FocusBorder } from "./focus-border.slint";
 import { FontSize } from "../theme.slint";
+import { IconSet, IconDisplay } from "@lucide";
 
 export struct ComboBoxItem {
     value: string,
@@ -169,6 +170,15 @@ export component ComboBox {
                         HorizontalLayout {
                             cross-axis-alignment: center;
                             padding: 8px;
+                            spacing: 8px;
+
+                            IconDisplay {
+                                icon: IconSet.Check;
+                                size: 14px;
+                                stroke-width: 2;
+                                stroke: Colors.textMuted;
+                            }
+
                             Text {
                                 text: options[current-index].text;
                                 color: Colors.textBody;
