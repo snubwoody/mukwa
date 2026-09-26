@@ -6,6 +6,7 @@ import {
     Transaction,
     State,
     Api,
+    Category,
 } from "../../globals.slint";
 import { FontSize } from "../../theme.slint";
 import {
@@ -192,15 +193,17 @@ component PayeeCell inherits TableCell {
 component CategoryCell inherits TableCell {
     in property <Transaction> transaction;
     callback changed(string);
+    in-out property <Category> category;
 
     if !self.is-editing: Text {
-        text: State.get-category(transaction.category-id).title;
+        text: category.title;
         color: Colors.textBody;
     }
 
     if self.is-editing: ComboBox {
         width: 100%;
         options: State.category-options;
+        current-value: category.id;
         init => {
             self.open();
         }
@@ -318,7 +321,7 @@ component TransactionRow inherits TableRow {
 
     CategoryCell {
         width: parent.width / length;
-        transaction: transaction;
+        category: State.get-category(transaction.category-id);
         changed(value) => {
             State.set-transaction-category(transaction.id,value);
         }
