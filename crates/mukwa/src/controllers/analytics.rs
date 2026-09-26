@@ -17,6 +17,13 @@ use uuid::Uuid;
 pub fn bind(window: &ui::MainWindow, state: &AppState) {
     let analytics = window.global::<AnalyticsApi>();
 
+    analytics.on_is_category_filtered({
+       let analytics = analytics.as_weak();
+        move |id|{
+            !analytics.unwrap().get_filtered_categories().iter().find(|category_id|category_id == &id).is_some()
+        }
+    });
+
     analytics.on_filter_category({
         let analytics = analytics.as_weak();
         move |id| {
@@ -109,14 +116,11 @@ fn draw_pie_chart(
     }
 
     let mut analytics = analytics.values().collect::<Vec<_>>();
-
     analytics.sort_by(|a, b| a.total.cmp(&b.total).reverse());
 
     let series: Vec<f32> = analytics.iter().map(|a| a.total.inner() as f32).collect();
     let labels: Vec<String> = analytics.iter().map(|a| a.category.title.clone()).collect();
-
     let radius = width.min(height) / 2.0;
-
     let chart = PieChart::new(width / 2.0, height / 2.0, series, radius)
         .with_colors(colors.to_vec())
         .with_label_line_length(50.0)
@@ -124,7 +128,6 @@ fn draw_pie_chart(
         .with_hole_radius(radius - 100.0);
 
     let segments = chart.segments();
-
     let slices = VecModel::default();
 
     for (index, segment) in segments.iter().enumerate() {

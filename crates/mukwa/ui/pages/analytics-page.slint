@@ -24,6 +24,7 @@ export struct PieChartSlice {
 export global AnalyticsApi {
     pure callback draw-pie-chart(width: length, height: length, Date) -> [PieChartSlice];
     callback filter-category(string);
+    pure callback is-category-filtered(string) -> bool;
     in-out property <[string]> filtered-categories;
 }
 
@@ -111,13 +112,13 @@ component CategoryFilter {
             alignment: start;
             spacing: 8px;
             cross-axis-alignment: start;
-            padding: 8px;
+            padding: 12px;
 
             for category[index] in State.categories: HorizontalLayout {
                 cross-axis-alignment: center;
                 spacing: 8px;
                 Checkbox {
-                    checked: true;
+                    checked: AnalyticsApi.is-category-filtered(category.id);
                     toggled => {
                         filter-category(category.id);
                     }
@@ -132,7 +133,20 @@ component CategoryFilter {
     }
 
     button := Button {
-        text: @tr("All categories");
+        text: helper-text();
+        border-width: 1px;
+        border-radius: 8px;
+        border-color: Colors.borderNeutral;
+
+        function helper-text() -> string {
+            if filters.length == 0 {
+                return @tr("All categories");
+            }
+            if State.categories.length - filters.length == 1 {
+                return @tr("1 category");
+            }
+            return State.categories.length - filters.length + " categories";
+        }
         clicked => {
             popup.show();
         }
