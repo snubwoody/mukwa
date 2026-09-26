@@ -11,7 +11,6 @@ mod ui;
 
 pub use mukwa_core::error::{Error, Result};
 use settings::SettingsStore;
-use tempfile::tempdir;
 
 use crate::state::AppState;
 use crate::ui::MainWindow;
@@ -20,8 +19,8 @@ use mukwa_core::service::Service;
 use rusqlite::Connection;
 use slint::ComponentHandle;
 use std::fs;
-use std::path::PathBuf;
-use tracing::{error, info};
+use std::path::{Path, PathBuf};
+use tracing::{debug, error, info};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
@@ -76,113 +75,61 @@ fn main() {
     info!("Closing application");
 }
 
-pub struct App {
-    #[allow(unused)]
-    state: AppState,
-    main_window: MainWindow,
-    #[allow(unused)]
-    settings: SettingsStore,
-}
+fn init_service(dir: impl AsRef<Path>) -> Result<Service> {
+    let path = dir.as_ref().join("data.sqlite");
+    debug!("Opening SQLite database at {:?}", &path);
+    let mut connection = Connection::open(&path)?;
+    let mut migrator = Migrator::new();
+    migrator.load_embedded()?;
+    migrator.migrate(&mut connection)?;
 
-impl App {
-    pub fn new() -> Result<Self> {
-        let data_dir = if cfg!(debug_assertions) {
-            PathBuf::from(".mukwa")
-        } else {
-            mukwa_core::data_dir()
-        };
-
-        fs::create_dir_all(&data_dir)?;
-
-        let path = data_dir.join("data.sqlite");
-        info!("Opening sqlite database at {:?}", &path);
-        let mut connection = Connection::open(&path)?;
-        let mut migrator = Migrator::new();
-        migrator.load_embedded()?;
-        migrator.migrate(&mut connection)?;
-
-        connection.pragma_update(None, "journal_mode", "WAL")?;
-        let service = Service::new(connection);
-        let main_window = MainWindow::new()?;
-
-        #[cfg(windows)]
-        {
-            use slint::winit_030::{
-                WinitWindowAccessor,
-                winit::platform::windows::{CornerPreference, WindowExtWindows},
-            };
-            let main_window_weak = main_window.as_weak();
-
-            slint::spawn_local(async move {
-                let main_window = main_window_weak.unwrap();
-                let handle = main_window.window().winit_window().await.unwrap();
-                handle.set_corner_preference(CornerPreference::Round);
-            })
-            .unwrap();
-        }
-
-        service.check_credit_account_categories()?;
-
-        let settings_dir = if cfg!(debug_assertions) {
-            PathBuf::from(".mukwa")
-        } else {
-            mukwa_core::config_dir()
-        };
-
-        fs::create_dir_all(&settings_dir)?;
-        let settings = SettingsStore::open(settings_dir.join("settings.toml"))?;
-        let state = AppState::new(service)?;
-
-        controllers::bind_all(&main_window, &state, &settings);
-
-        #[cfg(target_os = "linux")]
-        slint::set_xdg_app_id("com.wakunguma.Mukwa")?;
-
-        let app = App {
-            state,
-            main_window,
-            settings,
-        };
-
-        Ok(app)
-    }
-
-    /// Creates a new `App` for testing.
-    pub fn new_test() -> Result<Self> {
-        let temp = tempdir()?;
-        let service = Service::open_in_memory()?;
-        let main_window = MainWindow::new()?;
-
-        let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
-        let state = AppState::new(service)?;
-
-        #[cfg(target_os = "linux")]
-        slint::set_xdg_app_id("com.wakunguma.Mukwa")?;
-
-        controllers::bind_all(&main_window, &state, &settings);
-
-        let app = App {
-            state,
-            main_window,
-            settings,
-        };
-
-        Ok(app)
-    }
-
-    pub fn window(&self) -> &MainWindow {
-        &self.main_window
-    }
-
-    pub fn run(&self) -> Result<()> {
-        self.main_window.run()?;
-        Ok(())
-    }
+    connection.pragma_update(None, "journal_mode", "WAL")?;
+    let service = Service::new(connection);
+    service.check_credit_account_categories()?;
+    Ok(service)
 }
 
 pub fn run() -> Result<()> {
-    let app = App::new()?;
-    app.run()?;
+    let data_dir = if cfg!(debug_assertions) {
+        PathBuf::from(".mukwa")
+    } else {
+        mukwa_core::data_dir()
+    };
+
+    let settings_dir = if cfg!(debug_assertions) {
+        PathBuf::from(".mukwa")
+    } else {
+        mukwa_core::config_dir()
+    };
+
+    fs::create_dir_all(&data_dir)?;
+    fs::create_dir_all(&settings_dir)?;
+    let main_window = MainWindow::new()?;
+    let service = init_service(data_dir)?;
+    let settings = SettingsStore::open(settings_dir.join("settings.toml"))?;
+    let state = AppState::new(service)?;
+    controllers::bind_all(&main_window, &state, &settings);
+
+    #[cfg(windows)]
+    {
+        use slint::winit_030::{
+            WinitWindowAccessor,
+            winit::platform::windows::{CornerPreference, WindowExtWindows},
+        };
+        let main_window_weak = main_window.as_weak();
+
+        slint::spawn_local(async move {
+            let main_window = main_window_weak.unwrap();
+            let handle = main_window.window().winit_window().await.unwrap();
+            handle.set_corner_preference(CornerPreference::Round);
+        })
+        .unwrap();
+    }
+
+    #[cfg(target_os = "linux")]
+    slint::set_xdg_app_id("com.wakunguma.Mukwa")?;
+
+    main_window.run()?;
     Ok(())
 }
 
@@ -192,29 +139,26 @@ mod test {
     use jiff::civil::date;
     use jiff::{ToSpan, Zoned};
     use mukwa_core::Money;
+    use mukwa_core::service::AccountType;
     use slint::{Model, ToSharedString};
+    use tempfile::tempdir;
 
     #[test]
     fn total_spent_all_only_includes_expenses() -> Result<()> {
         i_slint_backend_testing::init_no_event_loop();
-        let app = App::new_test()?;
-        app.state
-            .service()
-            .create_expense()
-            .amount(Money::new(200))
-            .submit()?;
-        app.state
-            .service()
-            .create_expense()
-            .amount(Money::new(500))
-            .submit()?;
-        app.state
-            .service()
+        let temp = tempdir()?;
+        let service = init_service(temp.path())?;
+        service.create_account("", AccountType::Cash)?;
+        service.create_expense().amount(Money::new(200)).submit()?;
+        service.create_expense().amount(Money::new(500)).submit()?;
+        service
             .create_income()
             .amount(Money::new(10_000))
             .submit()?;
-        app.state.load_transactions()?;
-        let window = app.window();
+        let state = AppState::new(service)?;
+        let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
+        let window = MainWindow::new()?;
+        controllers::bind_all(&window, &state, &settings);
         let global_state = window.global::<ui::State>();
         let total = global_state.invoke_total_spent_all(Zoned::now().date().into());
         assert_eq!(total, Money::new(700).to_shared_string());
@@ -224,27 +168,29 @@ mod test {
     #[test]
     fn total_spent_all_filters_by_month() -> Result<()> {
         i_slint_backend_testing::init_no_event_loop();
-        let app = App::new_test()?;
-        app.state
-            .service()
+        let temp = tempdir()?;
+        let service = init_service(temp.path())?;
+        service.create_account("", AccountType::Cash)?;
+        service
             .create_expense()
             .date(date(2020, 2, 1))
             .amount(Money::new(200))
             .submit()?;
-        app.state
-            .service()
+        service
             .create_expense()
             .date(date(2020, 1, 1))
             .amount(Money::new(500))
             .submit()?;
-        app.state.load_transactions()?;
 
         let date = ui::Date {
             year: 2020,
             month: 1,
             day: 1,
         };
-        let window = app.window();
+        let window = MainWindow::new()?;
+        let state = AppState::new(service)?;
+        let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
+        controllers::bind_all(&window, &state, &settings);
         let global_state = window.global::<ui::State>();
         let total = global_state.invoke_total_spent_all(date);
         assert_eq!(total, Money::new(500).to_shared_string());
@@ -254,9 +200,9 @@ mod test {
     #[test]
     fn draw_pie_chart_filters_by_date() -> Result<()> {
         i_slint_backend_testing::init_no_event_loop();
-
-        let app = App::new_test()?;
-        let service = app.state.service();
+        let temp = tempdir()?;
+        let service = init_service(temp.path())?;
+        service.create_account("", AccountType::Cash)?;
         let group = service.create_category_group("")?;
         let category = service.create_category("Groceries", group.id)?;
 
@@ -278,9 +224,11 @@ mod test {
             .date(Zoned::now().date() - 1.month())
             .amount(Money::new(200))
             .submit()?;
-        app.state.load_transactions()?;
 
-        let window = app.window();
+        let window = MainWindow::new()?;
+        let state = AppState::new(service)?;
+        let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
+        controllers::bind_all(&window, &state, &settings);
         let analytics = window.global::<ui::AnalyticsApi>();
         let date = Zoned::now().date() - 1.month();
         let slices = analytics.invoke_draw_pie_chart(500.0, 500.0, date.into());
@@ -294,9 +242,9 @@ mod test {
     #[test]
     fn draw_pie_chart_sorts_categories() -> Result<()> {
         i_slint_backend_testing::init_no_event_loop();
-
-        let app = App::new_test()?;
-        let service = app.state.service();
+        let temp = tempdir()?;
+        let service = init_service(temp.path())?;
+        service.create_account("", AccountType::Cash)?;
         let group = service.create_category_group("")?;
         let groceries = service.create_category("Groceries", group.id)?;
         let electricity = service.create_category("Electricity", group.id)?;
@@ -317,9 +265,11 @@ mod test {
             .category(electricity.id)
             .amount(Money::new(70))
             .submit()?;
-        app.state.load_transactions()?;
 
-        let window = app.window();
+        let window = MainWindow::new()?;
+        let state = AppState::new(service)?;
+        let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
+        controllers::bind_all(&window, &state, &settings);
         let analytics = window.global::<ui::AnalyticsApi>();
         let pie_slices = analytics.invoke_draw_pie_chart(500.0, 500.0, Zoned::now().date().into());
         let mut slices = pie_slices.iter();
