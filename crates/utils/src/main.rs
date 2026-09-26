@@ -75,6 +75,7 @@ fn run() -> mukwa_core::Result<()> {
     Ok(())
 }
 
+
 fn main() {
     tracing_subscriber::fmt()
         .with_target(false)
@@ -198,4 +199,22 @@ fn path_segments_to_string(segments: PathSegmentsIter) -> Result<String, std::fm
         }
     }
     Ok(s)
+}
+
+#[cfg(test)]
+mod test{
+    use super::*;
+
+    #[test]
+    fn gen_release_info() -> mukwa_core::Result<()>{
+        smol::block_on(async {
+
+            let release = octocrab::instance()
+                .repos("snubwoody","mukwa")
+                .releases()
+                .get_latest().await.unwrap();
+            dbg!(release);
+        });
+        Ok(())
+    }
 }
