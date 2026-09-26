@@ -1,3 +1,8 @@
+
+## (unreleased)
+
+- Added support for filtering categories on the analytics page.
+
 ## 0.2.0 - 2026-09-21
 
 - Added support for importing transactions from CSV files.

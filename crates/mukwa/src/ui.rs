@@ -17,6 +17,13 @@ impl From<jiff::civil::Date> for Date {
     }
 }
 
+impl TryFrom<Date> for jiff::civil::Date {
+    type Error = jiff::Error;
+    fn try_from(value: Date) -> Result<Self, Self::Error> {
+        jiff::civil::Date::new(value.year as i16, value.month as i8, value.day as i8)
+    }
+}
+
 impl From<mukwa_core::service::Account> for Account {
     fn from(account: mukwa_core::service::Account) -> Self {
         Self {
