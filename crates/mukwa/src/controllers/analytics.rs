@@ -8,21 +8,35 @@ use jiff::civil::Date;
 use mukwa_core::Money;
 use mukwa_core::plot::PieChart;
 use mukwa_core::service::Category;
-use slint::{ComponentHandle, ModelRc, ToSharedString, VecModel};
-use std::collections::HashMap;
+use slint::{ComponentHandle, Global, Model, ModelRc, SharedString, ToSharedString, VecModel};
+use std::collections::{HashMap, HashSet};
+use tracing::warn;
 use uuid::Uuid;
+use crate::ui::AnalyticsApi;
 
 pub fn bind(window: &ui::MainWindow, state: &AppState) {
-    let analytics = window.global::<ui::AnalyticsApi>();
+    let analytics = window.global::<AnalyticsApi>();
+
+    analytics.on_filter_category({
+        let analytics = analytics.as_weak();
+        move |id| {
+            if let Err(err) = filter_category(&analytics.unwrap(),id){
+                warn!("Failed to filter category: {err}");
+            }
+        }
+    });
 
     analytics.on_draw_pie_chart({
         // TODO: draw gray no data donut chart if empty
         let state = state.clone();
+        let analytics = analytics.as_weak();
 
         move |width, height, date| {
+            let analytics = analytics.unwrap();
+            let filtered_categories: HashSet<SharedString> = analytics.get_filtered_categories().iter().collect();
             let categories = state.service().fetch_categories().unwrap_or_default();
+            let categories: Vec<Category> = categories.into_iter().filter(|category|filtered_categories.contains(&category.id.to_shared_string())).collect();
             // TODO: collect categories below a threshold into 'Other'
-            // TODO: order categories by total spent
 
             struct Analytic {
                 category: Category,
@@ -41,6 +55,9 @@ pub fn bind(window: &ui::MainWindow, state: &AppState) {
                 }
 
                 if let Some(category_id) = transaction.category_id {
+                    if filtered_categories.contains(&category_id.to_shared_string()){
+                        continue;
+                    }
                     match analytics.get(&category_id) {
                         Some(value) => {
                             analytics.insert(
@@ -117,4 +134,53 @@ pub fn bind(window: &ui::MainWindow, state: &AppState) {
             ModelRc::new(slices)
         }
     });
+}
+
+fn filter_category(analytics: &AnalyticsApi,id: SharedString) -> crate::Result<()>{
+    let filtered_categories = analytics.get_filtered_categories();
+    match filtered_categories.iter().find(|id|id == id) {
+        Some(_) => {
+            let new_categories = filtered_categories.iter().filter(|id|id != id).collect::<VecModel<_>>();
+            analytics.set_filtered_categories(ModelRc::new(new_categories));
+        }
+        None => {
+            let new_categories = filtered_categories.iter().collect::<VecModel<_>>();
+            new_categories.push(id);
+            analytics.set_filtered_categories(ModelRc::new(new_categories));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod test{
+    use crate::ui::MainWindow;
+    use super::*;
+
+    #[test]
+    fn filter_category_adds_category() -> crate::Result<()>{
+        let window = MainWindow::new()?;
+        let analytics = window.global::<AnalyticsApi>();
+        filter_category(&analytics,SharedString::from("C1"))?;
+        let category = analytics.get_filtered_categories().iter().next().unwrap();
+        assert_eq!(category,"C1");
+        Ok(())
+    }
+
+    #[test]
+    fn filter_category_removes_category() -> crate::Result<()>{
+        let window = MainWindow::new()?;
+        let analytics = window.global::<AnalyticsApi>();
+
+        filter_category(&analytics,SharedString::from("C1"))?;
+        filter_category(&analytics,SharedString::from("C2"))?;
+        filter_category(&analytics,SharedString::from("C2"))?;
+        filter_category(&analytics,SharedString::from("C1"))?;
+        filter_category(&analytics,SharedString::from("C3"))?;
+        let categories = analytics.get_filtered_categories().iter().collect::<Vec<_>>();
+        assert!(!categories.contains(&SharedString::from("C1")));
+        assert!(!categories.contains(&SharedString::from("C2")));
+        assert!(categories.contains(&SharedString::from("C3")));
+        Ok(())
+    }
 }

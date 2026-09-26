@@ -8,6 +8,7 @@ import { Settings } from "../settings.slint";
 import { IconButton, Button, PrimaryButton } from "../widgets.slint";
 import { IconSet } from "@lucide";
 import { Date, CalendarState } from "../widgets/calendar.slint";
+import { Checkbox } from "../widgets/checkbox.slint";
 
 export struct PieChartSlice {
     fill: color,
@@ -22,6 +23,8 @@ export struct PieChartSlice {
 
 export global AnalyticsApi {
     pure callback draw-pie-chart(width: length, height: length, Date) -> [PieChartSlice];
+    callback filter-category(string);
+    in-out property <[string]> filtered-categories;
 }
 
 component MonthSwitch inherits HorizontalLayout {
@@ -86,6 +89,56 @@ component MonthSwitch inherits HorizontalLayout {
     }
 }
 
+// TODO: hide when there are no categories
+component CategoryFilter {
+    callback filter-category(string);
+    in property <[string]> filters;
+
+    popup := PopupWindow {
+        y: button.height + 4px;
+        min-height: 50px;
+        min-width: 150px;
+        close-policy: close-on-click-outside;
+
+        Rectangle {
+            background: white;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Colors.borderNeutral;
+        }
+
+        VerticalLayout {
+            alignment: start;
+            spacing: 8px;
+            cross-axis-alignment: start;
+            padding: 8px;
+
+            for category[index] in State.categories: HorizontalLayout {
+                cross-axis-alignment: center;
+                spacing: 8px;
+                Checkbox {
+                    checked: true;
+                    toggled => {
+                        filter-category(category.id);
+                    }
+                }
+
+                Text {
+                    text: category.title;
+                    color: Colors.textBody;
+                }
+            }
+        }
+    }
+
+    button := Button {
+        text: @tr("All categories");
+        clicked => {
+            popup.show();
+        }
+    }
+}
+
 // TODO: wrap Path in TouchArea
 export component AnalyticsPage inherits HorizontalLayout {
     property <[PieChartSlice]> pie-chart-slices: AnalyticsApi.draw-pie-chart(500px, 500px,current-date);
@@ -104,10 +157,22 @@ export component AnalyticsPage inherits HorizontalLayout {
                 font-size: FontSize.heading-sm;
             }
 
-            MonthSwitch {
-                current-date: current-date;
-                changed(date) => {
-                    current-date = date
+            HorizontalLayout {
+                cross-axis-alignment: center;
+                spacing: 12px;
+
+                CategoryFilter {
+                    filters: AnalyticsApi.filtered-categories;
+                    filter-category(value) => {
+                        AnalyticsApi.filter-category(value);
+                    }
+                }
+
+                MonthSwitch {
+                    current-date: current-date;
+                    changed(date) => {
+                        current-date = date
+                    }
                 }
             }
         }
