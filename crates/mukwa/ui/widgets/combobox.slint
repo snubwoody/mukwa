@@ -155,19 +155,24 @@ export component ComboBox {
 
                 VerticalLayout {
                     spacing: 4px;
+                    alignment: start;
                     Text {
                         text: @tr("Selected");
                         color: Colors.textMuted;
                         font-size: FontSize.caption;
                     }
 
-                    HorizontalLayout {
-                        //height: 24px;
-                        cross-axis-alignment: center;
-                        padding: 8px;
-                        Text {
-                            text: options[current-index].text;
-                            color: Colors.textBody;
+                    Rectangle {
+                        background: Colors.neutral50;
+                        border-radius: 4px;
+                        height: 24px;
+                        HorizontalLayout {
+                            cross-axis-alignment: center;
+                            padding: 8px;
+                            Text {
+                                text: options[current-index].text;
+                                color: Colors.textBody;
+                            }
                         }
                     }
                 }
