@@ -3881,6 +3881,7 @@ dependencies = [
  "mukwa-core",
  "native-dialog",
  "rusqlite",
+ "semver",
  "serde",
  "slint",
  "slint-build",
