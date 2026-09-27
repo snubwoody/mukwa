@@ -3811,9 +3811,11 @@ dependencies = [
  "libc",
  "rusqlite",
  "rust-embed",
+ "semver",
  "serde",
  "serde_json",
  "slint",
+ "smol",
  "tempfile",
  "tiny-skia 0.12.0",
  "toml",
@@ -6957,9 +6959,9 @@ dependencies = [
  "mukwa-core",
  "octocrab",
  "rusqlite",
+ "serde_json",
  "smol",
  "tracing",
- "tracing-appender",
  "tracing-subscriber",
 ]
 
