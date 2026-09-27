@@ -332,6 +332,13 @@ export component MainWindow inherits Window {
     resize-border-width: root.maximized ? 0px : 4px;
 
     VerticalLayout {
+        init => {
+            debug("Initialised");
+            Api.check-for-update();
+            debug(State.left-to-assign());
+            Api.set-maximized(true);
+        }
+
         if Platform.os == windows: TitleBar {
             window-maximized: root.maximized;
             minimized => {

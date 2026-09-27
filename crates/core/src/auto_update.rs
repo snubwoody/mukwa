@@ -5,39 +5,55 @@ use jiff::Timestamp;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
+use tracing::debug;
+use crate::Error;
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Manifest {
-    releases: Vec<Release>,
+    pub releases: Vec<Release>,
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Platform {
     #[serde(rename = "windows_x86_64_exe")]
-    WindowsX86_64Exe,
+    WindowsX64,
     #[serde(rename = "windows_aarch64_exe")]
-    WindowsAarch64Exe,
+    WindowsArm64,
     #[serde(rename = "linux_x86_64_appimage")]
-    LinuxX86_64AppImage,
+    LinuxX64AppImage,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Release {
-    version: Version,
-    published_at: Timestamp,
-    artifacts: HashMap<Platform, Artifact>,
-    prerelease: bool,
+    pub version: Version,
+    pub published_at: Timestamp,
+    pub artifacts: HashMap<Platform, Artifact>,
+    pub prerelease: bool,
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+impl Default for Release {
+    fn default() -> Self {
+        Release {
+            version: Version::new(0, 0, 0),
+            published_at: Timestamp::default(),
+            artifacts: HashMap::new(),
+            prerelease: false,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Artifact {
-    download_url: String,
-    digest: String,
+    pub download_url: String,
+    pub digest: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReleaseResponse {
-    releases: Vec<ReleaseJson>,
+    pub releases: Vec<ReleaseJson>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -68,7 +84,7 @@ pub struct ReleaseAsset {
     size: u64,
 }
 
-/// Generates a release manifest from a list of Github releases.
+/// Generates a release manifest from a list of GitHub releases.
 pub fn gen_release_manifest(releases: &[ReleaseJson]) -> crate::Result<Manifest> {
     let mut manifest = Manifest::default();
     for release in releases {
@@ -85,17 +101,17 @@ pub fn gen_release_manifest(releases: &[ReleaseJson]) -> crate::Result<Manifest>
         };
 
         for asset in &release.assets {
-            let mut platform = Platform::WindowsX86_64Exe;
+            let mut platform = Platform::WindowsX64;
             if asset.name.ends_with("x86_64-Setup.exe") {
-                platform = Platform::WindowsX86_64Exe;
+                platform = Platform::WindowsX64;
             }
 
             if asset.name.ends_with("aarch64-Setup.exe") {
-                platform = Platform::WindowsAarch64Exe;
+                platform = Platform::WindowsArm64;
             }
 
             if asset.name.ends_with("x86_64.AppImage") {
-                platform = Platform::LinuxX86_64AppImage;
+                platform = Platform::LinuxX64AppImage;
             }
 
             let artifact = Artifact {
@@ -128,17 +144,102 @@ pub async fn fetch_releases() -> crate::Result<Vec<ReleaseJson>> {
     Ok(releases)
 }
 
+pub async fn download_update(release: Release, dir: impl AsRef<Path>) -> crate::Result<PathBuf> {
+    // TODO: only run on Windows
+    let artifact = release.artifacts.get(&Platform::WindowsX64).unwrap();
+    let download_url = artifact.download_url.clone();
+    let response = smol::unblock(move || ureq::get(&download_url).call()).await?;
+
+    if !response.status().is_success() {
+        return Err(Error::new("Response error"))
+        // TODO: return error
+    }
+    let mut buffer = vec![];
+    let mut body = response.into_body();
+    let dest = dir.as_ref().join("Mukwa-Update.exe");
+    let mut file = File::create(&dest)?;
+    let mut reader = body.as_reader();
+    reader.read_to_end(&mut buffer)?;
+    file.write(&buffer)?;
+    Ok(dest)
+}
+
+pub fn check_for_update(current_version: Version, mut manifest: Manifest) -> Option<Release> {
+    if manifest.releases.is_empty() {
+        return None;
+    }
+    manifest
+        .releases
+        .sort_by(|a, b| a.version.cmp(&b.version).reverse());
+
+    if manifest.releases[0].version > current_version {
+        return Some(manifest.releases[0].clone());
+    }
+
+    None
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
-    fn gen_release_info() -> crate::Result<()> {
-        let releases = smol::block_on(async { fetch_releases().await })?;
+    fn check_for_latest_update() -> crate::Result<()> {
+        let releases = vec![Release {
+            version: Version::new(0, 1, 0),
+            ..Default::default()
+        }];
+        let manifest = Manifest { releases };
+        let release = check_for_update(Version::new(0, 0, 0), manifest);
+        assert!(release.is_some());
+        assert_eq!(release.unwrap().version, Version::new(0, 1, 0));
+        Ok(())
+    }
 
-        let manifest = gen_release_manifest(&releases)?;
-        let content = serde_json::to_string_pretty(&manifest).unwrap();
-        std::fs::write("manifest.json", content)?;
+    #[test]
+    fn latest_version_equals_current_version() -> crate::Result<()> {
+        let releases = vec![Release {
+            version: Version::new(0, 1, 0),
+            ..Default::default()
+        }];
+        let manifest = Manifest { releases };
+        let release = check_for_update(Version::new(0, 1, 0), manifest);
+        assert!(release.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn latest_version_is_less_than_current_version() -> crate::Result<()> {
+        let releases = vec![Release {
+            version: Version::new(0, 0, 0),
+            ..Default::default()
+        }];
+        let manifest = Manifest { releases };
+        let release = check_for_update(Version::new(0, 1, 0), manifest);
+        assert!(release.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn check_for_update_returns_newest_update() -> crate::Result<()> {
+        let releases = vec![
+            Release {
+                version: Version::new(0, 1, 0),
+                ..Default::default()
+            },
+            Release {
+                version: Version::new(0, 2, 0),
+                ..Default::default()
+            },
+            Release {
+                version: Version::new(1, 0, 0),
+                ..Default::default()
+            },
+        ];
+        let manifest = Manifest { releases };
+        let release = check_for_update(Version::new(0, 0, 0), manifest);
+        assert!(release.is_some());
+        assert_eq!(release.unwrap().version, Version::new(1, 0, 0));
         Ok(())
     }
 }

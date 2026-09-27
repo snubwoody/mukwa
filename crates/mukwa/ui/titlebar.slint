@@ -2,6 +2,8 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 import { Colors } from "colors.slint";
+import { PrimaryButton } from "widgets.slint";
+import { Api } from "globals.slint";
 
 enum TitleBarButtonTheme { windows, windows-x }
 
@@ -80,6 +82,13 @@ export component TitleBar inherits WindowMoveArea {
         }
 
         HorizontalLayout {
+
+            PrimaryButton {
+                text: @tr("Check for update");
+                clicked => {
+                    Api.check-for-update();
+                }
+            }
             TitleBarButton {
                 theme: windows;
                 accessible-label: @tr("Minimize window");

@@ -104,10 +104,10 @@ pub fn run() -> Result<()> {
 
     fs::create_dir_all(&data_dir)?;
     fs::create_dir_all(&settings_dir)?;
-    let main_window = MainWindow::new()?;
     let service = init_service(data_dir)?;
     let settings = SettingsStore::open(settings_dir.join("settings.toml"))?;
     let state = AppState::new(service)?;
+    let main_window = MainWindow::new()?;
     controllers::bind_all(&main_window, &state, &settings);
 
     #[cfg(windows)]
@@ -116,8 +116,8 @@ pub fn run() -> Result<()> {
             WinitWindowAccessor,
             winit::platform::windows::{CornerPreference, WindowExtWindows},
         };
+        
         let main_window_weak = main_window.as_weak();
-
         slint::spawn_local(async move {
             let main_window = main_window_weak.unwrap();
             let handle = main_window.window().winit_window().await.unwrap();
