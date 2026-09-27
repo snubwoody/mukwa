@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+pub mod auto_update;
 pub mod error;
 pub mod fmt;
 pub mod migrator;
 mod money;
 pub mod plot;
-mod auto_update;
 pub mod service;
 
 pub use error::{Error, Result};

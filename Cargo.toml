@@ -30,6 +30,8 @@ tiny-skia = "0.12.0"
 image = "0.25.10"
 ureq = {version = "3.4.2",features = ["json"]}
 smol = "2.0.2"
+semver = {version = "1.0.28", features = ["serde"]}
+serde_json = "1.0.151"
 
 [workspace.dependencies.slint]
 git = "https://github.com/snubwoody/slint.git"

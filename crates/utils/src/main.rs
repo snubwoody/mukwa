@@ -2,13 +2,14 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use clap::{Parser, Subcommand};
+use mukwa_core::auto_update::{fetch_releases, gen_release_manifest};
 use mukwa_core::migrator::Migrator;
 use rusqlite::Connection;
 use std::collections::HashSet;
 use std::fmt::Write;
 use std::fs;
 use std::io::{BufReader, Cursor, Read};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::{info, warn};
 use usvg::Node;
 use usvg::tiny_skia_path::{PathSegment, PathSegmentsIter};
@@ -33,6 +34,16 @@ enum Command {
         #[arg(short, long, default_value = "data.sqlite")]
         path: PathBuf,
     },
+    Manifest {
+        #[command(subcommand)]
+        command: ManifestCommand,
+    },
+}
+
+#[derive(Subcommand)]
+enum ManifestCommand {
+    /// Create a release manifest
+    Create,
 }
 
 #[derive(Subcommand)]
@@ -71,10 +82,22 @@ fn run() -> mukwa_core::Result<()> {
             }
         },
         Command::GenerateIcons => generate_icons()?,
+        Command::Manifest { command } => match command {
+            ManifestCommand::Create => smol::block_on(async { create_manifest().await })?,
+        },
     }
     Ok(())
 }
 
+async fn create_manifest() -> mukwa_core::Result<()> {
+    let releases = fetch_releases().await?;
+    let manifest = gen_release_manifest(&releases)?;
+    let json = serde_json::to_string_pretty(&manifest).unwrap();
+    let path = Path::new("release-manifest.json");
+    std::fs::write(&path, &json)?;
+    info!("Created release manifest at {}", path.display());
+    Ok(())
+}
 
 fn main() {
     tracing_subscriber::fmt()
@@ -202,17 +225,18 @@ fn path_segments_to_string(segments: PathSegmentsIter) -> Result<String, std::fm
 }
 
 #[cfg(test)]
-mod test{
+mod test {
     use super::*;
 
     #[test]
-    fn gen_release_info() -> mukwa_core::Result<()>{
+    fn gen_release_info() -> mukwa_core::Result<()> {
         smol::block_on(async {
-
             let release = octocrab::instance()
-                .repos("snubwoody","mukwa")
+                .repos("snubwoody", "mukwa")
                 .releases()
-                .get_latest().await.unwrap();
+                .get_latest()
+                .await
+                .unwrap();
             dbg!(release);
         });
         Ok(())
