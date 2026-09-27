@@ -5,13 +5,26 @@ use crate::ui;
 use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::Money;
+use mukwa_core::auto_update::{
+    self, Artifact, Manifest, Platform, Release,download_update,
+};
 use mukwa_core::fmt::CurrencyFormatter;
+use semver::Version;
 use slint::{ComponentHandle, ToSharedString};
+use std::collections::HashMap;
 use std::str::FromStr;
-use tracing::warn;
+use tracing::{debug, info, warn};
 
 pub fn bind(main_window: &ui::MainWindow) {
     let api = main_window.global::<ui::Api>();
+
+    api.on_check_for_update(|| {
+        slint::spawn_local(async move {
+            if let Err(err) = check_for_update().await{
+                warn!("Failed to update: {err}");
+            }
+        }).unwrap();
+    });
 
     api.on_set_maximized({
         let window = main_window.clone_strong();
@@ -97,4 +110,37 @@ pub fn bind(main_window: &ui::MainWindow) {
             .unwrap_or_default()
             .inner() as f32
     });
+}
+
+async fn check_for_update() -> crate::Result<()>{
+    // FIXME: app hanging while writing update file
+    let mut artifacts = HashMap::new();
+    artifacts.insert(
+        Platform::WindowsX64,
+        Artifact {
+            download_url: String::from("https://github.com/snubwoody/mukwa/releases/latest/download/Mukwa-x86_64-Setup.exe"),
+            digest: String::new(),
+        },
+    );
+    let releases = vec![Release {
+        version: Version::new(0, 2, 0),
+        artifacts,
+        ..Default::default()
+    }];
+    let manifest = Manifest { releases };
+
+    info!("Checking for updates");
+    match auto_update::check_for_update(Version::new(0, 1, 0), manifest) {
+        Some(release) => {
+            info!("New update found, version {}",release.version);
+            info!("Downloading new update...");
+            let update_path = download_update(release, ".").await?;
+            debug!(path=?update_path,"Successfully downloaded new update");
+        }
+        None => {
+            info!("No new update found");
+        }
+    }
+
+    Ok(())
 }
