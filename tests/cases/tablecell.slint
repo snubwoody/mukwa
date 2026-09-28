@@ -9,13 +9,13 @@ export component TestCase inherits Rectangle {
     out property <bool> b-clicked: false;
     out property <bool> b-is-editing <=> table-cell-b.is-editing;
 
-    table-cell-a := TableCell{
+    table-cell-a := TableCell {
         clicked => {
             a-clicked = true;
         }
     }
 
-    table-cell-b := TableCell{
+    table-cell-b := TableCell {
         clicked => {
             b-clicked = true;
         }
