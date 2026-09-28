@@ -54,7 +54,6 @@ export component TitleBarButton {
     }
 }
 
-// TODO: extract and test this
 export component TitleBar inherits WindowMoveArea {
     in property <bool> window-maximized;
     callback hidden();
@@ -65,10 +64,16 @@ export component TitleBar inherits WindowMoveArea {
         background: Colors.neutral25;
     }
 
+    TouchArea {
+        double-clicked => {
+            maximized();
+        }
+    }
+
     HorizontalLayout {
         padding-left: 12px;
         cross-axis-alignment: center;
-        alignment: space-between;
+        //alignment: space-between;
         Text {
             text: "Mukwa";
             font-weight: FontWeight.semi-bold;
