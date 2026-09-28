@@ -12,6 +12,20 @@ concurrency:
   cancel-in-progress: true
   group: ${{github.ref}}-${{github.job}}
 jobs:
+  format-slint:
+    runs-on: macos-latest
+    needs: format
+    steps:
+    - uses: actions/checkout@v6
+    - uses: Swatinem/rust-cache@v2
+    - uses: cargo-bins/cargo-binstall@main
+    - run: cargo binstall slint-lsp -y
+      name: Install slint-lsp
+    - uses: hustcer/setup-nu@v3
+      with:
+        version: 0.114.1
+    - run: cargo run -p utils check-format ./**/*.slint
+      shell: nu
   format:
     strategy:
       fail-fast: false
