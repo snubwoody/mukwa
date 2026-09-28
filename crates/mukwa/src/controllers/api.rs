@@ -13,12 +13,20 @@ use tracing::warn;
 pub fn bind(main_window: &ui::MainWindow) {
     let api = main_window.global::<ui::Api>();
 
-    let window = main_window.clone_strong();
     api.on_set_maximized({
+        let window = main_window.clone_strong();
         move |maximized| {
             let window = window.window();
             window.set_maximized(maximized);
             window.is_maximized()
+        }
+    });
+
+    api.on_minimize({
+        let window = main_window.clone_strong();
+        move || {
+            let window = window.window();
+            window.set_minimized(true);
         }
     });
 

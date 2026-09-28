@@ -56,7 +56,7 @@ export component TitleBarButton {
 
 export component TitleBar inherits WindowMoveArea {
     in property <bool> window-maximized;
-    callback hidden();
+    callback minimized();
     callback maximized();
     callback closed();
 
@@ -73,7 +73,6 @@ export component TitleBar inherits WindowMoveArea {
     HorizontalLayout {
         padding-left: 12px;
         cross-axis-alignment: center;
-        //alignment: space-between;
         Text {
             text: "Mukwa";
             font-weight: FontWeight.semi-bold;
@@ -84,7 +83,7 @@ export component TitleBar inherits WindowMoveArea {
             TitleBarButton {
                 theme: windows;
                 accessible-label: @tr("Minimize window");
-                clicked => hidden();
+                clicked => minimized();
                 Image {
                     source: @image-url("assets/fluent_subtract.svg");
                 }

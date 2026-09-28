@@ -334,8 +334,8 @@ export component MainWindow inherits Window {
     VerticalLayout {
         if Platform.os == windows: TitleBar {
             window-maximized: root.maximized;
-            hidden => {
-                root.hide();
+            minimized => {
+                Api.minimize();
             }
 
             maximized => {
