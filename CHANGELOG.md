@@ -1,6 +1,7 @@
 
 ## (unreleased)
 
+- Fixed title bar not maximising when double clicked.
 - Added support for filtering categories on the analytics page.
 
 ## 0.2.0 - 2026-09-21
