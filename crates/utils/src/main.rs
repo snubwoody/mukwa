@@ -2,10 +2,13 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use clap::{Parser, Subcommand};
+use mukwa_core::Error;
 use mukwa_core::migrator::Migrator;
 use rusqlite::Connection;
+use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
-use tracing::{info, warn};
+use tracing::{error, info};
 
 #[derive(Parser)]
 struct Cli {
@@ -24,6 +27,10 @@ enum Command {
         /// The path to the sqlite database file
         #[arg(short, long, default_value = "data.sqlite")]
         path: PathBuf,
+    },
+    CheckFormat {
+        /// Path to .slint files
+        files: Vec<PathBuf>,
     },
 }
 
@@ -62,9 +69,13 @@ fn run() -> mukwa_core::Result<()> {
                 migrator.rollback(&mut connection)?;
             }
         },
+        Command::CheckFormat { files } => {
+            check_slint_fmt(&files)?;
+        }
     }
     Ok(())
 }
+
 fn main() {
     tracing_subscriber::fmt()
         .with_target(false)
@@ -72,6 +83,42 @@ fn main() {
         .init();
 
     if let Err(err) = run() {
-        warn!("{}", err.report());
+        error!("{}", err.report());
+        std::process::exit(1)
     }
+}
+
+/// Returns an error if the `.slint` files are not formatted.
+///
+/// The Slint LSP has no `format --check` command, so to emulate that this function
+/// hashes the contents of `files`, runs the `slint-lsp format` command against each of the files and
+/// compares the two hashes.
+fn check_slint_fmt(files: &[PathBuf]) -> mukwa_core::Result<()> {
+    let mut contents = Vec::new();
+    for path in files {
+        if !(path.extension().unwrap().to_str().unwrap() == "slint") {
+            return Err(Error::new(&format!(
+                "Unexpected file type: {}",
+                path.display()
+            )));
+        }
+        let mut file = File::open(path)?;
+        file.read_to_end(&mut contents)?;
+    }
+
+    let output = std::process::Command::new("slint-lsp")
+        .arg("format")
+        .args(files)
+        .output()
+        .expect("Failed to run process");
+
+    if !output.status.success() {
+        let err = String::from_utf8(output.stderr).unwrap();
+        return Err(Error::new(&err));
+    }
+
+    if contents != output.stdout {
+        return Err(Error::new("Slint files are not formatted"));
+    }
+    Ok(())
 }
