@@ -8,21 +8,26 @@ use mukwa_core::Money;
 use mukwa_core::auto_update::{self, download_update, install_update, Artifact, Manifest, Platform, Release};
 use mukwa_core::fmt::CurrencyFormatter;
 use semver::Version;
-use slint::{ComponentHandle, ToSharedString};
+use slint::{ComponentHandle, Global, ToSharedString};
 use std::collections::HashMap;
 use std::str::FromStr;
 use tracing::{debug, info, warn};
+use crate::ui::{Api, AutoUpdaterState};
 
 pub fn bind(main_window: &ui::MainWindow) {
     let api = main_window.global::<ui::Api>();
 
-    api.on_check_for_update(|| {
-        // TODO: store updater state to prevent multiple button clicks
-        let _ = slint::spawn_local(async move {
-            if let Err(err) = check_for_update().await{
-                warn!("Failed to update: {err}");
-            }
-        });
+    api.on_check_for_update({
+        let api = api.as_weak();
+        move || {
+            let api = api.unwrap();
+            // TODO: store updater state to prevent multiple button clicks
+            let _ = slint::spawn_local(async move {
+                if let Err(err) = check_for_update(&api).await{
+                    warn!("Failed to update: {err}");
+                }
+            });
+        }
     });
 
     api.on_set_maximized({
@@ -111,7 +116,7 @@ pub fn bind(main_window: &ui::MainWindow) {
     });
 }
 
-async fn check_for_update() -> crate::Result<()>{
+async fn check_for_update(api: &Api<'_>) -> crate::Result<()>{
     // FIXME: app hanging while writing update file
     let mut artifacts = HashMap::new();
     artifacts.insert(
@@ -128,14 +133,19 @@ async fn check_for_update() -> crate::Result<()>{
     }];
     let manifest = Manifest { releases };
 
+    let update_dir = dirs::data_local_dir().unwrap().join("Mukwa").join("updates");
+    smol::fs::create_dir_all(&update_dir).await?;
+    api.set_update_state(AutoUpdaterState::Checking);
     info!("Checking for updates");
     match auto_update::check_for_update(Version::new(0, 1, 0), manifest) {
         Some(release) => {
             info!("New update found, version {}",release.version);
+            api.set_update_state(AutoUpdaterState::Downloading);
             info!("Downloading new update...");
-            let update_path = download_update(release, ".").await?;
+            let update_path = download_update(release, &update_dir).await?;
             debug!(path=?update_path,"Successfully downloaded new update");
-            install_update(update_path)?;
+            api.set_update_state(AutoUpdaterState::Ready);
+            //install_update(update_path)?;
         }
         None => {
             info!("No new update found");
