@@ -3885,6 +3885,7 @@ dependencies = [
  "serde",
  "slint",
  "slint-build",
+ "smol",
  "tempfile",
  "tiny-skia 0.12.0",
  "toml",

@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use tracing::debug;
-use crate::Error;
+use std::process::Command;
+use crate::{log_dir, Error};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Manifest {
@@ -145,23 +145,35 @@ pub async fn fetch_releases() -> crate::Result<Vec<ReleaseJson>> {
 }
 
 pub async fn download_update(release: Release, dir: impl AsRef<Path>) -> crate::Result<PathBuf> {
-    // TODO: only run on Windows
     let artifact = release.artifacts.get(&Platform::WindowsX64).unwrap();
     let download_url = artifact.download_url.clone();
     let response = smol::unblock(move || ureq::get(&download_url).call()).await?;
 
     if !response.status().is_success() {
+        // TODO: read response body
         return Err(Error::new("Response error"))
-        // TODO: return error
     }
-    let mut buffer = vec![];
-    let mut body = response.into_body();
     let dest = dir.as_ref().join("Mukwa-Update.exe");
-    let mut file = File::create(&dest)?;
-    let mut reader = body.as_reader();
-    reader.read_to_end(&mut buffer)?;
-    file.write(&buffer)?;
+    smol::unblock({
+        let dest = dest.clone();
+        move || {
+            let mut file = File::create(dest)?;
+            let mut reader = response.into_body().into_reader();
+            std::io::copy(&mut reader,&mut file)
+        }
+    }).await?;
     Ok(dest)
+}
+
+pub fn install_update(path: impl AsRef<Path>) -> crate::Result<()>{
+    let absolute_path = path.as_ref().canonicalize()?;
+    let log_path = log_dir().join("inno-setup.log");
+    let output = Command::new(absolute_path).arg("/verysilent").arg(&format!("/log={}",log_path.display())).output()?;
+    if !output.status.success(){
+        let stdout = String::try_from(output.stdout)?;
+        return Err(Error::new(&stdout))
+    }
+    Ok(())
 }
 
 pub fn check_for_update(current_version: Version, mut manifest: Manifest) -> Option<Release> {
