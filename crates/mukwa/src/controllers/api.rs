@@ -5,9 +5,7 @@ use crate::ui;
 use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::Money;
-use mukwa_core::auto_update::{
-    self, Artifact, Manifest, Platform, Release,download_update,
-};
+use mukwa_core::auto_update::{self, download_update, install_update, Artifact, Manifest, Platform, Release};
 use mukwa_core::fmt::CurrencyFormatter;
 use semver::Version;
 use slint::{ComponentHandle, ToSharedString};
@@ -19,11 +17,11 @@ pub fn bind(main_window: &ui::MainWindow) {
     let api = main_window.global::<ui::Api>();
 
     api.on_check_for_update(|| {
-        slint::spawn_local(async move {
+        let _ = slint::spawn_local(async move {
             if let Err(err) = check_for_update().await{
                 warn!("Failed to update: {err}");
             }
-        }).unwrap();
+        });
     });
 
     api.on_set_maximized({
@@ -136,6 +134,7 @@ async fn check_for_update() -> crate::Result<()>{
             info!("Downloading new update...");
             let update_path = download_update(release, ".").await?;
             debug!(path=?update_path,"Successfully downloaded new update");
+            install_update(update_path)?;
         }
         None => {
             info!("No new update found");
