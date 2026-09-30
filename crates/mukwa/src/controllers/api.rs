@@ -17,6 +17,7 @@ pub fn bind(main_window: &ui::MainWindow) {
     let api = main_window.global::<ui::Api>();
 
     api.on_check_for_update(|| {
+        // TODO: store updater state to prevent multiple button clicks
         let _ = slint::spawn_local(async move {
             if let Err(err) = check_for_update().await{
                 warn!("Failed to update: {err}");
