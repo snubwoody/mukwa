@@ -168,7 +168,11 @@ pub async fn download_update(release: Release, dir: impl AsRef<Path>) -> crate::
 pub fn install_update(path: impl AsRef<Path>) -> crate::Result<()>{
     let absolute_path = path.as_ref().canonicalize()?;
     let log_path = log_dir().join("inno-setup.log");
-    Command::new(absolute_path).arg("/verysilent").arg(&format!("/log={}",log_path.display())).spawn()?;
+    Command::new(absolute_path)
+        .arg("/verysilent")
+        .arg("/update=1")
+        .arg(&format!("/log={}",log_path.display()))
+        .spawn()?;
     Ok(())
 }
 
