@@ -3779,6 +3779,7 @@ name = "mukwa"
 version = "0.2.0"
 dependencies = [
  "csv",
+ "dirs",
  "fontdb",
  "i-slint-backend-testing",
  "jiff",

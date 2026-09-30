@@ -19,6 +19,7 @@ fontdb.workspace = true
 tempfile.workspace = true
 semver.workspace = true
 smol.workspace = true
+dirs.workspace = true
 native-dialog = "0.9.7"
 csv = "1.4.0"
 

@@ -82,39 +82,57 @@ export component TitleBar inherits WindowMoveArea {
         }
 
         HorizontalLayout {
+            alignment: end;
+            spacing: 12px;
 
-            PrimaryButton {
-                text: @tr("Check for update");
-                clicked => {
-                    Api.check-for-update();
-                }
-            }
-            TitleBarButton {
-                theme: windows;
-                accessible-label: @tr("Minimize window");
-                clicked => minimized();
-                Image {
-                    source: @image-url("assets/fluent_subtract.svg");
-                }
-            }
+            HorizontalLayout {
+                spacing: 12px;
+                padding: 12px;
+                alignment: end;
 
-            TitleBarButton {
-                theme: windows;
-                clicked => maximized();
-                accessible-label: @tr("Maximize window");
-                Image {
-                    width: 16px;
-                    height: 16px;
-                    source: root.window-maximized ? @image-url("assets/fluent_square_multiple.svg") : @image-url("assets/fluent_square.svg");
+                if Api.update-state == ready: PrimaryButton {
+                    text: @tr("Update & Restart");
+                    clicked => {
+                        Api.check-for-update();
+                    }
+                }
+
+                PrimaryButton {
+                    text: @tr("Check for update");
+                    clicked => {
+                        Api.check-for-update();
+                    }
                 }
             }
 
-            TitleBarButton {
-                theme: windows-x;
-                clicked => closed();
-                accessible-label: @tr("Close window");
-                Image {
-                    source: @image-url("assets/fluent_dismiss.svg");
+            HorizontalLayout {
+                TitleBarButton {
+                    theme: windows;
+                    accessible-label: @tr("Minimize window");
+                    clicked => minimized();
+                    Image {
+                        source: @image-url("assets/fluent_subtract.svg");
+                    }
+                }
+
+                TitleBarButton {
+                    theme: windows;
+                    clicked => maximized();
+                    accessible-label: @tr("Maximize window");
+                    Image {
+                        width: 16px;
+                        height: 16px;
+                        source: root.window-maximized ? @image-url("assets/fluent_square_multiple.svg") : @image-url("assets/fluent_square.svg");
+                    }
+                }
+
+                TitleBarButton {
+                    theme: windows-x;
+                    clicked => closed();
+                    accessible-label: @tr("Close window");
+                    Image {
+                        source: @image-url("assets/fluent_dismiss.svg");
+                    }
                 }
             }
         }
