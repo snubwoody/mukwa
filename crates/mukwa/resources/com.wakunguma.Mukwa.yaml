@@ -25,17 +25,14 @@ modules:
       - cargo fetch --offline
       - cargo build --offline -r -p mukwa
       - install -Dm755 target/release/mukwa /app/bin/mukwa
-      - install -Dm644 crates/mukwa/resources/icons/app-icon.svg /app/share/icons/hicolor/scalable/apps/mukwa.svg
+      - sed -i 's/^Icon=.*/Icon=com.wakunguma.Mukwa/' crates/mukwa/resources/mukwa.desktop
+      - install -Dm644 crates/mukwa/resources/icons/app-icon.svg /app/share/icons/hicolor/scalable/apps/com.wakunguma.Mukwa.svg
       - install -Dm644 crates/mukwa/resources/mukwa.desktop /app/share/applications/com.wakunguma.Mukwa.desktop
       - install -Dm644 crates/mukwa/resources/mukwa.metainfo.xml /app/share/metainfo/com.wakunguma.Mukwa.metainfo.xml
     sources:
       - type: archive
         url: https://github.com/snubwoody/mukwa/archive/refs/tags/v0.2.0.tar.gz
         sha256: 65d2323620879f5b3b994fb0d6d35d11391d564f648c50abc166978a031afab1
-#      - type: archive
-#        url: https://github.com/rust-skia/skia-binaries/releases/download/0.153.3/skia-binaries-a25a0fdb7d90429aa2d1-x86_64-unknown-linux-gnu-gl-jpegd-jpege-pdf-textlayout-vulkan.tar.gz
-#        dest-filename: skia-binaries.tar.gz
-#        sha256: 097e78d775c9156dc4b070b9cca7008dbab587513ecb1924baf4cf9620f3119b
       - type: file
         url: https://github.com/rust-skia/skia-binaries/releases/download/0.153.3/skia-binaries-b7f043e0b1e2a850e702-x86_64-unknown-linux-gnu-ganesh-gl-jpegd-jpege-pdf-vulkan.tar.gz
         dest-filename: skia-binaries.tar.gz
