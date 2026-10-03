@@ -9,6 +9,7 @@ import {
     CategoryGroup,
     Budget,
     Api,
+    CategoryState,
 } from "../globals.slint";
 import {
     TextField,
@@ -30,7 +31,7 @@ export global SpendingPageState {
 component CategoryItem inherits VerticalLayout {
     in property <Date> current-date;
     in property <Category> category;
-    property <Budget> budget: State.get-budget(category.id, current-date);
+    property <Budget> budget: CategoryState.get-budget(category.id, current-date);
 
     function budget-progress() -> float {
         if Api.money-to-float(budget.amount) <= 0 && Api.money-to-float(State.total-spent(budget.id)) > 0 {
@@ -49,15 +50,16 @@ component CategoryItem inherits VerticalLayout {
         ContextMenuItem {
             text: @tr("Delete");
             clicked => {
-                State.delete-category(category.id);
+                //State.delete-category(category.id);
+                CategoryState.delete-category(category.id);
                 parent.close();
-                SpendingPageState.left-to-budget = State.left-to-assign();
+                SpendingPageState.left-to-budget = CategoryState.left-to-assign();
             }
         }
     }
 
     DragArea {
-        data: State.category-to-transfer(category.id);
+        data: CategoryState.category-to-transfer(category.id);
         allow-move: true;
 
         TouchArea {
@@ -86,7 +88,7 @@ component CategoryItem inherits VerticalLayout {
                     InlineTextField {
                         text: category.title;
                         enabled: category.account-id.is-empty;
-                        accepted(value) => State.update-category(category.id, value);
+                        accepted(value) => CategoryState.update-category(category.id, value);
                     }
 
                     Text {
@@ -126,8 +128,8 @@ component CategoryItem inherits VerticalLayout {
                 field-text: Api.format-money-without-symbol(budget.amount);
                 input-type: decimal;
                 accepted(value) => {
-                    State.edit-budget(budget.id, value);
-                    SpendingPageState.left-to-budget = State.left-to-assign();
+                    CategoryState.edit-budget(budget.id, value);
+                    SpendingPageState.left-to-budget = CategoryState.left-to-assign();
                 }
             }
 
@@ -140,7 +142,7 @@ component CategoryItem inherits VerticalLayout {
 
             Text {
                 width: 100px;
-                text: State.format-money(State.left-to-spend(budget.id),Settings.currency-code);
+                text: State.format-money(CategoryState.left-to-spend(budget.id),Settings.currency-code);
                 color: Colors.textBody;
                 horizontal-alignment: end;
             }
@@ -162,7 +164,7 @@ component CategoryGroupItem {
     drop-area := DropArea {
         can-drop(event) => event.proposed-action;
         dropped(event) => {
-            State.move-category(State.transfer-to-category(event.data), category-group.id);
+            CategoryState.move-category(CategoryState.transfer-to-category(event.data), category-group.id);
             return event.proposed-action;
         }
     }
@@ -173,9 +175,9 @@ component CategoryGroupItem {
         ContextMenuItem {
             text: @tr("Delete");
             clicked => {
-                State.delete-category-group(category-group.id);
+                CategoryState.delete-category-group(category-group.id);
                 parent.close();
-                SpendingPageState.left-to-budget = State.left-to-assign();
+                SpendingPageState.left-to-budget = CategoryState.left-to-assign();
             }
         }
     }
@@ -236,7 +238,7 @@ component CategoryGroupItem {
                 text-field := TextField {
                     placeholder-text: @tr("New category");
                     accepted => {
-                        State.create-category(self.text,category-group.id);
+                        CategoryState.create-category(self.text,category-group.id);
                         category-popup.close();
                     }
                 }
@@ -254,7 +256,7 @@ component CategoryGroupItem {
                     PrimaryButton {
                         text: @tr("Confirm");
                         clicked => {
-                            State.create-category(text-field.text,category-group.id);
+                            CategoryState.create-category(text-field.text,category-group.id);
                             category-popup.close();
                         }
                     }
@@ -292,7 +294,7 @@ component CategoryGroupItem {
                     text: category-group.title;
                     font-weight: FontWeight.semi-bold;
                     enabled: !category-group.is-meta;
-                    accepted(value) => State.update-category-group(category-group.id, value);
+                    accepted(value) => CategoryState.update-category-group(category-group.id, value);
                 }
 
                 category-button := IconButton {
@@ -311,21 +313,21 @@ component CategoryGroupItem {
 
                 Text {
                     width: 100px;
-                    text: State.format-money(State.total-assigned-in-group(category-group.id,current-date),Settings.currency-code);
+                    text: State.format-money(CategoryState.total-assigned-in-group(category-group.id,current-date),Settings.currency-code);
                     color: Colors.textBody;
                     horizontal-alignment: end;
                 }
 
                 Text {
                     width: 100px;
-                    text: State.format-money(State.total-spent-in-group(category-group.id, current-date),Settings.currency-code);
+                    text: State.format-money(CategoryState.total-spent-in-group(category-group.id, current-date),Settings.currency-code);
                     color: Colors.textBody;
                     horizontal-alignment: end;
                 }
 
                 Text {
                     width: 100px;
-                    text: State.format-money(State.left-to-spend-in-group(category-group.id,current-date),Settings.currency-code);
+                    text: State.format-money(CategoryState.left-to-spend-in-group(category-group.id,current-date),Settings.currency-code);
                     color: Colors.textBody;
                     horizontal-alignment: end;
                 }
@@ -333,7 +335,7 @@ component CategoryGroupItem {
         }
 
         if root.open: VerticalLayout {
-            for category in State.categories-in-group(category-group.id): CategoryItem {
+            for category in CategoryState.categories-in-group(category-group.id): CategoryItem {
                 current-date: current-date;
                 category: category;
             }
@@ -348,7 +350,7 @@ export component SpendingPage inherits VerticalLayout {
     spacing: 12px;
 
     init => {
-        SpendingPageState.left-to-budget = State.left-to-assign();
+        SpendingPageState.left-to-budget = CategoryState.left-to-assign();
     }
 
     HorizontalLayout {
@@ -448,7 +450,7 @@ export component SpendingPage inherits VerticalLayout {
             text-field := TextField {
                 placeholder-text: @tr("New category group");
                 accepted => {
-                    State.create-category-group(self.text);
+                    CategoryState.create-category-group(self.text);
                     popup.close();
                 }
             }
@@ -466,7 +468,7 @@ export component SpendingPage inherits VerticalLayout {
                 PrimaryButton {
                     text: @tr("Confirm");
                     clicked => {
-                        State.create-category-group(text-field.text);
+                        CategoryState.create-category-group(text-field.text);
                         popup.close();
                     }
                 }

@@ -108,7 +108,7 @@ pub fn run() -> Result<()> {
     let service = init_service(data_dir)?;
     let settings = SettingsStore::open(settings_dir.join("settings.toml"))?;
     let state = AppState::new(service)?;
-    controllers::bind_all(&main_window, &state, &settings);
+    controllers::bind_all(&main_window, &state, &settings)?;
 
     #[cfg(windows)]
     {

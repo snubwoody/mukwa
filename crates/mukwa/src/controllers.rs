@@ -10,11 +10,16 @@ use slint::{ComponentHandle, Model};
 mod analytics;
 mod api;
 mod calendar;
+mod category;
 mod global;
 mod import_csv;
 mod settings;
 
-pub fn bind_all(window: &MainWindow, state: &AppState, settings: &SettingsStore) {
+pub fn bind_all(
+    window: &MainWindow,
+    state: &AppState,
+    settings: &SettingsStore,
+) -> crate::Result<()> {
     calendar::bind(window);
     analytics::bind(window, state);
     settings::bind(window, settings.clone());
@@ -22,8 +27,10 @@ pub fn bind_all(window: &MainWindow, state: &AppState, settings: &SettingsStore)
     global::bind(window, state);
     api::bind(window);
     import_csv::bind(window, state);
+    category::bind(window, state)?;
 
     bind_combobox_api(window);
+    Ok(())
 }
 
 fn bind_combobox_api(window: &MainWindow) {
