@@ -2,6 +2,7 @@
 ## (unreleased)
 
 - Added support for filtering categories on the analytics page.
+- Fixed the left to budget amount not updating when editing budgets.
 
 ### Windows
 
