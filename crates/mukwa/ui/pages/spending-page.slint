@@ -23,6 +23,10 @@ import { IconSet } from "@lucide";
 import { Settings } from "../settings.slint";
 import { FontSize } from "../theme.slint";
 
+export global SpendingPageState {
+    in-out property <string> left-to-budget;
+}
+
 component CategoryItem inherits VerticalLayout {
     in property <Date> current-date;
     in property <Category> category;
@@ -47,6 +51,7 @@ component CategoryItem inherits VerticalLayout {
             clicked => {
                 State.delete-category(category.id);
                 parent.close();
+                SpendingPageState.left-to-budget = State.left-to-assign();
             }
         }
     }
@@ -120,7 +125,10 @@ component CategoryItem inherits VerticalLayout {
                 text: State.format-money(budget.amount,Settings.currency-code);
                 field-text: Api.format-money-without-symbol(budget.amount);
                 input-type: decimal;
-                accepted(value) => State.edit-budget(budget.id, value);
+                accepted(value) => {
+                    State.edit-budget(budget.id, value);
+                    SpendingPageState.left-to-budget = State.left-to-assign();
+                }
             }
 
             Text {
@@ -167,6 +175,7 @@ component CategoryGroupItem {
             clicked => {
                 State.delete-category-group(category-group.id);
                 parent.close();
+                SpendingPageState.left-to-budget = State.left-to-assign();
             }
         }
     }
@@ -334,9 +343,13 @@ component CategoryGroupItem {
 
 export component SpendingPage inherits VerticalLayout {
     in-out property <Date> current-date: CalendarState.today();
-    property <string> left-to-budget: State.left-to-assign();
+    property <string> left-to-budget: SpendingPageState.left-to-budget;
     alignment: start;
     spacing: 12px;
+
+    init => {
+        SpendingPageState.left-to-budget = State.left-to-assign();
+    }
 
     HorizontalLayout {
         spacing: 4px;
@@ -394,10 +407,10 @@ export component SpendingPage inherits VerticalLayout {
                 font-weight: FontWeight.semi-bold;
 
                 function helper-text() -> string {
-                    if Api.money-to-float(State.left-to-assign()) == 0 {
+                    if Api.money-to-float(left-to-budget) == 0 {
                         return @tr("Fully budgeted");
                     }
-                    if Api.money-to-float(State.left-to-assign()) < 0 {
+                    if Api.money-to-float(left-to-budget) < 0 {
                         return @tr("Overbudgeted");
                     }
                     return @tr("Ready to budget");
