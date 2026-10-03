@@ -34,13 +34,13 @@ component CategoryItem inherits VerticalLayout {
     property <Budget> budget: CategoryState.get-budget(category.id, current-date);
 
     function budget-progress() -> float {
-        if Api.money-to-float(budget.amount) <= 0 && Api.money-to-float(State.total-spent(budget.id)) > 0 {
+        if Api.money-to-float(budget.amount) <= 0 && Api.money-to-float(CategoryState.total-spent(budget.id)) > 0 {
             return 1;
         }
         if Api.money-to-float(budget.amount) <= 0 {
             return 0;
         }
-        return Math.max(Api.money-to-float(State.total-spent(budget.id)))
+        return Math.max(Api.money-to-float(CategoryState.total-spent(budget.id)))
             / Api.money-to-float(budget.amount);
     }
 
@@ -50,7 +50,6 @@ component CategoryItem inherits VerticalLayout {
         ContextMenuItem {
             text: @tr("Delete");
             clicked => {
-                //State.delete-category(category.id);
                 CategoryState.delete-category(category.id);
                 parent.close();
                 SpendingPageState.left-to-budget = CategoryState.left-to-assign();
@@ -96,17 +95,17 @@ component CategoryItem inherits VerticalLayout {
                         color: Colors.textBody;
 
                         function helper-text() -> string {
-                            if Api.money-to-float(State.total-spent(budget.id)) == Api.money-to-float(budget.amount) && Api.money-to-float(budget.amount) > 0 {
+                            if Api.money-to-float(CategoryState.total-spent(budget.id)) == Api.money-to-float(budget.amount) && Api.money-to-float(budget.amount) > 0 {
                                 return "Fully spent";
                             }
-                            if Api.money-to-float(State.total-spent(budget.id)) > Api.money-to-float(budget.amount) {
+                            if Api.money-to-float(CategoryState.total-spent(budget.id)) > Api.money-to-float(budget.amount) {
                                 return "Overspent "
-                                    + State.format-money(State.total-spent(budget.id),Settings.currency-code)
+                                    + State.format-money(CategoryState.total-spent(budget.id),Settings.currency-code)
                                     + " of "
                                     + State.format-money(budget.amount,Settings.currency-code);
                             }
                             return "Spent "
-                                + State.format-money(State.total-spent(budget.id),Settings.currency-code)
+                                + State.format-money(CategoryState.total-spent(budget.id),Settings.currency-code)
                                 + " of "
                                 + State.format-money(budget.amount,Settings.currency-code);
                         }
@@ -135,7 +134,7 @@ component CategoryItem inherits VerticalLayout {
 
             Text {
                 width: 100px;
-                text: State.format-money(State.total-spent(budget.id),Settings.currency-code);
+                text: State.format-money(CategoryState.total-spent(budget.id),Settings.currency-code);
                 color: Colors.textBody;
                 horizontal-alignment: end;
             }

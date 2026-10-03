@@ -7,6 +7,7 @@ import {
     State,
     Api,
     Category,
+    CategoryState,
 } from "../../globals.slint";
 import { FontSize } from "../../theme.slint";
 import {
@@ -321,7 +322,7 @@ component TransactionRow inherits TableRow {
 
     CategoryCell {
         width: parent.width / length;
-        category: State.get-category(transaction.category-id);
+        category: CategoryState.get-category(transaction.category-id);
         changed(value) => {
             State.set-transaction-category(transaction.id,value);
         }
