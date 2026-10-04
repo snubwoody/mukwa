@@ -473,13 +473,21 @@ mod test {
     use jiff::civil::date;
     use mukwa_core::service::{AccountType, CreateBudgetOpts};
 
-    #[test]
-    fn bind_properties() -> crate::Result<()> {
+    fn setup() -> crate::Result<(Service, CategoryState<'static>, MainWindow)> {
         i_slint_backend_testing::init_no_event_loop();
         let service = Service::open_in_memory()?;
-        let state = AppState::new(service)?;
+        let state = AppState::new(service.clone())?;
         let window = MainWindow::new()?;
         bind(&window, &state)?;
+        let category_state: CategoryState = window.global();
+        // Hack to make the lifetime static
+        let category_state = category_state.as_weak().unwrap();
+        Ok((service, category_state, window))
+    }
+
+    #[test]
+    fn bind_properties() -> crate::Result<()> {
+        let (_, _, window) = setup()?;
 
         let category_state = window.global::<CategoryState>();
         let current_month = category_state.get_current_month();
@@ -489,13 +497,8 @@ mod test {
 
     #[test]
     fn create_category_adds_to_combobox_list() -> crate::Result<()> {
-        i_slint_backend_testing::init_no_event_loop();
-        let service = Service::open_in_memory()?;
+        let (service, category_state, _) = setup()?;
         let group = service.create_category_group("")?;
-        let state = AppState::new(service)?;
-        let window = MainWindow::new()?;
-        bind(&window, &state)?;
-        let category_state = window.global::<CategoryState>();
         category_state.invoke_create_category("Entertainment".into(), group.id.to_shared_string());
         let combobox_options = category_state.get_category_options();
         assert_eq!(combobox_options.iter().len(), 1);
@@ -577,8 +580,7 @@ mod test {
 
     #[test]
     fn calculate_total_spent() -> crate::Result<()> {
-        i_slint_backend_testing::init_no_event_loop();
-        let service = Service::open_in_memory()?;
+        let (service, category_state, _) = setup()?;
         service.create_account("", AccountType::Cash)?;
         let group = service.create_category_group("")?;
         let category = service.create_category("", group.id)?;
@@ -592,10 +594,6 @@ mod test {
             category_id: category.id,
             ..Default::default()
         })?;
-        let state = AppState::new(service)?;
-        let window = MainWindow::new()?;
-        bind(&window, &state)?;
-        let category_state: CategoryState = window.global();
         let total = category_state.invoke_total_spent(budget.id.to_shared_string());
         assert_eq!(total, Money::new(500).to_shared_string());
         Ok(())
@@ -603,8 +601,7 @@ mod test {
 
     #[test]
     fn calculate_total_spent_only_includes_current_month() -> crate::Result<()> {
-        i_slint_backend_testing::init_no_event_loop();
-        let service = Service::open_in_memory()?;
+        let (service, category_state, _) = setup()?;
         service.create_account("", AccountType::Cash)?;
         let group = service.create_category_group("")?;
         let category = service.create_category(Default::default(), group.id)?;
@@ -623,10 +620,6 @@ mod test {
             category_id: category.id,
             ..Default::default()
         })?;
-        let state = AppState::new(service)?;
-        let window = MainWindow::new()?;
-        bind(&window, &state)?;
-        let category_state: CategoryState = window.global();
         let total = category_state.invoke_total_spent(budget.id.to_shared_string());
         assert_eq!(total, Money::new(500).to_shared_string());
         Ok(())
@@ -634,8 +627,7 @@ mod test {
 
     #[test]
     fn left_to_spend_caps_at_zero() -> crate::Result<()> {
-        i_slint_backend_testing::init_no_event_loop();
-        let service = Service::open_in_memory()?;
+        let (service, category_state, _) = setup()?;
         service.create_account("", AccountType::Cash)?;
         let group = service.create_category_group("")?;
         let category = service.create_category(Default::default(), group.id)?;
@@ -650,10 +642,6 @@ mod test {
             .date(Zoned::now().date())
             .category(category.id)
             .submit()?;
-        let state = AppState::new(service)?;
-        let window = MainWindow::new()?;
-        bind(&window, &state)?;
-        let category_state: CategoryState = window.global();
         let total = category_state.invoke_left_to_spend(budget.id.to_shared_string());
         assert_eq!(total, Money::ZERO.to_shared_string());
         Ok(())
