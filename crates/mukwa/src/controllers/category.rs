@@ -14,7 +14,7 @@ use slint::{
 };
 use std::rc::Rc;
 use std::str::FromStr;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 use uuid::Uuid;
 
 pub fn bind(window: &MainWindow, state: &AppState) -> crate::Result<()> {
@@ -42,6 +42,8 @@ pub fn bind(window: &MainWindow, state: &AppState) -> crate::Result<()> {
     category_state.set_categories(ModelRc::new(category_model));
     category_state.set_category_groups(ModelRc::new(category_group_model));
     category_state.set_budgets(ModelRc::new(budget_model));
+    // We can't map arrays in slint so we have to maintain duplicate arrays for comboboxes
+    // see <https://github.com/slint-ui/slint/issues/1328>
     category_state.set_category_options(ModelRc::new(category_options_model));
     category_state.set_current_month(Zoned::now().date().into());
 
@@ -313,11 +315,8 @@ fn load_budgets(state: &CategoryState, service: &Service) -> crate::Result<()> {
 fn delete_category(state: &CategoryState, service: &Service, id: &str) -> crate::Result<Uuid> {
     let id = Uuid::parse_str(id)?;
     service.delete_category(id)?;
-    //self.reset_budgets(self.current_budget_month)?;
-    // self.reset_categories()?;
-    load_categories(&state, &service)?;
-    // FIXME: find a way to reset transactions
-    //self.load_transactions()?;
+    load_categories(state, service)?;
+    load_budgets(state, service)?;
     Ok(id)
 }
 
@@ -328,9 +327,9 @@ fn delete_category_group(
 ) -> crate::Result<Uuid> {
     let id = Uuid::parse_str(id)?;
     service.delete_category_group(id)?;
-    load_budgets(&state, &service)?;
-    load_category_groups(&state, &service)?;
-    load_categories(&state, &service)?;
+    load_budgets(state, service)?;
+    load_category_groups(state, service)?;
+    load_categories(state, service)?;
     Ok(id)
 }
 
@@ -382,11 +381,9 @@ fn update_budget(
     let budget_id = Uuid::parse_str(id)?;
     let amount = Money::from_str(amount)?;
     service.update_budget(budget_id, amount)?;
-    // self.budgets.set_vec(budgets);
-    // self.reset_category_groups()?;
-
-    load_budgets(&state, &service)?;
-    load_categories(&state, &service)?;
+    load_budgets(state, service)?;
+    load_categories(state, service)?;
+    load_category_groups(state, service)?;
     Ok(())
 }
 
@@ -399,11 +396,12 @@ fn move_category(
     let id = Uuid::parse_str(id)?;
     let group_id = Uuid::parse_str(group_id)?;
     service.move_category(id, group_id)?;
-    load_categories(&state, &service)?;
-    load_category_groups(&state, &service)?;
-    load_budgets(&state, &service)?;
+    load_categories(state, service)?;
+    load_category_groups(state, service)?;
+    load_budgets(state, service)?;
     Ok(())
 }
+
 fn create_category(
     state: &CategoryState,
     service: &Service,
@@ -424,7 +422,7 @@ fn create_category(
         .get_category_options()
         .push_row(category.clone().into())?;
     state.get_categories().push_row(category.into())?;
-    load_budgets(&state, &service)?;
+    load_budgets(state, service)?;
     Ok(id)
 }
 
@@ -436,8 +434,8 @@ fn update_category(
 ) -> crate::Result<Uuid> {
     let id = Uuid::parse_str(id)?;
     service.update_category(id, title)?;
-    load_categories(&state, &service)?;
-    load_budgets(&state, &service)?;
+    load_categories(state, service)?;
+    load_budgets(state, service)?;
     Ok(id)
 }
 
@@ -450,9 +448,9 @@ fn update_category_group(
     let id = Uuid::parse_str(id)?;
     service.update_category_group(id, title)?;
     service.update_category(id, title)?;
-    load_categories(&state, &service)?;
-    load_category_groups(&state, &service)?;
-    load_budgets(&state, &service)?;
+    load_categories(state, service)?;
+    load_category_groups(state, service)?;
+    load_budgets(state, service)?;
     Ok(id)
 }
 
@@ -474,20 +472,6 @@ mod test {
     use super::*;
     use jiff::civil::date;
     use mukwa_core::service::{AccountType, CreateBudgetOpts};
-
-    fn setup_state(
-        f: impl FnOnce(&Service) -> crate::Result<()>,
-    ) -> crate::Result<(AppState, MainWindow)> {
-        i_slint_backend_testing::init_no_event_loop();
-        let service = Service::open_in_memory()?;
-        f(&service)?;
-
-        let state = AppState::new(service)?;
-        let window = MainWindow::new()?;
-        bind(&window, &state)?;
-
-        Ok((state, window))
-    }
 
     #[test]
     fn bind_properties() -> crate::Result<()> {

@@ -3,7 +3,7 @@
 
 import { Colors } from "../colors.slint";
 import { FontSize } from "../theme.slint";
-import { State, Api } from "../globals.slint";
+import { State, Api, CategoryState } from "../globals.slint";
 import { Settings } from "../settings.slint";
 import { IconButton, Button, PrimaryButton } from "../widgets.slint";
 import { IconSet } from "@lucide";
@@ -113,7 +113,7 @@ component CategoryFilter {
             cross-axis-alignment: start;
             padding: 12px;
 
-            for category[index] in State.categories: HorizontalLayout {
+            for category[index] in CategoryState.categories: HorizontalLayout {
                 cross-axis-alignment: center;
                 spacing: 8px;
                 Checkbox {
@@ -141,10 +141,10 @@ component CategoryFilter {
             if filters.length == 0 {
                 return @tr("All categories");
             }
-            if State.categories.length - filters.length == 1 {
+            if CategoryState.categories.length - filters.length == 1 {
                 return @tr("1 category");
             }
-            return State.categories.length - filters.length + " categories";
+            return CategoryState.categories.length - filters.length + " categories";
         }
         clicked => {
             popup.show();
@@ -174,7 +174,7 @@ export component AnalyticsPage inherits HorizontalLayout {
                 cross-axis-alignment: center;
                 spacing: 12px;
 
-                if State.categories.length > 0: CategoryFilter {
+                if CategoryState.categories.length > 0: CategoryFilter {
                     filters: AnalyticsApi.filtered-categories;
                     filter-category(value) => {
                         AnalyticsApi.filter-category(value);

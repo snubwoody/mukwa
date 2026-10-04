@@ -109,7 +109,6 @@ export global State {
     callback duplicate-transaction(id: string);
     callback delete-transaction(id: string);
     callback confirm-transaction(id: string);
-    callback set-current-budget-month(Date);
     callback set-transaction-date(id: string, date: string);
     callback set-transaction-account(id: string, account-id: string);
     callback set-transaction-payee(id: string, account-id: string);
@@ -131,17 +130,11 @@ export global State {
     pure callback format-money(value: string, currency-code: string) -> string;
 
     in-out property <[Transaction]> transactions;
-    in-out property <[Category]> categories;
-    in-out property <[CategoryGroup]> category-groups;
-    in-out property <[Budget]> budgets;
     // Account options for combo boxes
     in-out property <[ComboBoxItem]> account-options;
-    // Category options for combo boxes
-    in-out property <[ComboBoxItem]> category-options;
     // All the supported currencies
     in-out property <[ComboBoxItem]> currency-options;
     // All the system fonts (that we found)
     in-out property <[ComboBoxItem]> font-options;
     in-out property <[Account]> accounts;
-    in-out property <string> left-to-budget;
 }

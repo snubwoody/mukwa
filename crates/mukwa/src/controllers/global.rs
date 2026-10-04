@@ -9,9 +9,7 @@ use jiff::civil::Date;
 use mukwa_core::fmt::CurrencyFormatter;
 use mukwa_core::service::{Service, TransactionType};
 use mukwa_core::{Currency, Money, fmt};
-use slint::{
-    ComponentHandle, DataTransfer, Model, ModelRc, SharedString, ToSharedString, VecModel,
-};
+use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::collections::HashSet;
 use std::rc::Rc;
 use std::str::FromStr;
@@ -58,9 +56,6 @@ pub fn bind(window: &MainWindow, state: &AppState) {
     let fonts_model_rc = ModelRc::new(fonts_model);
     let transactions_model_rc = ModelRc::new(state.transactions());
     let accounts_model_rc = ModelRc::new(state.accounts());
-    let categories_model_rc = ModelRc::new(state.categories());
-    let category_groups_model_rc = ModelRc::new(state.category_groups());
-    let budgets_model_rc = ModelRc::new(state.budgets());
     let account_options_rc = ModelRc::new(state.account_options());
 
     let global_state = window.global::<ui::State>();
@@ -69,12 +64,8 @@ pub fn bind(window: &MainWindow, state: &AppState) {
     global_state.set_font_options(fonts_model_rc);
     global_state.set_transactions(transactions_model_rc);
     global_state.set_accounts(accounts_model_rc);
-    global_state.set_categories(categories_model_rc);
-    global_state.set_category_groups(category_groups_model_rc);
-    global_state.set_budgets(budgets_model_rc);
 
     global_state.set_account_options(account_options_rc);
-    global_state.set_category_options(ModelRc::new(state.category_options()));
 
     global_state.on_is_transaction_unconfirmed({
         let state = state.clone();
@@ -140,17 +131,6 @@ pub fn bind(window: &MainWindow, state: &AppState) {
         move |id| {
             if let Err(err) = state.delete_account(&id) {
                 warn!("Failed to delete account: {err}")
-            }
-        }
-    });
-
-    global_state.on_set_current_budget_month({
-        let mut state = state.clone();
-        move |date| {
-            let date = Date::new(date.year as i16, date.month as i8, date.day as i8)
-                .unwrap_or(Zoned::now().date());
-            if let Err(err) = state.set_current_budget_month(date) {
-                warn!("{err}")
             }
         }
     });
