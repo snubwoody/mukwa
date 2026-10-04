@@ -422,6 +422,7 @@ component NewTransactionRow inherits VerticalLayout {
         PayeeCell {
             width: parent.width / length;
             transaction: transaction;
+            active-account-id: active-account-id;
             changed(value) => {
                 transaction.payee-id = value;
             }
@@ -430,8 +431,10 @@ component NewTransactionRow inherits VerticalLayout {
         CategoryCell {
             width: parent.width / length;
             transaction: transaction;
+            category: CategoryState.get-category(transaction.category-id);
             changed(value) => {
                 transaction.category-id = value;
+                transaction.transaction-type = transfer;
             }
         }
 
