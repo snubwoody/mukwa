@@ -46,6 +46,17 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.2.1" date="2026-10-04">
+          <url type="details">https://github.com/snubwoody/mukwa/blob/main/CHANGELOG.md#021---2026-10-04</url>
+          <description>
+              <ul>
+                  <li>Added support for filtering categories on the analytics page.</li>
+                  <li>Fixed the left to budget amount not updating when editing budgets.</li>
+                  <li>Windows: Fixed the title bar not maximising when double-clicked.</li>
+                  <li>Windows: Fixed minimise window button closing the window. </li>
+              </ul>
+          </description>
+        </release>
         <release version="0.2.0" date="2026-09-21">
           <url type="details">https://github.com/snubwoody/mukwa/blob/main/CHANGELOG.md#020---2026-09-21</url>
           <description>
