@@ -38,4 +38,12 @@ modules:
         url: https://github.com/rust-skia/skia-binaries/releases/download/0.153.3/skia-binaries-b7f043e0b1e2a850e702-x86_64-unknown-linux-gnu-ganesh-gl-jpegd-jpege-pdf-vulkan.tar.gz
         dest-filename: skia-binaries.tar.gz
         sha256: 9ebe4c448cc9f789bad241cbd11739cdf759e27db5719c23a7635e096d5807b3
+        only-arches:
+          - x86_64
+      - type: file
+        url: https://github.com/rust-skia/skia-binaries/releases/download/0.153.3/skia-binaries-b7f043e0b1e2a850e702-aarch64-unknown-linux-gnu-ganesh-gl-jpegd-jpege-pdf-vulkan.tar.gz
+        dest-filename: skia-binaries.tar.gz
+        sha256: 82da2256fd0ce9419527f72ca4e9858a13c14d23073da1e618dc596397f65560
+        only-arches:
+          - aarch64
       - cargo-sources.json

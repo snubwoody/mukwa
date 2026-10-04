@@ -13,6 +13,7 @@ temp/
 # Build output
 .build/
 build/
+builddir/
 target/
 cargo-sources.json
 vendor/
