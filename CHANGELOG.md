@@ -1,12 +1,12 @@
 
-## (unreleased)
+## 0.2.1 - 2026-10-04
 
 - Added support for filtering categories on the analytics page.
 - Fixed the left to budget amount not updating when editing budgets.
 
 ### Windows
 
-- Fixed title bar not maximising when double clicked.
+- Fixed the title bar not maximising when double-clicked.
 - Fixed minimise window button closing the window. 
 
 ## 0.2.0 - 2026-09-21
