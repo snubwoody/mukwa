@@ -23,8 +23,7 @@ pub fn bind(window: &ui::MainWindow) {
     });
 
     calendar_state.on_increment_week(|date| {
-        let result = Date::new(date.year as i16, date.month as i8, date.day as i8);
-        if let Ok(date) = result {
+        if let Ok(date) = Date::try_from(date) {
             let date = date.saturating_add(1.week());
             return date.into();
         }
@@ -96,4 +95,55 @@ pub fn bind(window: &ui::MainWindow) {
             }
         }
     });
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::ui::{CalendarState, MainWindow};
+
+    #[test]
+    fn increment_week() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        bind(&window);
+        let test_date = |date: ui::Date, expected: ui::Date| {
+            let calendar_state = window.global::<CalendarState>();
+            let date = calendar_state.invoke_increment_week(date);
+            assert_eq!(date, expected);
+        };
+        test_date(
+            ui::Date {
+                day: 1,
+                month: 1,
+                year: 2020,
+            },
+            ui::Date {
+                day: 8,
+                month: 1,
+                year: 2020,
+            },
+        );
+        test_date(
+            ui::Date {
+                day: 25,
+                month: 3,
+                year: 2020,
+            },
+            ui::Date {
+                day: 1,
+                month: 4,
+                year: 2020,
+            },
+        );
+        test_date(
+            ui::Date {
+                day: 23,
+                month: 3,
+                year: -24242,
+            },
+            Zoned::now().date().into(),
+        );
+        Ok(())
+    }
 }

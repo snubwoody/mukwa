@@ -2,29 +2,22 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use crate::ui;
-use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::Money;
 use mukwa_core::service::{AccountType, Service, Transaction};
 use slint::{Model, SharedString, ToSharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
-use tracing::{debug, info};
+use tracing::info;
 use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct AppState {
     service: Service,
     accounts: Rc<VecModel<ui::Account>>,
-    categories: Rc<VecModel<ui::Category>>,
-    category_groups: Rc<VecModel<ui::CategoryGroup>>,
-    current_budget_month: Date,
-    /// The budgets of the active month.
-    budgets: Rc<VecModel<ui::Budget>>,
     // We can't map arrays in slint so we have to maintain duplicate arrays for comboboxes
     // see <https://github.com/slint-ui/slint/issues/1328>
     account_options: Rc<VecModel<ui::ComboBoxItem>>,
-    category_options: Rc<VecModel<ui::ComboBoxItem>>,
     transactions: Rc<VecModel<ui::Transaction>>,
 }
 
@@ -37,24 +30,6 @@ impl AppState {
 
         let transactions_model = Rc::new(VecModel::from(transactions_list));
 
-        let categories = service.fetch_categories()?;
-        let category_list: Vec<ui::Category> = categories.iter().map(|c| c.into()).collect();
-        let category_options: Vec<ui::ComboBoxItem> = categories.iter().map(|c| c.into()).collect();
-        let category_groups = service.fetch_category_groups()?;
-        let category_group_list: Vec<ui::CategoryGroup> =
-            category_groups.iter().map(|c| c.into()).collect();
-
-        let category_model = Rc::new(VecModel::from(category_list));
-        let category_group_model = Rc::new(VecModel::from(category_group_list));
-        let category_options_model = Rc::new(VecModel::from(category_options));
-
-        let budgets_list: Vec<ui::Budget> = service
-            .fetch_budgets_by_month(Zoned::now().date())?
-            .iter()
-            .map(|b| b.into())
-            .collect();
-        let budget_model = Rc::new(VecModel::from(budgets_list));
-
         let accounts = service.fetch_accounts()?;
         let account_list: Vec<ui::Account> = accounts.iter().map(|a| a.into()).collect();
         let account_options: Vec<ui::ComboBoxItem> = accounts.iter().map(|a| a.into()).collect();
@@ -65,13 +40,8 @@ impl AppState {
         let mut state = AppState {
             service,
             accounts: accounts_model,
-            categories: category_model,
-            category_groups: category_group_model,
-            current_budget_month: Zoned::now().date(),
             account_options: account_options_model,
             transactions: transactions_model,
-            category_options: category_options_model,
-            budgets: budget_model,
         };
 
         state.load_accounts()?;
@@ -90,24 +60,8 @@ impl AppState {
         self.accounts.clone()
     }
 
-    pub fn categories(&self) -> Rc<VecModel<ui::Category>> {
-        self.categories.clone()
-    }
-
-    pub fn category_groups(&self) -> Rc<VecModel<ui::CategoryGroup>> {
-        self.category_groups.clone()
-    }
-
-    pub fn budgets(&self) -> Rc<VecModel<ui::Budget>> {
-        self.budgets.clone()
-    }
-
     pub fn account_options(&self) -> Rc<VecModel<ui::ComboBoxItem>> {
         self.account_options.clone()
-    }
-
-    pub fn category_options(&self) -> Rc<VecModel<ui::ComboBoxItem>> {
-        self.category_options.clone()
     }
 
     /// Creates a new account.
@@ -148,34 +102,6 @@ impl AppState {
         self.load_transactions()?;
         self.load_accounts()?;
         self.account_options.push(account.into());
-        Ok(())
-    }
-
-    pub fn set_current_budget_month(&mut self, date: Date) -> crate::Result<()> {
-        self.current_budget_month = date;
-        self.reset_budgets(date)?;
-        Ok(())
-    }
-
-    /// Creates a new category.
-    pub fn create_category(&mut self, title: &str, group_id: &str) -> crate::Result<()> {
-        let group_id = Uuid::parse_str(group_id)?;
-        let category = self.service.create_category(title, group_id)?;
-        info!(id=?category.id,"Created new category");
-
-        self.reset_budgets(self.current_budget_month)?;
-        self.category_options.push(category.clone().into());
-        self.categories.push(category.into());
-        Ok(())
-    }
-
-    /// Creates a new category group.
-    pub fn create_category_group(&mut self, title: &str) -> crate::Result<()> {
-        let category_group = self.service.create_category_group(title)?;
-        info!(id=?category_group.id,"Created new category group");
-
-        self.reset_budgets(self.current_budget_month)?;
-        self.category_groups.push(category_group.into());
         Ok(())
     }
 
@@ -260,34 +186,14 @@ impl AppState {
         Ok(())
     }
 
-    pub fn delete_category(&mut self, id: &str) -> crate::Result<()> {
-        let id = Uuid::parse_str(id)?;
-        self.service.delete_category(id)?;
-        info!("Deleted category {id}");
-        self.reset_budgets(self.current_budget_month)?;
-        self.reset_categories()?;
-        self.load_transactions()?;
-        Ok(())
-    }
-
     pub fn delete_account(&mut self, id: &str) -> crate::Result<()> {
         let id = Uuid::parse_str(id)?;
         self.service.delete_account(id)?;
         info!("Deleted account {id}");
-        self.reset_budgets(self.current_budget_month)?;
-        self.reset_categories()?;
+        // FIXME
+        //self.reset_budgets(self.current_budget_month)?;
+        //self.reset_categories()?;
         self.load_accounts()?;
-        self.load_transactions()?;
-        Ok(())
-    }
-
-    pub fn delete_category_group(&mut self, id: &str) -> crate::Result<()> {
-        let id = Uuid::parse_str(id)?;
-        self.service.delete_category_group(id)?;
-        info!("Deleted category group {id}");
-        self.reset_budgets(self.current_budget_month)?;
-        self.reset_category_groups()?;
-        self.reset_categories()?;
         self.load_transactions()?;
         Ok(())
     }
@@ -304,96 +210,6 @@ impl AppState {
     pub fn account_balance(&self, id: &str) -> crate::Result<Money> {
         let id = Uuid::parse_str(id)?;
         self.service.account_balance(id)
-    }
-
-    pub fn total_spent(&self, id: &str) -> crate::Result<Money> {
-        let id = Uuid::parse_str(id)?;
-        let budget = self.service.get_budget(id)?;
-        let date = Date::new(budget.year as i16, budget.month as i8, 1)?;
-        self.service.total_spent(budget.category_id, date)
-    }
-
-    pub fn total_spent_in_group(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
-        let id = Uuid::parse_str(id)?;
-        let date = Date::new(date.year as i16, date.month as i8, date.day as i8)?;
-        let total = self.service.total_spent_in_group(id, date)?;
-        Ok(total)
-    }
-
-    pub fn total_assigned_in_group(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
-        let id = Uuid::parse_str(id)?;
-        let date = Date::new(date.year as i16, date.month as i8, date.day as i8)?;
-        let total = self.service.total_assigned_in_group(id, date)?;
-        Ok(total)
-    }
-
-    pub fn left_to_spend(&self, id: &str) -> crate::Result<Money> {
-        let total = self.total_spent(id)?;
-        let id = Uuid::parse_str(id)?;
-        let budget = self.service.get_budget(id)?;
-        let available = budget.amount - total;
-        Ok(available.max(Money::ZERO))
-    }
-
-    pub fn left_to_spend_in_group(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
-        let total = self.total_spent_in_group(id, date.clone())?;
-        let id = Uuid::parse_str(id)?;
-        let date = Date::new(date.year as i16, date.month as i8, date.day as i8)?;
-        let assigned = self.service.total_assigned_in_group(id, date)?;
-        let available = assigned - total;
-        Ok(available.max(Money::ZERO))
-    }
-
-    pub fn move_category(&mut self, id: &str, group_id: &str) -> crate::Result<()> {
-        let id = Uuid::parse_str(id)?;
-        let group_id = Uuid::parse_str(group_id)?;
-        self.service.move_category(id, group_id)?;
-        self.reset_budgets(self.current_budget_month)?;
-        self.reset_category_groups()?;
-        self.reset_categories()?;
-        debug!("Moved category {id} into group {group_id}");
-        Ok(())
-    }
-
-    pub fn update_budget(&mut self, id: &str, amount: &str) -> crate::Result<()> {
-        let budget_id = Uuid::parse_str(id)?;
-        let amount = Money::from_str(amount)?;
-        let new_budget = self.service.update_budget(budget_id, amount)?;
-        info!(id=?id,"Updated budget");
-        let budgets: Vec<ui::Budget> = self
-            .budgets
-            .iter()
-            .map(|budget| {
-                if budget.id == new_budget.id.to_shared_string() {
-                    new_budget.into()
-                } else {
-                    budget
-                }
-            })
-            .collect();
-        self.budgets.set_vec(budgets);
-        self.reset_categories()?;
-        self.reset_category_groups()?;
-        Ok(())
-    }
-
-    pub fn update_category(&mut self, id: &str, title: &str) -> crate::Result<()> {
-        let id = Uuid::parse_str(id)?;
-        self.service.update_category(id, title)?;
-        info!(id=?id,"Updated category");
-        self.reset_categories()?;
-        self.reset_budgets(self.current_budget_month)?;
-        Ok(())
-    }
-
-    pub fn update_category_group(&mut self, id: &str, title: &str) -> crate::Result<()> {
-        let id = Uuid::parse_str(id)?;
-        self.service.update_category_group(id, title)?;
-        info!(id=?id,"Updated category group");
-        self.reset_categories()?;
-        self.reset_category_groups()?;
-        self.reset_budgets(self.current_budget_month)?;
-        Ok(())
     }
 
     pub fn set_transaction_date(&mut self, id: &str, date: &str) -> crate::Result<()> {
@@ -478,17 +294,6 @@ impl AppState {
         self.transactions.set_vec(transactions);
     }
 
-    fn reset_budgets(&mut self, month: Date) -> crate::Result<()> {
-        let budgets_list: Vec<ui::Budget> = self
-            .service
-            .fetch_or_init_budgets(month)?
-            .iter()
-            .map(|b| b.into())
-            .collect();
-        self.budgets.set_vec(budgets_list);
-        Ok(())
-    }
-
     fn load_accounts(&mut self) -> crate::Result<()> {
         let accounts = self.service.fetch_accounts()?;
         let mut account_list = vec![];
@@ -505,33 +310,11 @@ impl AppState {
         Ok(())
     }
 
-    fn reset_categories(&mut self) -> crate::Result<()> {
-        let categories: Vec<ui::Category> = self
-            .service
-            .fetch_categories()?
-            .iter()
-            .map(|c| c.into())
-            .collect();
-        self.categories.set_vec(categories);
-        Ok(())
-    }
-
     pub(crate) fn load_transactions(&self) -> crate::Result<()> {
         let mut transactions = self.service.fetch_transactions()?;
         transactions.sort_by(|a, b| a.date.cmp(&b.date).reverse());
         let transactions: Vec<ui::Transaction> = transactions.iter().map(|t| t.into()).collect();
         self.transactions.set_vec(transactions);
-        Ok(())
-    }
-
-    fn reset_category_groups(&mut self) -> crate::Result<()> {
-        let groups: Vec<ui::CategoryGroup> = self
-            .service
-            .fetch_category_groups()?
-            .iter()
-            .map(|b| b.into())
-            .collect();
-        self.category_groups.set_vec(groups);
         Ok(())
     }
 
@@ -546,8 +329,8 @@ mod test {
     use crate::state::AppState;
     use crate::ui::CreateTransactionOpts;
     use jiff::Zoned;
-    use jiff::civil::date;
-    use mukwa_core::service::{AccountType, CreateBudgetOpts, Service};
+
+    use mukwa_core::service::{AccountType, Service};
     use mukwa_core::{Money, create_test_db};
     use slint::{Model, SharedString, ToSharedString};
 
@@ -715,40 +498,6 @@ mod test {
     }
 
     #[test]
-    fn create_category_creates_a_budget() -> crate::Result<()> {
-        let connection = create_test_db();
-        let service = Service::new(connection);
-        let group = service.create_category_group("")?;
-        let mut state = AppState::new(service.clone())?;
-
-        state.create_category("Groceries", &group.id.to_string())?;
-
-        let categories = service.fetch_categories()?;
-        let budgets = service.fetch_budgets_by_month(Zoned::now().date())?;
-        assert_eq!(budgets.len(), 1);
-        assert_eq!(budgets[0].category_id, categories[0].id);
-        Ok(())
-    }
-
-    #[test]
-    fn create_category_creates_a_budget_in_current_month() -> crate::Result<()> {
-        let connection = create_test_db();
-        let service = Service::new(connection);
-        let group = service.create_category_group("")?;
-        let mut state = AppState::new(service.clone())?;
-
-        state.set_current_budget_month(date(2020, 1, 1))?;
-        state.create_category("Groceries", &group.id.to_string())?;
-        let categories = service.fetch_categories()?;
-        let budgets = service.fetch_budgets_by_month(date(2020, 1, 1))?;
-        assert_eq!(budgets.len(), 1);
-        assert_eq!(budgets[0].year, 2020);
-        assert_eq!(budgets[0].month, 1);
-        assert_eq!(budgets[0].category_id, categories[0].id);
-        Ok(())
-    }
-
-    #[test]
     fn create_account_adds_to_account_list() -> crate::Result<()> {
         let service = Service::open_in_memory()?;
         let accounts = service.fetch_accounts()?;
@@ -791,19 +540,6 @@ mod test {
     }
 
     #[test]
-    fn create_category_group_adds_to_list() -> crate::Result<()> {
-        let service = Service::open_in_memory()?;
-        let groups = service.fetch_category_groups()?;
-        let len = groups.len();
-        let mut state = AppState::new(service)?;
-        state.create_category_group("")?;
-        state.create_category_group("")?;
-
-        assert_eq!(state.category_groups().iter().len(), len + 2);
-        Ok(())
-    }
-
-    #[test]
     fn create_account_adds_to_account_options() -> crate::Result<()> {
         let service = Service::open_in_memory()?;
         let accounts = service.fetch_accounts()?;
@@ -831,90 +567,6 @@ mod test {
         let state = AppState::new(service)?;
         assert_eq!(state.transactions().iter().len(), 3);
         assert_eq!(state.accounts().iter().len(), 2);
-        Ok(())
-    }
-
-    #[test]
-    fn state_loads_categories_from_service() -> crate::Result<()> {
-        let service = Service::open_in_memory()?;
-        let group = service.create_category_group("")?;
-        service.create_category(Default::default(), group.id)?;
-        service.create_category(Default::default(), group.id)?;
-
-        let state = AppState::new(service)?;
-        assert_eq!(state.categories().iter().len(), 2);
-        Ok(())
-    }
-
-    #[test]
-    fn calculate_total_spent() -> crate::Result<()> {
-        let service = Service::open_in_memory()?;
-        service.create_account("", AccountType::Cash)?;
-        let group = service.create_category_group("")?;
-        let category = service.create_category("", group.id)?;
-        service
-            .create_expense()
-            .amount(Money::new(500))
-            .category(category.id)
-            .submit()?;
-
-        let budget = service.create_budget(CreateBudgetOpts {
-            category_id: category.id,
-            ..Default::default()
-        })?;
-        let state = AppState::new(service)?;
-        let total = state.total_spent(budget.id.to_string().as_str())?;
-        assert_eq!(total, Money::new(500));
-        Ok(())
-    }
-
-    #[test]
-    fn calculate_total_spent_only_includes_current_month() -> crate::Result<()> {
-        let service = Service::open_in_memory()?;
-        service.create_account("", AccountType::Cash)?;
-        let group = service.create_category_group("")?;
-        let category = service.create_category(Default::default(), group.id)?;
-        service
-            .create_expense()
-            .amount(Money::new(500))
-            .category(category.id)
-            .submit()?;
-        service
-            .create_expense()
-            .amount(Money::new(500))
-            .category(category.id)
-            .date(date(1990, 1, 1))
-            .submit()?;
-        let budget = service.create_budget(CreateBudgetOpts {
-            category_id: category.id,
-            ..Default::default()
-        })?;
-        let state = AppState::new(service)?;
-        let total = state.total_spent(budget.id.to_string().as_str())?;
-        assert_eq!(total, Money::new(500));
-        Ok(())
-    }
-
-    #[test]
-    fn left_to_spend_caps_at_zero() -> crate::Result<()> {
-        let service = Service::open_in_memory()?;
-        service.create_account("", AccountType::Cash)?;
-        let group = service.create_category_group("")?;
-        let category = service.create_category(Default::default(), group.id)?;
-        let budget = service.create_budget(CreateBudgetOpts {
-            category_id: category.id,
-            amount: Some(Money::new(200)),
-            month: Some(Zoned::now().date()),
-        })?;
-        service
-            .create_expense()
-            .amount(Money::new(500))
-            .date(Zoned::now().date())
-            .category(category.id)
-            .submit()?;
-        let state = AppState::new(service)?;
-        let total = state.left_to_spend(budget.id.to_string().as_str())?;
-        assert_eq!(total, Money::ZERO);
         Ok(())
     }
 }

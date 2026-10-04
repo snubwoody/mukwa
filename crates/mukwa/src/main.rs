@@ -108,7 +108,7 @@ pub fn run() -> Result<()> {
     let service = init_service(data_dir)?;
     let settings = SettingsStore::open(settings_dir.join("settings.toml"))?;
     let state = AppState::new(service)?;
-    controllers::bind_all(&main_window, &state, &settings);
+    controllers::bind_all(&main_window, &state, &settings)?;
 
     #[cfg(windows)]
     {
@@ -158,7 +158,7 @@ mod test {
         let state = AppState::new(service)?;
         let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
         let window = MainWindow::new()?;
-        controllers::bind_all(&window, &state, &settings);
+        controllers::bind_all(&window, &state, &settings)?;
         let global_state = window.global::<ui::State>();
         let total = global_state.invoke_total_spent_all(Zoned::now().date().into());
         assert_eq!(total, Money::new(700).to_shared_string());
@@ -190,7 +190,7 @@ mod test {
         let window = MainWindow::new()?;
         let state = AppState::new(service)?;
         let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
-        controllers::bind_all(&window, &state, &settings);
+        controllers::bind_all(&window, &state, &settings)?;
         let global_state = window.global::<ui::State>();
         let total = global_state.invoke_total_spent_all(date);
         assert_eq!(total, Money::new(500).to_shared_string());
@@ -228,7 +228,7 @@ mod test {
         let window = MainWindow::new()?;
         let state = AppState::new(service)?;
         let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
-        controllers::bind_all(&window, &state, &settings);
+        controllers::bind_all(&window, &state, &settings)?;
         let analytics = window.global::<ui::AnalyticsApi>();
         let date = Zoned::now().date() - 1.month();
         let slices = analytics.invoke_draw_pie_chart(500.0, 500.0, date.into());
@@ -269,7 +269,7 @@ mod test {
         let window = MainWindow::new()?;
         let state = AppState::new(service)?;
         let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
-        controllers::bind_all(&window, &state, &settings);
+        controllers::bind_all(&window, &state, &settings)?;
         let analytics = window.global::<ui::AnalyticsApi>();
         let pie_slices = analytics.invoke_draw_pie_chart(500.0, 500.0, Zoned::now().date().into());
         let mut slices = pie_slices.iter();

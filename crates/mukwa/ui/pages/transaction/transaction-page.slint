@@ -7,6 +7,7 @@ import {
     State,
     Api,
     Category,
+    CategoryState,
 } from "../../globals.slint";
 import { FontSize } from "../../theme.slint";
 import {
@@ -18,7 +19,7 @@ import {
     ContextMenuItem,
     IconButton,
 } from "../../widgets.slint";
-import { Calendar, Date } from "../../widgets/calendar.slint";
+import { Calendar, Date, CalendarState } from "../../widgets/calendar.slint";
 import { Table, TableRow, TableCell } from "../../widgets/tableview.slint";
 import { Settings } from "../../settings.slint";
 import { IconSet, IconDisplay } from "@lucide";
@@ -202,7 +203,7 @@ component CategoryCell inherits TableCell {
 
     if self.is-editing: ComboBox {
         width: 100%;
-        options: State.category-options;
+        options: CategoryState.category-options;
         current-value: category.id;
         init => {
             self.open();
@@ -321,7 +322,7 @@ component TransactionRow inherits TableRow {
 
     CategoryCell {
         width: parent.width / length;
-        category: State.get-category(transaction.category-id);
+        category: CategoryState.get-category(transaction.category-id);
         changed(value) => {
             State.set-transaction-category(transaction.id,value);
         }

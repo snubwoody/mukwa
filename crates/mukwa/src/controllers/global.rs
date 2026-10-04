@@ -9,10 +9,7 @@ use jiff::civil::Date;
 use mukwa_core::fmt::CurrencyFormatter;
 use mukwa_core::service::{Service, TransactionType};
 use mukwa_core::{Currency, Money, fmt};
-use slint::ModelExt;
-use slint::{
-    ComponentHandle, DataTransfer, Model, ModelRc, SharedString, ToSharedString, VecModel,
-};
+use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::collections::HashSet;
 use std::rc::Rc;
 use std::str::FromStr;
@@ -59,9 +56,6 @@ pub fn bind(window: &MainWindow, state: &AppState) {
     let fonts_model_rc = ModelRc::new(fonts_model);
     let transactions_model_rc = ModelRc::new(state.transactions());
     let accounts_model_rc = ModelRc::new(state.accounts());
-    let categories_model_rc = ModelRc::new(state.categories());
-    let category_groups_model_rc = ModelRc::new(state.category_groups());
-    let budgets_model_rc = ModelRc::new(state.budgets());
     let account_options_rc = ModelRc::new(state.account_options());
 
     let global_state = window.global::<ui::State>();
@@ -70,24 +64,8 @@ pub fn bind(window: &MainWindow, state: &AppState) {
     global_state.set_font_options(fonts_model_rc);
     global_state.set_transactions(transactions_model_rc);
     global_state.set_accounts(accounts_model_rc);
-    global_state.set_categories(categories_model_rc);
-    global_state.set_category_groups(category_groups_model_rc);
-    global_state.set_budgets(budgets_model_rc);
 
     global_state.set_account_options(account_options_rc);
-    global_state.set_category_options(ModelRc::new(state.category_options()));
-
-    global_state.on_left_to_assign({
-        let state = state.clone();
-        move || {
-            state
-                .service()
-                .left_to_assign()
-                .inspect_err(|err| warn!("Error calculating left to assign: {err}"))
-                .unwrap_or_default()
-                .to_shared_string()
-        }
-    });
 
     global_state.on_is_transaction_unconfirmed({
         let state = state.clone();
@@ -128,43 +106,6 @@ pub fn bind(window: &MainWindow, state: &AppState) {
         }
     });
 
-    global_state.on_get_category({
-        let state = state.clone();
-        move |id| {
-            state
-                .categories()
-                .iter()
-                .find(|c| c.id == id)
-                .unwrap_or_default()
-        }
-    });
-
-    global_state.on_categories_in_group({
-        let state = state.clone();
-        move |group_id| {
-            let filtered_categories = state
-                .categories()
-                .filter(move |category| category.group_id == group_id);
-
-            ModelRc::new(filtered_categories)
-        }
-    });
-
-    global_state.on_get_budget({
-        let state = state.clone();
-        move |category_id, date| {
-            state
-                .budgets()
-                .iter()
-                .find(|budget| {
-                    budget.category_id == category_id
-                        && budget.month == date.month
-                        && budget.year == date.year
-                })
-                .unwrap_or_default()
-        }
-    });
-
     global_state.on_get_account({
         let state = state.clone();
         move |id| {
@@ -185,58 +126,11 @@ pub fn bind(window: &MainWindow, state: &AppState) {
         }
     });
 
-    global_state.on_create_category({
-        let mut state = state.clone();
-        move |title, group_id| {
-            if let Err(err) = state.create_category(&title, &group_id) {
-                warn!("Failed to create category: {err}")
-            }
-        }
-    });
-
-    global_state.on_delete_category({
-        let mut state = state.clone();
-        move |id| {
-            if let Err(err) = state.delete_category(&id) {
-                warn!("Failed to delete category: {err}")
-            }
-        }
-    });
-
     global_state.on_delete_account({
         let mut state = state.clone();
         move |id| {
             if let Err(err) = state.delete_account(&id) {
                 warn!("Failed to delete account: {err}")
-            }
-        }
-    });
-
-    global_state.on_delete_category_group({
-        let mut state = state.clone();
-        move |id| {
-            if let Err(err) = state.delete_category_group(&id) {
-                warn!("Failed to delete category group: {err}")
-            }
-        }
-    });
-
-    global_state.on_create_category_group({
-        let mut state = state.clone();
-        move |title| {
-            if let Err(err) = state.create_category_group(&title) {
-                warn!("{err}")
-            }
-        }
-    });
-
-    global_state.on_set_current_budget_month({
-        let mut state = state.clone();
-        move |date| {
-            let date = Date::new(date.year as i16, date.month as i8, date.day as i8)
-                .unwrap_or(Zoned::now().date());
-            if let Err(err) = state.set_current_budget_month(date) {
-                warn!("{err}")
             }
         }
     });
@@ -327,28 +221,6 @@ pub fn bind(window: &MainWindow, state: &AppState) {
         }
     });
 
-    global_state.on_total_spent({
-        let state = state.clone();
-        move |id| match state.total_spent(&id) {
-            Ok(total) => total.to_shared_string(),
-            Err(err) => {
-                warn!("Failed to calculate total spent: {err}");
-                Money::ZERO.to_shared_string()
-            }
-        }
-    });
-
-    global_state.on_total_spent_in_group({
-        let state = state.clone();
-        move |id, date| match state.total_spent_in_group(&id, date) {
-            Ok(total) => total.to_shared_string(),
-            Err(err) => {
-                warn!("Failed to calculate total spent: {err}");
-                Money::ZERO.to_shared_string()
-            }
-        }
-    });
-
     global_state.on_delete_transaction({
         let mut state = state.clone();
         move |id| {
@@ -363,15 +235,6 @@ pub fn bind(window: &MainWindow, state: &AppState) {
         move |id| {
             if let Err(err) = state.confirm_transaction(&id) {
                 warn!("Failed to delete transaction: {err}");
-            }
-        }
-    });
-
-    global_state.on_edit_budget({
-        let mut state = state.clone();
-        move |id, amount| {
-            if let Err(err) = state.update_budget(&id, &amount) {
-                warn!("Failed to update budget: {err}");
             }
         }
     });
@@ -398,86 +261,6 @@ pub fn bind(window: &MainWindow, state: &AppState) {
             Err(err) => {
                 warn!("Invalid date: {err}");
                 SharedString::new()
-            }
-        }
-    });
-
-    global_state.on_update_category({
-        let mut state = state.clone();
-        move |id, title| {
-            if let Err(err) = state.update_category(&id, &title) {
-                warn!("Failed to update category: {err}");
-            }
-        }
-    });
-
-    global_state.on_update_category_group({
-        let mut state = state.clone();
-        move |id, title| {
-            if let Err(err) = state.update_category_group(&id, &title) {
-                warn!("{err}");
-            }
-        }
-    });
-
-    global_state.on_left_to_spend({
-        let state = state.clone();
-        move |id| match state.left_to_spend(&id) {
-            Ok(value) => value.to_shared_string(),
-            Err(err) => {
-                warn!("{err}");
-                Money::ZERO.to_shared_string()
-            }
-        }
-    });
-
-    global_state.on_category_to_transfer(DataTransfer::from);
-
-    global_state.on_transfer_to_category(|data| {
-        data.plain_text().unwrap_or_else(|err| {
-            warn!("{err}");
-            SharedString::new()
-        })
-    });
-
-    global_state.on_move_category({
-        let mut state = state.clone();
-        move |id, group_id| {
-            if let Err(err) = state.move_category(&id, &group_id) {
-                warn!("Failed to move category: {err}");
-            }
-        }
-    });
-
-    global_state.on_left_to_spend_in_group({
-        let state = state.clone();
-        move |id, date| match state.left_to_spend_in_group(&id, date) {
-            Ok(value) => value.to_shared_string(),
-            Err(err) => {
-                warn!("Failed to calculate the amount left to spend in group {id}: {err}");
-                Money::ZERO.to_shared_string()
-            }
-        }
-    });
-
-    global_state.on_total_assigned_in_group({
-        let state = state.clone();
-        move |id, date| match state.total_assigned_in_group(&id, date) {
-            Ok(value) => value.to_shared_string(),
-            Err(err) => {
-                warn!(group_id=?id,"Failed to calculate total assigned in group: {err}");
-                Money::ZERO.to_shared_string()
-            }
-        }
-    });
-
-    global_state.on_total_spent_in_group({
-        let state = state.clone();
-        move |id, date| match state.total_spent_in_group(&id, date) {
-            Ok(value) => value.to_shared_string(),
-            Err(err) => {
-                warn!(group_id=?id,"Failed to calculate total spent in group: {err}");
-                Money::ZERO.to_shared_string()
             }
         }
     });
