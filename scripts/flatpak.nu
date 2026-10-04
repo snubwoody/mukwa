@@ -1,17 +1,8 @@
 let bundle_dir = "target/bundle/flatpak"
+let resource_dir = "crates/mukwa/resources"
 
-def main [command: string] {
-    match $command {
-        "help" => {
-            help
-        }
-        "build" => {
-            build
-        }
-        "install" => {
-            install
-        }
-    }
+def main [] {
+
 }
 
 # Build the flatpak
@@ -31,11 +22,16 @@ def "main build" [] {
     uv run python bin/flatpak-cargo-generator.py Cargo.lock -o ($bundle_dir)/cargo-sources.json
     print "Building flatpak..."
     mkdir $bundle_dir
-    cp crates/mukwa/resources/com.wakunguma.Mukwa.yaml $bundle_dir
+    cp ($resource_dir)/com.wakunguma.Mukwa.yaml $bundle_dir
     flatpak-builder --force-clean build ($bundle_dir)/com.wakunguma.Mukwa.yaml
 }
 
 # Install the flatpak
 def "main install" [] {
     flatpak-builder --force-clean --user --repo=repo --install build ($bundle_dir)/com.wakunguma.Mukwa.yaml
+}
+
+# Run the flatpak linter against the manifest files
+def "main lint" [] {
+    flatpak run --command=flatpak-builder-lint org.flatpak.Builder appstream ($resource_dir)/mukwa.metainfo.xml
 }
