@@ -7,7 +7,7 @@
     <summary>Personal finance app</summary>
     <description>
         <p>
-            Mukwa a free, privacy focused personal finance app, designed to help you track your spending and
+            Mukwa is a free, privacy focused personal finance app, designed to help you track your spending and
             manage your budgets.
         </p>
     </description>
@@ -22,8 +22,40 @@
     <url type="homepage">https://github.com/snubwoody/mukwa</url>
     <url type="bugtracker">https://github.com/snubwoody/mukwa/issues</url>
     <url type="contribute">https://github.com/snubwoody/mukwa/blob/main/CONTRIBUTING.md</url>
+    <url type="vcs-browser">https://github.com/snubwoody/mukwa</url>
     <supports>
         <internet>offline-only</internet>
     </supports>
     <content_rating type="oars-1.1" />
+    <branding>
+      <color type="primary" scheme_preference="light">#99c1f1</color>
+      <color type="primary" scheme_preference="dark">#242c49</color>
+    </branding>
+    <screenshots>
+        <screenshot type="default">
+            <image>https://raw.githubusercontent.com/snubwoody/mukwa/601e184b6d1390e94bd3b1880d129c0c65f7a18f/assets/screenshots/analytics.png</image>
+            <caption>Analytics</caption>
+        </screenshot>
+        <screenshot>
+            <image>https://raw.githubusercontent.com/snubwoody/mukwa/601e184b6d1390e94bd3b1880d129c0c65f7a18f/assets/screenshots/budgets.png</image>
+            <caption>Budgets</caption>
+        </screenshot>
+        <screenshot>
+            <image>https://raw.githubusercontent.com/snubwoody/mukwa/601e184b6d1390e94bd3b1880d129c0c65f7a18f/assets/screenshots/transactions.png</image>
+            <caption>Transactions</caption>
+        </screenshot>
+    </screenshots>
+    <releases>
+        <release version="0.2.0" date="2026-09-21">
+          <url type="details">https://github.com/snubwoody/mukwa/blob/main/CHANGELOG.md#020---2026-09-21</url>
+          <description>
+              <ul>
+                  <li>Added support for importing transactions from CSV files.</li>
+                  <li>Added a custom title bar on Windows.</li>
+                  <li>Added a "Credit payments" auto category group. Every credit account will get its own category in the "Credit payments" group for tracking payments.</li>
+                  <li>The spending page now displays how much money is available to assign.</li>
+              </ul>
+          </description>
+        </release>
+    </releases>
 </component>

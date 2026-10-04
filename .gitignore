@@ -1,4 +1,5 @@
 .env
+.flatpak-builder/
 .mukwa/
 /bin/
 temp/
@@ -12,4 +13,9 @@ temp/
 # Build output
 .build/
 build/
+builddir/
 target/
+cargo-sources.json
+vendor/
+.venv/
+repo/
