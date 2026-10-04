@@ -26,4 +26,8 @@
         <internet>offline-only</internet>
     </supports>
     <content_rating type="oars-1.1" />
+    <branding>
+      <color type="primary" scheme_preference="light">#99c1f1</color>
+      <color type="primary" scheme_preference="dark">#242c49</color>
+    </branding>
 </component>
