@@ -31,6 +31,20 @@
       <color type="primary" scheme_preference="light">#99c1f1</color>
       <color type="primary" scheme_preference="dark">#242c49</color>
     </branding>
+    <screenshots>
+        <screenshot type="default">
+            <image>https://raw.githubusercontent.com/snubwoody/mukwa/601e184b6d1390e94bd3b1880d129c0c65f7a18f/assets/screenshots/analytics.png</image>
+            <caption>Analytics</caption>
+        </screenshot>
+        <screenshot>
+            <image>https://raw.githubusercontent.com/snubwoody/mukwa/601e184b6d1390e94bd3b1880d129c0c65f7a18f/assets/screenshots/budgets.png</image>
+            <caption>Budgets</caption>
+        </screenshot>
+        <screenshot>
+            <image>https://raw.githubusercontent.com/snubwoody/mukwa/601e184b6d1390e94bd3b1880d129c0c65f7a18f/assets/screenshots/transactions.png</image>
+            <caption>Transactions</caption>
+        </screenshot>
+    </screenshots>
     <releases>
         <release version="0.2.0" date="2026-09-21">
           <url type="details">https://github.com/snubwoody/mukwa/blob/main/CHANGELOG.md#020---2026-09-21</url>
