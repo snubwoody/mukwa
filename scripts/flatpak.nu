@@ -33,5 +33,8 @@ def "main install" [] {
 
 # Run the flatpak linter against the manifest files
 def "main lint" [] {
+    print "Linting appstream..."
     flatpak run --command=flatpak-builder-lint org.flatpak.Builder appstream ($resource_dir)/mukwa.metainfo.xml
+    print "Linting flatpak manifest..."
+    flatpak run --command=flatpak-builder-lint org.flatpak.Builder manifest ($bundle_dir)/com.wakunguma.Mukwa.yaml
 }
