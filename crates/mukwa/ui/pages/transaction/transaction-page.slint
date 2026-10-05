@@ -628,6 +628,84 @@ export component TransactionPage inherits VerticalLayout {
         padding-bottom: 8px;
         spacing: 8px;
 
+        date-popup := PopupWindow {
+            width: 250px;
+            close-policy: close-on-click-outside;
+
+            Rectangle {
+                background: white;
+                border-radius: 12px;
+                border-width: 1px;
+                border-color: Colors.borderNeutral;
+            }
+
+            VerticalLayout {
+                spacing: 8px;
+                HorizontalLayout {
+                    Text {
+                        text: @tr("Date");
+                        color: Colors.textBody;
+                    }
+
+                    Text {
+                        text: @tr("Is after");
+                        color: Colors.textBody;
+                    }
+                }
+
+                Calendar { }
+
+                PrimaryButton {
+                    text: @tr("Apply");
+                    clicked => {
+                    }
+                }
+            }
+        }
+
+        popup := PopupWindow {
+            width: 250px;
+            close-policy: close-on-click-outside;
+
+            Rectangle {
+                background: white;
+                border-radius: 12px;
+                border-width: 1px;
+                border-color: Colors.borderNeutral;
+            }
+
+            VerticalLayout {
+                alignment: start;
+                spacing: 8px;
+                padding: 12px;
+
+                Text {
+                    text: @tr("Filter by");
+                    color: Colors.textBody;
+                    font-size: FontSize.caption;
+                    font-weight: FontWeight.semi-bold;
+                }
+
+                PrimaryButton {
+                    theme: ghost;
+                    text: @tr("Date");
+                    clicked => {
+                        date-popup.show();
+                        popup.close();
+                    }
+                }
+            }
+        }
+
+        IconButton {
+            icon: IconSet.ListFilter;
+            theme: ghost;
+            accessible-label: @tr("Filter transactions");
+            clicked => {
+                popup.show();
+            }
+        }
+
         if !active-account-id.is-empty: IconButton {
             icon: Icons.file-down;
             theme: ghost;
