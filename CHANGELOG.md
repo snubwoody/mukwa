@@ -1,3 +1,6 @@
+## (unreleased)
+
+- Fixed incorrect left to budget calculation. Transfers to credit accounts are no longer subtracted from the left to budget amount.
 
 ## 0.2.1 - 2026-10-04
 
