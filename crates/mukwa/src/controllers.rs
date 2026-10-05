@@ -14,12 +14,15 @@ mod category;
 mod global;
 mod import_csv;
 mod settings;
+mod transaction;
 
 pub fn bind_all(
     window: &MainWindow,
     state: &AppState,
     settings: &SettingsStore,
 ) -> crate::Result<()> {
+    let service = state.service();
+
     calendar::bind(window);
     analytics::bind(window, state);
     settings::bind(window, settings.clone());
@@ -28,6 +31,7 @@ pub fn bind_all(
     api::bind(window);
     import_csv::bind(window, state);
     category::bind(window, state)?;
+    transaction::bind(window, service)?;
 
     bind_combobox_api(window);
     Ok(())
