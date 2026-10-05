@@ -1,0 +1,184 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { Colors } from "../colors.slint";
+import { ListView, ScrollView } from "std-widgets.slint";
+import { FocusBorder } from "./focus-border.slint";
+import { FontSize } from "../theme.slint";
+
+export struct DropdownItem {
+    value: string,
+    text: string,
+}
+
+export global DropdownApi {
+    // Work around because Slint doesn't have any find-index like API.
+    pure callback find-index(options: [DropdownItem], value: string) -> int;
+}
+
+export component Dropdown {
+    in-out property <string> label;
+    in property <[DropdownItem]> options;
+    out property <int> current-index: 0;
+    in-out property <string> current-value: options[current-index].value;
+    in property <bool> enabled: true;
+
+    callback changed(value: string);
+
+    public function open() {
+        popup.show();
+    }
+
+    public function select(index: int) {
+        current-index = Math.min(Math.max(index,0),options.length - 1);
+    }
+
+    public function move-selection-up() {
+        root.select(Math.max(root.current-index - 1, 0));
+    }
+
+    public function move-selection-down() {
+        root.select(Math.min(root.current-index + 1, root.options.length - 1));
+    }
+
+    accessible-role: combobox;
+    accessible-enabled: enabled;
+    accessible-expanded: popup.is-open;
+    accessible-expandable: true;
+    accessible-value: current-value;
+    forward-focus: focus-scope;
+
+    focus-scope := FocusScope {
+        enabled: root.enabled;
+        key-pressed(event) => {
+            if (!self.enabled) {
+                return reject;
+            }
+            if (event.text == Key.Space || event.text == Key.Return) {
+                popup.show();
+                return accept;
+            }
+            return reject;
+        }
+
+        touch-area := TouchArea {
+            enabled: root.enabled;
+            clicked => {
+                popup.show();
+            }
+        }
+    }
+
+    layout := FlexboxLayout {
+        spacing: 8px;
+        flex-direction: column;
+        flex-wrap: no-wrap;
+        if label != "": Text {
+            text: label;
+            color: Colors.textBody;
+        }
+
+        Rectangle {
+            background: white;
+            border-color: focus-scope.has-focus ? Colors.borderAccent : Colors.neutral50;
+            border-width: 1px;
+            border-radius: 8px;
+            clip: true;
+
+            FlexboxLayout {
+                padding-top: 4px;
+                padding-bottom: 4px;
+                padding-left: 8px;
+                padding-right: 8px;
+                flex-wrap: no-wrap;
+                text := Text {
+                    text: options[current-index].text;
+                    color: Colors.textBody;
+                    width: 100%;
+                    horizontal-alignment: left;
+                    vertical-alignment: center;
+                    overflow: elide;
+                    horizontal-stretch: 1;
+                    vertical-stretch: 1;
+                }
+            }
+        }
+    }
+
+    popup := PopupWindow {
+        width: max(root.width,250px);
+        y: layout.height + 8px;
+        height: min(content.preferred-height,250px);
+        close-policy: close-on-click-outside;
+        forward-focus: popup-fs;
+
+        popup-background := Rectangle {
+            background: white;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Colors.neutral50;
+        }
+
+        popup-fs := FocusScope {
+            key-pressed(event) => {
+                if (!self.enabled) {
+                    return reject;
+                }
+                if (event.text == Key.UpArrow) {
+                    root.move-selection-up();
+                    return accept;
+                } else if (event.text == Key.DownArrow) {
+                    root.move-selection-down();
+                    return accept;
+                } else if (event.text == Key.Return) {
+                    changed(options[current-index].value);
+                    popup.close();
+                    return accept;
+                } else if (event.text == Key.Escape) {
+                    popup.close();
+                    return accept;
+                }
+                return reject;
+            }
+        }
+
+        flickable := Flickable {
+            max-height: 250px;
+            content-height: content.preferred-height;
+            content := VerticalLayout {
+                padding: 12px;
+                spacing: 8px;
+                for option[i] in options: Rectangle {
+                    background: current-index == i ? Colors.neutral50 : white;
+                    height: 24px;
+                    border-radius: 4px;
+
+                    states [
+                        hovered when inner-touch-area.has-hover: {
+                            background: Colors.neutral50;
+                            in {
+                                animate background { duration: 150ms; }
+                            }
+                        }
+                    ]
+                    inner-touch-area := TouchArea {
+                        clicked => {
+                            root.select(i);
+                            changed(options[current-index].value);
+                            popup.close();
+                        }
+                    }
+
+                    HorizontalLayout {
+                        cross-axis-alignment: center;
+                        padding: 8px;
+                        Text {
+                            text: option.text;
+                            color: Colors.textBody;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
