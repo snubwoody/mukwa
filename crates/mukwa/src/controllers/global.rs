@@ -221,15 +221,6 @@ pub fn bind(window: &MainWindow, state: &AppState) {
         }
     });
 
-    global_state.on_delete_transaction({
-        let mut state = state.clone();
-        move |id| {
-            if let Err(err) = state.delete_transaction(&id) {
-                warn!("Failed to delete transaction: {err}");
-            }
-        }
-    });
-
     global_state.on_confirm_transaction({
         let mut state = state.clone();
         move |id| {

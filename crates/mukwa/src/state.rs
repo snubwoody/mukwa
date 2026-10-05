@@ -164,19 +164,6 @@ impl AppState {
         Ok(())
     }
 
-    pub fn delete_transaction(&mut self, id: &str) -> crate::Result<()> {
-        let tid = Uuid::parse_str(id)?;
-        self.service.delete_transaction(tid)?;
-        info!("Deleted transaction {id}");
-        let transactions = self
-            .transactions
-            .iter()
-            .filter(|t| t.id.as_str() != id)
-            .collect::<Vec<_>>();
-        self.transactions.set_vec(transactions);
-        self.load_accounts()?;
-        Ok(())
-    }
     pub fn confirm_transaction(&mut self, id: &str) -> crate::Result<()> {
         let tid = Uuid::parse_str(id)?;
         self.service.confirm_transaction(tid)?;
@@ -379,22 +366,6 @@ mod test {
         state.duplicate_transaction(&transaction.id.to_shared_string())?;
         let account = state.get_account(account.id.to_shared_string()).unwrap();
         assert_eq!(account.balance, Money::new(100).to_shared_string());
-        Ok(())
-    }
-
-    #[test]
-    fn delete_transaction_reloads_accounts() -> crate::Result<()> {
-        let service = Service::open_in_memory()?;
-        let account = service.create_account("", AccountType::Cash)?;
-        let transaction = service
-            .create_income()
-            .account(account.id)
-            .amount(Money::new(50))
-            .submit()?;
-        let mut state = AppState::new(service)?;
-        state.delete_transaction(&transaction.id.to_shared_string())?;
-        let account = state.get_account(account.id.to_shared_string()).unwrap();
-        assert_eq!(account.balance, Money::new(0).to_shared_string());
         Ok(())
     }
 

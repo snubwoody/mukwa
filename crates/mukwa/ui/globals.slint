@@ -75,6 +75,8 @@ export global Api {
 
 export global TransactionState {
     in-out property <[Transaction]> transactions;
+
+    callback delete-transaction(id: string);
 }
 
 export global CategoryState {
@@ -111,7 +113,6 @@ export global State {
     callback create-account(name: string, type: AccountType, balance: string);
     callback create-transaction(CreateTransactionOpts);
     callback duplicate-transaction(id: string);
-    callback delete-transaction(id: string);
     callback confirm-transaction(id: string);
     callback set-transaction-date(id: string, date: string);
     callback set-transaction-account(id: string, account-id: string);
