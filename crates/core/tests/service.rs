@@ -66,7 +66,33 @@ fn left_to_assign_excludes_transfers_to_credit_accounts() -> Result<()> {
         .amount(Money::new(100))
         .submit()?;
     let left_to_assign = service.left_to_assign()?;
-    assert_eq!(left_to_assign, Money::new(400));
+    assert_eq!(left_to_assign, Money::new(500));
+    Ok(())
+}
+
+#[test]
+fn left_to_assign_excludes_transfers_to_cash_accounts() -> Result<()> {
+    let connection = create_test_db();
+    let service = Service::new(connection);
+    let cash_account = service.create_account("Cash account", AccountType::Cash)?;
+    let savings_account = service.create_account("Savings account", AccountType::Cash)?;
+
+    service
+        .create_income()
+        .amount(Money::new(500))
+        .account(cash_account.id)
+        .submit()?;
+
+    let left_to_assign = service.left_to_assign()?;
+    assert_eq!(left_to_assign, Money::new(500));
+
+    service
+        .create_transfer()
+        .accounts(cash_account.id, savings_account.id)
+        .amount(Money::new(100))
+        .submit()?;
+    let left_to_assign = service.left_to_assign()?;
+    assert_eq!(left_to_assign, Money::new(500));
     Ok(())
 }
 

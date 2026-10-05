@@ -1143,29 +1143,10 @@ impl Service {
             .map(|account| (account.id, account))
             .collect();
 
-        let credit_accounts: HashMap<Uuid, Account> = self
-            .fetch_accounts()?
-            .into_iter()
-            .filter(|account| account.account_type == AccountType::Credit)
-            .map(|account| (account.id, account))
-            .collect();
-
         let mut total_cash = Money::ZERO;
         let transactions = self.fetch_transactions()?;
 
         for transaction in transactions {
-            // Subtract money transferred from cash accounts to credit accounts (credit payments)
-            if transaction.transaction_type() == TransactionType::Transfer {
-                let sender_id = transaction.sender_id.unwrap();
-                let receiver_id = transaction.receiver_id.unwrap();
-                if cash_accounts.contains_key(&sender_id)
-                    && credit_accounts.contains_key(&receiver_id)
-                {
-                    total_cash -= transaction.amount;
-                }
-                continue;
-            }
-
             // Add money deposited into cash accounts
             if transaction.transaction_type() == TransactionType::Income
                 && let Some(account_id) = transaction.receiver_id
