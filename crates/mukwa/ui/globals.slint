@@ -73,7 +73,9 @@ export global Api {
     callback minimize();
 }
 
-export global TransactionState { }
+export global TransactionState {
+    in-out property <[Transaction]> transactions;
+}
 
 export global CategoryState {
     callback delete-category(id: string);
