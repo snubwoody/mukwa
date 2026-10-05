@@ -12,6 +12,7 @@ import { Colors } from "colors.slint";
 import {
     Account,
     Transaction,
+    TransactionState,
     State,
     Category,
     Api,
@@ -373,7 +374,7 @@ export component MainWindow inherits Window {
 
             if active-page == Page.transactions: TransactionPage {
                 active-account-id: active-account-id;
-                transactions: State.transactions;
+                transactions: TransactionState.transactions;
             }
         }
     }

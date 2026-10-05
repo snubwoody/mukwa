@@ -54,7 +54,6 @@ pub fn bind(window: &MainWindow, state: &AppState) {
     let currencies_model_rc = ModelRc::new(currencies_model);
     let fonts_model = Rc::new(VecModel::from(fonts));
     let fonts_model_rc = ModelRc::new(fonts_model);
-    let transactions_model_rc = ModelRc::new(state.transactions());
     let accounts_model_rc = ModelRc::new(state.accounts());
     let account_options_rc = ModelRc::new(state.account_options());
 
@@ -62,19 +61,8 @@ pub fn bind(window: &MainWindow, state: &AppState) {
 
     global_state.set_currency_options(currencies_model_rc);
     global_state.set_font_options(fonts_model_rc);
-    global_state.set_transactions(transactions_model_rc);
     global_state.set_accounts(accounts_model_rc);
-
     global_state.set_account_options(account_options_rc);
-
-    global_state.on_is_transaction_unconfirmed({
-        let state = state.clone();
-        move |id| {
-            is_transaction_unconfirmed(&id, &state.service())
-                .inspect_err(|err| warn!("{err}"))
-                .unwrap_or_default()
-        }
-    });
 
     global_state.on_total_spent_all({
         let state = state.clone();
@@ -117,83 +105,11 @@ pub fn bind(window: &MainWindow, state: &AppState) {
         }
     });
 
-    global_state.on_create_transaction({
-        let mut state = state.clone();
-        move |opts| {
-            if let Err(err) = state.create_transaction(opts) {
-                warn!("Failed to create transaction: {err}")
-            }
-        }
-    });
-
     global_state.on_delete_account({
         let mut state = state.clone();
         move |id| {
             if let Err(err) = state.delete_account(&id) {
                 warn!("Failed to delete account: {err}")
-            }
-        }
-    });
-
-    global_state.on_set_transaction_category({
-        let mut state = state.clone();
-        move |id, category_id| {
-            if let Err(err) = state.set_transaction_category(&id, &category_id) {
-                warn!("{err}");
-            }
-        }
-    });
-
-    global_state.on_set_transaction_date({
-        let mut state = state.clone();
-        move |id, date| {
-            if let Err(err) = state.set_transaction_date(&id, &date) {
-                warn!("{err}");
-            }
-        }
-    });
-
-    global_state.on_set_transaction_outflow({
-        let mut state = state.clone();
-        move |id, amount| {
-            if let Err(err) = state.set_transaction_outflow(&id, &amount) {
-                warn!("{err}");
-            }
-        }
-    });
-
-    global_state.on_set_transaction_inflow({
-        let mut state = state.clone();
-        move |id, amount| {
-            if let Err(err) = state.set_transaction_inflow(&id, &amount) {
-                warn!("{err}");
-            }
-        }
-    });
-
-    global_state.on_set_transaction_account({
-        let mut state = state.clone();
-        move |id, account_id| {
-            if let Err(err) = state.set_transaction_account(&id, &account_id) {
-                warn!("{err}");
-            }
-        }
-    });
-
-    global_state.on_set_transaction_payee({
-        let mut state = state.clone();
-        move |id, account_id| {
-            if let Err(err) = state.set_transaction_payee(&id, &account_id) {
-                warn!("{err}");
-            }
-        }
-    });
-
-    global_state.on_set_transaction_note({
-        let mut state = state.clone();
-        move |id, note| {
-            if let Err(err) = state.set_transaction_note(&id, &note) {
-                warn!("{err}");
             }
         }
     });
@@ -221,15 +137,6 @@ pub fn bind(window: &MainWindow, state: &AppState) {
         }
     });
 
-    global_state.on_confirm_transaction({
-        let mut state = state.clone();
-        move |id| {
-            if let Err(err) = state.confirm_transaction(&id) {
-                warn!("Failed to delete transaction: {err}");
-            }
-        }
-    });
-
     global_state.on_format_dateym({
         |date| match Date::new(date.year as i16, date.month as i8, date.day as i8) {
             Ok(date) => date.strftime("%b %Y").to_shared_string(),
@@ -252,15 +159,6 @@ pub fn bind(window: &MainWindow, state: &AppState) {
             Err(err) => {
                 warn!("Invalid date: {err}");
                 SharedString::new()
-            }
-        }
-    });
-
-    global_state.on_duplicate_transaction({
-        let mut state = state.clone();
-        move |id| {
-            if let Err(err) = state.duplicate_transaction(&id) {
-                warn!("Failed to duplicate transaction: {err}");
             }
         }
     });
@@ -292,14 +190,4 @@ pub fn bind(window: &MainWindow, state: &AppState) {
             }
         }
     })
-}
-
-fn is_transaction_unconfirmed(id: &str, service: &Service) -> crate::Result<bool> {
-    let unconfirmed_transactions: HashSet<Uuid> = service
-        .fetch_unconfirmed_transactions()?
-        .iter()
-        .copied()
-        .collect();
-    let id = Uuid::parse_str(id)?;
-    Ok(unconfirmed_transactions.contains(&id))
 }

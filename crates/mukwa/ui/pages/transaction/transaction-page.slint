@@ -47,7 +47,7 @@ component ConfirmButton {
                 theme: ghost;
                 text: @tr("Confirm transaction");
                 clicked => {
-                    State.confirm-transaction(transaction.id);
+                    TransactionState.confirm-transaction(transaction.id);
                     popup.close();
                 }
             }
@@ -74,7 +74,7 @@ component ConfirmButton {
 
 component DateCell inherits TableCell {
     in property <Transaction> transaction;
-    property <bool> is-unconfirmed: State.is-transaction-unconfirmed(transaction.id);
+    property <bool> is-unconfirmed: TransactionState.is-transaction-unconfirmed(transaction.id);
     callback changed(Date);
 
     clicked => {
@@ -280,7 +280,7 @@ component TransactionRow inherits TableRow {
         ContextMenuItem {
             text: @tr("Duplicate");
             clicked => {
-                State.duplicate-transaction(transaction.id);
+                TransactionState.duplicate-transaction(transaction.id);
                 parent.close();
             }
         }
@@ -298,7 +298,7 @@ component TransactionRow inherits TableRow {
         width: parent.width / length;
         transaction: transaction;
         changed(value) => {
-            State.set-transaction-date(transaction.id, value.year + "-" + value.month + "-" + value.day);
+            TransactionState.set-transaction-date(transaction.id, value.year + "-" + value.month + "-" + value.day);
         }
     }
 
@@ -308,7 +308,7 @@ component TransactionRow inherits TableRow {
         options: State.account-options;
         current-value: transaction.account-id;
         changed(value) => {
-            State.set-transaction-account(transaction.id,value);
+            TransactionState.set-transaction-account(transaction.id,value);
         }
     }
 
@@ -317,7 +317,7 @@ component TransactionRow inherits TableRow {
         transaction: transaction;
         active-account-id: active-account-id;
         changed(value) => {
-            State.set-transaction-payee(transaction.id,value);
+            TransactionState.set-transaction-payee(transaction.id,value);
         }
     }
 
@@ -325,7 +325,7 @@ component TransactionRow inherits TableRow {
         width: parent.width / length;
         category: CategoryState.get-category(transaction.category-id);
         changed(value) => {
-            State.set-transaction-category(transaction.id,value);
+            TransactionState.set-transaction-category(transaction.id,value);
         }
     }
 
@@ -333,7 +333,7 @@ component TransactionRow inherits TableRow {
         width: parent.width / length;
         transaction: transaction;
         changed(value) => {
-            State.set-transaction-note(transaction.id, value);
+            TransactionState.set-transaction-note(transaction.id, value);
         }
     }
 
@@ -355,7 +355,7 @@ component TransactionRow inherits TableRow {
         }
 
         changed(value) => {
-            State.set-transaction-outflow(transaction.id, value);
+            TransactionState.set-transaction-outflow(transaction.id, value);
         }
     }
 
@@ -376,12 +376,11 @@ component TransactionRow inherits TableRow {
         }
 
         changed(value) => {
-            State.set-transaction-inflow(transaction.id, value);
+            TransactionState.set-transaction-inflow(transaction.id, value);
         }
     }
 }
 
-// TODO: remove the account option and set to active-account-id
 component NewTransactionRow inherits VerticalLayout {
     property <Transaction> transaction: {
         id: "placeholder-transaction",
@@ -453,7 +452,7 @@ component NewTransactionRow inherits VerticalLayout {
             changed(value) => {
                 transaction.outflow = value;
                 transaction.inflow = "";
-                State.set-transaction-outflow(transaction.id, value);
+                TransactionState.set-transaction-outflow(transaction.id, value);
             }
         }
 
@@ -482,7 +481,7 @@ component NewTransactionRow inherits VerticalLayout {
         PrimaryButton {
             text: @tr("Save");
             clicked => {
-                State.create_transaction({
+                TransactionState.create-transaction({
                     date: transaction.date,
                     account-id: transaction.account-id,
                     payee-id: transaction.payee-id,
@@ -498,7 +497,7 @@ component NewTransactionRow inherits VerticalLayout {
         PrimaryButton {
             text: @tr("Save and add another");
             clicked => {
-                State.create_transaction({
+                TransactionState.create-transaction({
                     date: transaction.date,
                     account-id: transaction.account-id,
                     payee-id: transaction.payee-id,
