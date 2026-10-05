@@ -25,6 +25,7 @@ import { Table, TableRow, TableCell } from "../../widgets/tableview.slint";
 import { Settings } from "../../settings.slint";
 import { ImportCsvDialog, ImportCsvState } from "import-csv.slint";
 import { Icon, Icons } from "../../icons.slint";
+import { Dropdown } from "../../widgets/dropdown.slint";
 
 component ConfirmButton {
     in property <Transaction> transaction;
@@ -647,6 +648,15 @@ export component TransactionPage inherits VerticalLayout {
                         color: Colors.textBody;
                     }
 
+                    Dropdown {
+                        options: [
+                            {text: "Is", value: "is"},
+                            {text: "Is after", value: "is-after"},
+                            {text: "Is before", value: "is-before"},
+                            {text: "Is on or after", value: "is-on-or-after"},
+                            {text: "Is on or after", value: "is-on-or-before"},
+                        ];
+                    }
                     Text {
                         text: @tr("Is after");
                         color: Colors.textBody;
@@ -698,7 +708,7 @@ export component TransactionPage inherits VerticalLayout {
         }
 
         IconButton {
-            icon: IconSet.ListFilter;
+            icon: Icons.list-filter;
             theme: ghost;
             accessible-label: @tr("Filter transactions");
             clicked => {
