@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+use std::collections::HashSet;
+use std::fs::File;
+use std::io::{BufReader, Cursor, Read};
+use std::ops::Index;
 use clap::{Parser, Subcommand};
 use mukwa_core::migrator::Migrator;
 use rusqlite::Connection;
 use std::path::PathBuf;
 use tracing::{info, warn};
+use usvg::Node;
+use usvg::tiny_skia_path::{PathSegment, PathSegmentsIter};
+use zip::ZipArchive;
 
 #[derive(Parser)]
 struct Cli {
@@ -15,6 +22,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    GenSvg,
     Migrate {
         #[command(subcommand)]
         command: MigrateCommand,
@@ -62,9 +70,11 @@ fn run() -> mukwa_core::Result<()> {
                 migrator.rollback(&mut connection)?;
             }
         },
+        Command::GenSvg => generate_svgs()?
     }
     Ok(())
 }
+
 fn main() {
     tracing_subscriber::fmt()
         .with_target(false)
@@ -73,5 +83,137 @@ fn main() {
 
     if let Err(err) = run() {
         warn!("{}", err.report());
+    }
+}
+
+fn generate_svgs() -> mukwa_core::Result<()>{
+    // FIXME: fix the imports
+    use std::io::Write;
+    let config = std::fs::read_to_string("crates/mukwa/ui/iconlist")?;
+    let icon_list = config.split('\n').collect::<HashSet<&str>>();
+
+    let url = "https://github.com/lucide-icons/lucide/releases/download/1.52.0/lucide-icons-1.52.0.zip";
+    info!("Fetching icons from {url}");
+    let mut response = ureq::get(url).call().unwrap();
+    let body = response.body_mut();
+    let mut buffer = vec![];
+    body.as_reader().read_to_end(&mut buffer)?;
+    let reader = Cursor::new(buffer);
+    let mut archive = ZipArchive::new(reader).unwrap();
+    info!("Parsing icons...");
+
+    let dest_path = PathBuf::from("crates/mukwa/ui/icons.slint");
+    let mut dest = File::options().create(true).truncate(true).write(true).open(&dest_path)?;
+    writeln!(dest,"// SPDX-License-Identifier: GPL-3.0-or-later")?;
+    writeln!(dest,"// Copyright (C) 2026 Wakunguma Kalimukwa")?;
+    writeln!(dest,"")?;
+    for i in 0..archive.len(){
+        let file = archive.by_index(i).unwrap();
+        if !file.name().ends_with(".svg"){
+            continue;
+        }
+        let name = file.name().replace(".svg","").replace("icons/","");
+        if !icon_list.contains(name.as_str()){
+           continue;
+        }
+        let name = kebab_to_pascal(&name);
+        let data: std::io::Result<Vec<u8>> = file.bytes().into_iter().collect();
+        let icon = svg_to_icon(&data?,&name)?;
+        writeln!(dest,"{icon}\n")?;
+    }
+    info!("Generated icons at {}",dest_path.display());
+    Ok(())
+}
+
+/// Converts a kebab-case string to a PascalCase string.
+fn kebab_to_pascal(value: &str) -> String{
+    let mut s = String::new();
+    for word in value.split('-'){
+        let mut chars = word.chars();
+        if let Some(c) = chars.next() {
+            s.push_str(c.to_uppercase().to_string().as_str());
+        }
+        while let Some(c) = chars.next(){
+            s.push(c)
+        }
+    }
+    s
+}
+
+fn svg_to_icon(data: &[u8],name: &str) -> mukwa_core::Result<String>{
+    // use std::io::Write;
+    use std::fmt::Write;
+    let content = usvg::Tree::from_data(&data,&Default::default()).unwrap();
+    let root = content.root();
+    let mut icon = String::new();
+    writeln!(icon,"export component {name} inherits Rectangle {{").unwrap();
+    writeln!(icon,"in-out property <length> size: 24px;\nwidth: size;\nheight: size;").unwrap();
+    writeln!(icon,"in-out property <color> stroke: black;").unwrap();
+    writeln!(icon,"in-out property <length> stroke-width: 1px;").unwrap();
+    for node in root.children(){
+        match node {
+            Node::Path(path) => {
+                // TODO: not every path has fill
+                let commands = path_segments_to_string(path.data().segments()).unwrap();
+                // dbg!(&commands);
+                let mut component = String::new();
+                write!(component,"Path {{\ncommands:\"{commands}\";\n").unwrap();
+                writeln!(component,"stroke: parent.stroke;").unwrap();
+                writeln!(component,"stroke-width: parent.stroke-width;").unwrap();
+                writeln!(component,"viewbox-width: 24;").unwrap();
+                writeln!(component,"viewbox-height: 24;").unwrap();
+                writeln!(component,"viewbox-x: 0;").unwrap();
+                writeln!(component,"viewbox-y: 0;").unwrap();
+                writeln!(component,"stroke-line-cap: round;").unwrap();
+                writeln!(component,"stroke-line-join: round;").unwrap();
+                write!(component,"}}").unwrap();
+                write!(icon,"\n{component}\n").unwrap();
+            },
+            _ => {
+                panic!("Unsupported element")
+            }
+        }
+    }
+    write!(icon,"}}").unwrap();
+    Ok(icon)
+}
+
+fn path_segments_to_string(segments: PathSegmentsIter) -> Result<String,std::fmt::Error>{
+    use std::fmt::Write;
+    let mut s = String::new();
+    for segment in segments {
+        match segment {
+            PathSegment::MoveTo(p) => s.write_fmt(format_args!("M {} {} ", p.x, p.y))?,
+            PathSegment::LineTo(p) => s.write_fmt(format_args!("L {} {} ", p.x, p.y))?,
+            PathSegment::QuadTo(p0, p1) => {
+                s.write_fmt(format_args!("Q {} {} {} {} ", p0.x, p0.y, p1.x, p1.y))?
+            }
+            PathSegment::CubicTo(p0, p1, p2) => s.write_fmt(format_args!(
+                "C {} {} {} {} {} {} ",
+                p0.x, p0.y, p1.x, p1.y, p2.x, p2.y
+            ))?,
+            PathSegment::Close => s.write_fmt(format_args!("Z "))?,
+        }
+    }
+    Ok(s)
+}
+
+// <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-scan-line preview-icon"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn convert_kebab_to_pascal_case(){
+        let test_case = |value: &str,expected: &str|{
+            let pascal_string = kebab_to_pascal(value);
+            assert_eq!(pascal_string,expected);
+        };
+
+        test_case("scan-line","ScanLine");
+        test_case("my-little-pony","MyLittlePony");
+        test_case("noend-","Noend");
+        test_case("-nostart","Nostart");
     }
 }
