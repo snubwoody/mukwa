@@ -44,12 +44,12 @@ import { ComboBoxItem } from "widgets/combobox.slint";
 export { ComboBoxApi } from "widgets/combobox.slint";
 export { Date, CalendarState } from "widgets/calendar.slint";
 import { Table } from "widgets/tableview.slint";
-import { IconDisplay, IconSet, Icon } from "@lucide";
 import { SettingsDialog, Settings } from "settings.slint";
 import { FontSize } from "theme.slint";
 import { AnalyticsPage } from "pages/analytics-page.slint";
 import { IconButton } from "widgets/button.slint";
 import { TitleBar } from "titlebar.slint";
+import { Icon, Icons } from "icons.slint";
 
 enum Page {
     spending,
@@ -122,10 +122,9 @@ component AccountSection inherits VerticalLayout {
         selected: current-page == Page.transactions && active-account-id == "";
         clicked => select-page(Page.transactions);
 
-        IconDisplay {
-            icon: IconSet.PiggyBank;
-            size: 14px;
-            stroke-width: 1.5;
+        Icon{
+            icon: Icons.piggy-bank;
+            size: FontSize.body;
             stroke: Colors.textBody;
         }
     }
@@ -252,10 +251,10 @@ component Sidebar {
                     text: @tr("Spending");
                     selected: current-page == Page.spending && active-account-id == "";
                     clicked => select-page(Page.spending);
-                    IconDisplay {
-                        icon: IconSet.Banknote;
-                        size: 14px;
-                        stroke-width: 2;
+
+                    Icon{
+                        icon: Icons.banknote;
+                        size: FontSize.body;
                         stroke: Colors.textBody;
                     }
                 }
@@ -264,10 +263,10 @@ component Sidebar {
                     text: @tr("Analytics");
                     selected: current-page == Page.analytics && active-account-id == "";
                     clicked => select-page(Page.analytics);
-                    IconDisplay {
-                        icon: IconSet.ChartPie;
-                        size: 14px;
-                        stroke-width: 2;
+
+                    Icon{
+                        icon: Icons.chart-pie;
+                        size: FontSize.body;
                         stroke: Colors.textBody;
                     }
                 }
@@ -300,10 +299,9 @@ component Sidebar {
                 text: @tr("Settings");
                 clicked => settings-dialog.show();
 
-                IconDisplay {
-                    icon: IconSet.Settings;
-                    size: 13px;
-                    stroke-width: 2;
+                Icon{
+                    icon: Icons.settings;
+                    size: FontSize.body;
                     stroke: Colors.textBody;
                 }
             }

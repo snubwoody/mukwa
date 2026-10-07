@@ -3,7 +3,8 @@
 
 import { Colors } from "../colors.slint";
 import { FocusBorder } from "focus-border.slint";
-import { IconDisplay, IconSet, Icon } from "@lucide";
+import { Icon, IconData } from "../icons.slint";
+import { FontSize } from "../theme.slint";
 
 export component Button inherits Rectangle {
     in property <string> text;
@@ -87,7 +88,7 @@ export component IconButton {
     in property <IconButtonTheme> theme: accent;
     in property <bool> enabled <=> touch-area.enabled;
     out property <bool> has-focus: focus-scope.has-focus;
-    in property <Icon> icon;
+    in property <IconData> icon;
 
     padding: 4px;
 
@@ -139,10 +140,10 @@ export component IconButton {
     HorizontalLayout {
         padding: root.padding;
 
-        IconDisplay {
+        Icon {
             icon: root.icon;
-            size: 14px;
-            stroke-width: 2;
+            size: FontSize.body;
+            stroke-width: 1.5px;
             stroke: icon-color(theme);
         }
     }

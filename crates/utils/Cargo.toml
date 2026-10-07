@@ -10,3 +10,6 @@ rusqlite.workspace = true
 clap.workspace = true
 tracing-appender.workspace = true
 mukwa-core = {path = "../core"}
+usvg = "0.48.1"
+ureq = "3.4.2"
+zip = "8.6.0"

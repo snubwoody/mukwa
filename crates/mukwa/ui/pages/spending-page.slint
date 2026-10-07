@@ -20,9 +20,9 @@ import {
     ContextMenu,
     ContextMenuItem,
 } from "../widgets.slint";
-import { IconSet } from "@lucide";
 import { Settings } from "../settings.slint";
 import { FontSize } from "../theme.slint";
+import { Icons } from "../icons.slint";
 
 export global SpendingPageState {
     in-out property <string> left-to-budget;
@@ -274,7 +274,7 @@ component CategoryGroupItem {
                 cross-axis-alignment: center;
 
                 IconButton {
-                    icon: IconSet.ChevronDown;
+                    icon: Icons.chevron-down;
                     theme: ghost;
                     states [
                         closed when !root.open: {
@@ -297,7 +297,7 @@ component CategoryGroupItem {
                 }
 
                 category-button := IconButton {
-                    icon: IconSet.Plus;
+                    icon: Icons.plus;
                     theme: ghost;
                     enabled: !category-group.is-meta;
                     visible: !category-group.is-meta;
@@ -359,7 +359,7 @@ export component SpendingPage inherits VerticalLayout {
         padding: 16px;
 
         IconButton {
-            icon: IconSet.ChevronLeft;
+            icon: Icons.chevron-left;
             theme: ghost;
             accessible-label: @tr("Previous month");
             clicked => {
@@ -377,7 +377,7 @@ export component SpendingPage inherits VerticalLayout {
         }
 
         IconButton {
-            icon: IconSet.ChevronRight;
+            icon: Icons.chevron-right;
             theme: ghost;
             accessible-label: @tr("Next month");
             clicked => {
