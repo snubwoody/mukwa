@@ -44,12 +44,12 @@ import { ComboBoxItem } from "widgets/combobox.slint";
 export { ComboBoxApi } from "widgets/combobox.slint";
 export { Date, CalendarState } from "widgets/calendar.slint";
 import { Table } from "widgets/tableview.slint";
-import { IconDisplay, IconSet, Icon } from "@lucide";
 import { SettingsDialog, Settings } from "settings.slint";
 import { FontSize } from "theme.slint";
 import { AnalyticsPage } from "pages/analytics-page.slint";
 import { IconButton } from "widgets/button.slint";
 import { TitleBar } from "titlebar.slint";
+import { PiggyBank, ChartPie, Banknote, Settings as SettingsIcon } from "icons.slint";
 
 enum Page {
     spending,
@@ -122,11 +122,15 @@ component AccountSection inherits VerticalLayout {
         selected: current-page == Page.transactions && active-account-id == "";
         clicked => select-page(Page.transactions);
 
-        IconDisplay {
-            icon: IconSet.PiggyBank;
-            size: 14px;
-            stroke-width: 1.5;
-            stroke: Colors.textBody;
+//        IconDisplay {
+//            icon: IconSet.PiggyBank;
+//            size: 14px;
+//            stroke-width: 1.5;
+//            stroke: Colors.textBody;
+//        }
+
+        PiggyBank {
+
         }
     }
 
@@ -252,10 +256,9 @@ component Sidebar {
                     text: @tr("Spending");
                     selected: current-page == Page.spending && active-account-id == "";
                     clicked => select-page(Page.spending);
-                    IconDisplay {
-                        icon: IconSet.Banknote;
-                        size: 14px;
-                        stroke-width: 2;
+
+                    Banknote {
+                        size: FontSize.body;
                         stroke: Colors.textBody;
                     }
                 }
@@ -264,10 +267,9 @@ component Sidebar {
                     text: @tr("Analytics");
                     selected: current-page == Page.analytics && active-account-id == "";
                     clicked => select-page(Page.analytics);
-                    IconDisplay {
-                        icon: IconSet.ChartPie;
-                        size: 14px;
-                        stroke-width: 2;
+
+                    ChartPie {
+                        size: FontSize.body;
                         stroke: Colors.textBody;
                     }
                 }
@@ -290,14 +292,6 @@ component Sidebar {
                     text: @tr("Create account");
                     clicked => create-account-dialog.show();
                 }
-
-                Path {
-                    width: 16px;
-                    height: 16px;
-                    stroke-width: 1px;
-                    commands: "M 3 7 L 3 5 C 3 3.8954306 3.8954306 3 5 3 L 7 3 ";
-                    fill: black;
-                }
             }
 
             Rectangle {
@@ -308,10 +302,8 @@ component Sidebar {
                 text: @tr("Settings");
                 clicked => settings-dialog.show();
 
-                IconDisplay {
-                    icon: IconSet.Settings;
-                    size: 13px;
-                    stroke-width: 2;
+                SettingsIcon {
+                    size: FontSize.body;
                     stroke: Colors.textBody;
                 }
             }

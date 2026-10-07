@@ -109,6 +109,7 @@ fn generate_icons() -> mukwa_core::Result<()> {
     dest.write_all(b"// Copyright (C) 2026 Wakunguma Kalimukwa\n")?;
     dest.write_all(b"\n")?;
 
+    // TODO: add icon component that they all inherit from
     for i in 0..archive.len() {
         let file = archive.by_index(i).unwrap();
         if !file.name().ends_with(".svg") {
