@@ -3,8 +3,7 @@
 
 use std::collections::HashSet;
 use std::fs::File;
-use std::io::{BufReader, Cursor, Read};
-use std::ops::Index;
+use std::io::{Cursor, Read};
 use clap::{Parser, Subcommand};
 use mukwa_core::migrator::Migrator;
 use rusqlite::Connection;
@@ -22,7 +21,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    GenSvg,
+    GenerateIcons,
     Migrate {
         #[command(subcommand)]
         command: MigrateCommand,
@@ -70,7 +69,7 @@ fn run() -> mukwa_core::Result<()> {
                 migrator.rollback(&mut connection)?;
             }
         },
-        Command::GenSvg => generate_svgs()?
+        Command::GenerateIcons => generate_icons()?
     }
     Ok(())
 }
@@ -86,7 +85,7 @@ fn main() {
     }
 }
 
-fn generate_svgs() -> mukwa_core::Result<()>{
+fn generate_icons() -> mukwa_core::Result<()>{
     // FIXME: fix the imports
     use std::io::Write;
     let config = std::fs::read_to_string("crates/mukwa/ui/iconlist")?;
@@ -142,7 +141,6 @@ fn kebab_to_pascal(value: &str) -> String{
 }
 
 fn svg_to_icon(data: &[u8],name: &str) -> mukwa_core::Result<String>{
-    // use std::io::Write;
     use std::fmt::Write;
     let content = usvg::Tree::from_data(&data,&Default::default()).unwrap();
     let root = content.root();
@@ -156,7 +154,6 @@ fn svg_to_icon(data: &[u8],name: &str) -> mukwa_core::Result<String>{
             Node::Path(path) => {
                 // TODO: not every path has fill
                 let commands = path_segments_to_string(path.data().segments()).unwrap();
-                // dbg!(&commands);
                 let mut component = String::new();
                 write!(component,"Path {{\ncommands:\"{commands}\";\n").unwrap();
                 writeln!(component,"stroke: parent.stroke;").unwrap();
@@ -198,8 +195,6 @@ fn path_segments_to_string(segments: PathSegmentsIter) -> Result<String,std::fmt
     }
     Ok(s)
 }
-
-// <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-scan-line preview-icon"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
 
 #[cfg(test)]
 mod test {
