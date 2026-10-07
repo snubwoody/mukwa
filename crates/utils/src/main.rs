@@ -5,8 +5,8 @@ use clap::{Parser, Subcommand};
 use mukwa_core::migrator::Migrator;
 use rusqlite::Connection;
 use std::collections::HashSet;
-use std::fs;
 use std::fmt::Write;
+use std::fs;
 use std::io::{BufReader, Cursor, Read};
 use std::path::PathBuf;
 use tracing::{info, warn};
@@ -90,7 +90,6 @@ fn generate_icons() -> mukwa_core::Result<()> {
     let config = fs::read_to_string("crates/mukwa/ui/iconlist")?;
     let icon_list = config.split('\n').collect::<HashSet<&str>>();
     let dest_path = PathBuf::from("crates/mukwa/ui/icons.slint");
-    // let dest_path = PathBuf::from("icons.slint");
 
     let url =
         "https://github.com/lucide-icons/lucide/releases/download/1.52.0/lucide-icons-1.52.0.zip";
@@ -102,35 +101,35 @@ fn generate_icons() -> mukwa_core::Result<()> {
     let mut archive = ZipArchive::new(Cursor::new(buffer)).unwrap();
 
     let mut buffer = String::new();
-    writeln!(buffer,"// SPDX-License-Identifier: GPL-3.0-or-later")?;
-    writeln!(buffer,"// Copyright (C) 2026 Wakunguma Kalimukwa")?;
-    writeln!(buffer,"\n// Auto generated file, do not edit\n")?;
+    writeln!(buffer, "// SPDX-License-Identifier: GPL-3.0-or-later")?;
+    writeln!(buffer, "// Copyright (C) 2026 Wakunguma Kalimukwa")?;
+    writeln!(buffer, "\n// Auto generated file, do not edit\n")?;
 
-    writeln!(buffer,"export struct IconData {{\npaths: [string],}}\n")?;
+    writeln!(buffer, "export struct IconData {{\npaths: [string],}}\n")?;
 
-    writeln!(buffer,"export component Icon {{")?;
-    writeln!(buffer,"in-out property <length> size: 16px;")?;
-    writeln!(buffer,"in-out property <color> stroke: black;")?;
-    writeln!(buffer,"in-out property <length> stroke-width: 1px;")?;
-    writeln!(buffer,"in-out property <IconData> icon;")?;
-    writeln!(buffer,"width: self.size;")?;
-    writeln!(buffer,"height: self.size;")?;
+    writeln!(buffer, "export component Icon {{")?;
+    writeln!(buffer, "in-out property <length> size: 16px;")?;
+    writeln!(buffer, "in-out property <color> stroke: black;")?;
+    writeln!(buffer, "in-out property <length> stroke-width: 1px;")?;
+    writeln!(buffer, "in-out property <IconData> icon;")?;
+    writeln!(buffer, "width: self.size;")?;
+    writeln!(buffer, "height: self.size;")?;
 
-    writeln!(buffer,"\nfor path in icon.paths: Path {{")?;
-    writeln!(buffer,"stroke: parent.stroke;")?;
-    writeln!(buffer,"stroke-width: parent.stroke-width;")?;
-    writeln!(buffer,"stroke-line-cap: round;")?;
-    writeln!(buffer,"stroke-line-join: round;")?;
-    writeln!(buffer,"commands: path;")?;
-    writeln!(buffer,"viewbox-x: 0;")?;
-    writeln!(buffer,"viewbox-y: 0;")?;
-    writeln!(buffer,"viewbox-width: 24;")?;
-    writeln!(buffer,"viewbox-height: 24;")?;
-    writeln!(buffer,"}}")?;
+    writeln!(buffer, "\nfor path in icon.paths: Path {{")?;
+    writeln!(buffer, "stroke: parent.stroke;")?;
+    writeln!(buffer, "stroke-width: parent.stroke-width;")?;
+    writeln!(buffer, "stroke-line-cap: round;")?;
+    writeln!(buffer, "stroke-line-join: round;")?;
+    writeln!(buffer, "commands: path;")?;
+    writeln!(buffer, "viewbox-x: 0;")?;
+    writeln!(buffer, "viewbox-y: 0;")?;
+    writeln!(buffer, "viewbox-width: 24;")?;
+    writeln!(buffer, "viewbox-height: 24;")?;
+    writeln!(buffer, "}}")?;
 
-    writeln!(buffer,"}}")?;
+    writeln!(buffer, "}}")?;
 
-    writeln!(buffer,"export global Icons {{")?;
+    writeln!(buffer, "export global Icons {{")?;
 
     info!("Parsing icons...");
     for i in 0..archive.len() {
@@ -147,32 +146,17 @@ fn generate_icons() -> mukwa_core::Result<()> {
         let reader = BufReader::new(file);
         let data: std::io::Result<Vec<u8>> = reader.bytes().collect();
         let icon = svg_to_icon(&data?, &name)?;
-        write!(buffer,"{icon}")?;
+        write!(buffer, "{icon}")?;
     }
 
-    writeln!(buffer,"}}")?;
-    fs::write(&dest_path,buffer.as_bytes())?;
+    writeln!(buffer, "}}")?;
+    fs::write(&dest_path, buffer.as_bytes())?;
     std::process::Command::new("slint-lsp")
         .args(["format", "--inline"])
         .arg(&dest_path)
         .output()?;
     info!("Generated icons at {}", dest_path.display());
     Ok(())
-}
-
-/// Converts a kebab-case string to a PascalCase string.
-fn kebab_to_pascal(value: &str) -> String {
-    let mut s = String::new();
-    for word in value.split('-') {
-        let mut chars = word.chars();
-        if let Some(c) = chars.next() {
-            s.push_str(c.to_uppercase().to_string().as_str());
-        }
-        for c in chars {
-            s.push(c)
-        }
-    }
-    s
 }
 
 fn svg_to_icon(data: &[u8], name: &str) -> mukwa_core::Result<String> {
@@ -186,7 +170,7 @@ fn svg_to_icon(data: &[u8], name: &str) -> mukwa_core::Result<String> {
             Node::Path(path) => {
                 // TODO: not every path has fill
                 let commands = path_segments_to_string(path.data().segments())?;
-                writeln!(icon,"\"{commands}\",")?;
+                writeln!(icon, "\"{commands}\",")?;
             }
             _ => {
                 panic!("Unsupported element")
@@ -214,22 +198,4 @@ fn path_segments_to_string(segments: PathSegmentsIter) -> Result<String, std::fm
         }
     }
     Ok(s)
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn convert_kebab_to_pascal_case() {
-        let test_case = |value: &str, expected: &str| {
-            let pascal_string = kebab_to_pascal(value);
-            assert_eq!(pascal_string, expected);
-        };
-
-        test_case("scan-line", "ScanLine");
-        test_case("my-little-pony", "MyLittlePony");
-        test_case("noend-", "Noend");
-        test_case("-nostart", "Nostart");
-    }
 }

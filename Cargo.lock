@@ -3439,7 +3439,6 @@ dependencies = [
  "fontdb",
  "i-slint-backend-testing",
  "jiff",
- "lucide-slint",
  "mukwa-core",
  "native-dialog",
  "rusqlite",

@@ -1,9 +1,8 @@
-use std::{collections::HashMap, path::PathBuf};
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
 
 fn main() {
-    let library = HashMap::from([("lucide".to_string(), PathBuf::from(lucide_slint::lib()))]);
-    let config = slint_build::CompilerConfiguration::new().with_library_paths(library);
-    slint_build::compile_with_config("ui/app.slint", config).unwrap();
+    slint_build::compile("ui/app.slint").unwrap();
 
     #[cfg(target_os = "windows")]
     {

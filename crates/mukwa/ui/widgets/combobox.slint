@@ -5,7 +5,7 @@ import { Colors } from "../colors.slint";
 import { ListView, ScrollView } from "std-widgets.slint";
 import { FocusBorder } from "./focus-border.slint";
 import { FontSize } from "../theme.slint";
-import { IconSet, IconDisplay } from "@lucide";
+import { Icon, Icons } from "../icons.slint";
 
 export struct ComboBoxItem {
     value: string,
@@ -172,10 +172,10 @@ export component ComboBox {
                             padding: 8px;
                             spacing: 4px;
 
-                            IconDisplay {
-                                icon: IconSet.Check;
+                            Icon {
+                                icon: Icons.check;
                                 size: 14px;
-                                stroke-width: 2;
+                                stroke-width: 2px;
                                 stroke: Colors.textMuted;
                             }
 
