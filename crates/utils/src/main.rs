@@ -121,6 +121,7 @@ fn generate_svgs() -> mukwa_core::Result<()>{
         let icon = svg_to_icon(&data?,&name)?;
         writeln!(dest,"{icon}\n")?;
     }
+    std::process::Command::new("slint-lsp").args(&["format","--inline"]).arg(&dest_path).output()?;
     info!("Generated icons at {}",dest_path.display());
     Ok(())
 }
