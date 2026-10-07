@@ -3,7 +3,7 @@
 
 import { Colors } from "../colors.slint";
 import { Button, IconButton } from "button.slint";
-import { IconSet } from "@lucide";
+import { Icons } from "../icons.slint";
 
 export struct Date {
     year: int,
@@ -126,7 +126,7 @@ export component Calendar {
             cross-axis-alignment: center;
 
             IconButton {
-                icon: IconSet.ChevronLeft;
+                icon: Icons.chevron-left;
                 theme: ghost;
                 accessible-label: "Previous month";
                 clicked => decrement-month();
@@ -138,7 +138,7 @@ export component Calendar {
             }
 
             IconButton {
-                icon: IconSet.ChevronRight;
+                icon: Icons.chevron-right;
                 theme: ghost;
                 accessible-label: "Next month";
                 clicked => increment-month();

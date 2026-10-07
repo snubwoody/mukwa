@@ -12,7 +12,7 @@ import {
 } from "../../widgets.slint";
 import { ComboBoxItem } from "../../widgets/combobox.slint";
 import { FontSize } from "../../theme.slint";
-import { IconSet } from "@lucide";
+import { Icons } from "../../icons.slint";
 
 export global ImportCsvState {
     callback import-transactions();
@@ -76,7 +76,7 @@ export component ImportCsvDialog inherits PopupWindow {
             }
 
             IconButton {
-                icon: IconSet.X;
+                icon: Icons.x;
                 theme: ghost;
                 clicked => root.close();
             }

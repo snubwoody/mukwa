@@ -49,7 +49,7 @@ import { FontSize } from "theme.slint";
 import { AnalyticsPage } from "pages/analytics-page.slint";
 import { IconButton } from "widgets/button.slint";
 import { TitleBar } from "titlebar.slint";
-import { PiggyBank, ChartPie, Banknote, Settings as SettingsIcon } from "icons.slint";
+import { Icon, Icons } from "icons.slint";
 
 enum Page {
     spending,
@@ -122,15 +122,10 @@ component AccountSection inherits VerticalLayout {
         selected: current-page == Page.transactions && active-account-id == "";
         clicked => select-page(Page.transactions);
 
-//        IconDisplay {
-//            icon: IconSet.PiggyBank;
-//            size: 14px;
-//            stroke-width: 1.5;
-//            stroke: Colors.textBody;
-//        }
-
-        PiggyBank {
-
+        Icon{
+            icon: Icons.piggy-bank;
+            size: FontSize.body;
+            stroke: Colors.textBody;
         }
     }
 
@@ -257,7 +252,8 @@ component Sidebar {
                     selected: current-page == Page.spending && active-account-id == "";
                     clicked => select-page(Page.spending);
 
-                    Banknote {
+                    Icon{
+                        icon: Icons.banknote;
                         size: FontSize.body;
                         stroke: Colors.textBody;
                     }
@@ -268,7 +264,8 @@ component Sidebar {
                     selected: current-page == Page.analytics && active-account-id == "";
                     clicked => select-page(Page.analytics);
 
-                    ChartPie {
+                    Icon{
+                        icon: Icons.chart-pie;
                         size: FontSize.body;
                         stroke: Colors.textBody;
                     }
@@ -302,7 +299,8 @@ component Sidebar {
                 text: @tr("Settings");
                 clicked => settings-dialog.show();
 
-                SettingsIcon {
+                Icon{
+                    icon: Icons.settings;
                     size: FontSize.body;
                     stroke: Colors.textBody;
                 }

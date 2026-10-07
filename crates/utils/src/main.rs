@@ -5,8 +5,9 @@ use clap::{Parser, Subcommand};
 use mukwa_core::migrator::Migrator;
 use rusqlite::Connection;
 use std::collections::HashSet;
-use std::fs::File;
-use std::io::{BufReader, Cursor, Read, Write};
+use std::fs;
+use std::fmt::Write;
+use std::io::{BufReader, Cursor, Read};
 use std::path::PathBuf;
 use tracing::{info, warn};
 use usvg::Node;
@@ -86,9 +87,10 @@ fn main() {
 }
 
 fn generate_icons() -> mukwa_core::Result<()> {
-    let config = std::fs::read_to_string("crates/mukwa/ui/iconlist")?;
+    let config = fs::read_to_string("crates/mukwa/ui/iconlist")?;
     let icon_list = config.split('\n').collect::<HashSet<&str>>();
     let dest_path = PathBuf::from("crates/mukwa/ui/icons.slint");
+    // let dest_path = PathBuf::from("icons.slint");
 
     let url =
         "https://github.com/lucide-icons/lucide/releases/download/1.52.0/lucide-icons-1.52.0.zip";
@@ -98,18 +100,39 @@ fn generate_icons() -> mukwa_core::Result<()> {
     response.body_mut().as_reader().read_to_end(&mut buffer)?;
 
     let mut archive = ZipArchive::new(Cursor::new(buffer)).unwrap();
+
+    let mut buffer = String::new();
+    writeln!(buffer,"// SPDX-License-Identifier: GPL-3.0-or-later")?;
+    writeln!(buffer,"// Copyright (C) 2026 Wakunguma Kalimukwa")?;
+    writeln!(buffer,"\n// Auto generated file, do not edit\n")?;
+
+    writeln!(buffer,"export struct IconData {{\npaths: [string],}}\n")?;
+
+    writeln!(buffer,"export component Icon {{")?;
+    writeln!(buffer,"in-out property <length> size: 16px;")?;
+    writeln!(buffer,"in-out property <color> stroke: black;")?;
+    writeln!(buffer,"in-out property <length> stroke-width: 1px;")?;
+    writeln!(buffer,"in-out property <IconData> icon;")?;
+    writeln!(buffer,"width: self.size;")?;
+    writeln!(buffer,"height: self.size;")?;
+
+    writeln!(buffer,"\nfor path in icon.paths: Path {{")?;
+    writeln!(buffer,"stroke: parent.stroke;")?;
+    writeln!(buffer,"stroke-width: parent.stroke-width;")?;
+    writeln!(buffer,"stroke-line-cap: round;")?;
+    writeln!(buffer,"stroke-line-join: round;")?;
+    writeln!(buffer,"commands: path;")?;
+    writeln!(buffer,"viewbox-x: 0;")?;
+    writeln!(buffer,"viewbox-y: 0;")?;
+    writeln!(buffer,"viewbox-width: 24;")?;
+    writeln!(buffer,"viewbox-height: 24;")?;
+    writeln!(buffer,"}}")?;
+
+    writeln!(buffer,"}}")?;
+
+    writeln!(buffer,"export global Icons {{")?;
+
     info!("Parsing icons...");
-
-    let mut dest = File::options()
-        .create(true)
-        .truncate(true)
-        .write(true)
-        .open(&dest_path)?;
-    dest.write_all(b"// SPDX-License-Identifier: GPL-3.0-or-later\n")?;
-    dest.write_all(b"// Copyright (C) 2026 Wakunguma Kalimukwa\n")?;
-    dest.write_all(b"\n")?;
-
-    // TODO: add icon component that they all inherit from
     for i in 0..archive.len() {
         let file = archive.by_index(i).unwrap();
         if !file.name().ends_with(".svg") {
@@ -123,10 +146,12 @@ fn generate_icons() -> mukwa_core::Result<()> {
 
         let reader = BufReader::new(file);
         let data: std::io::Result<Vec<u8>> = reader.bytes().collect();
-        let icon = svg_to_icon(&data?, &kebab_to_pascal(&name))?;
-        dest.write_all(format!("{icon}\n").as_bytes())?;
+        let icon = svg_to_icon(&data?, &name)?;
+        write!(buffer,"{icon}")?;
     }
 
+    writeln!(buffer,"}}")?;
+    fs::write(&dest_path,buffer.as_bytes())?;
     std::process::Command::new("slint-lsp")
         .args(["format", "--inline"])
         .arg(&dest_path)
@@ -151,47 +176,29 @@ fn kebab_to_pascal(value: &str) -> String {
 }
 
 fn svg_to_icon(data: &[u8], name: &str) -> mukwa_core::Result<String> {
-    use std::fmt::Write;
     let content = usvg::Tree::from_data(data, &Default::default()).unwrap();
     let root = content.root();
     let mut icon = String::new();
-    writeln!(icon, "export component {name} inherits Rectangle {{").unwrap();
-    writeln!(
-        icon,
-        "in-out property <length> size: 24px;\nwidth: size;\nheight: size;"
-    )
-    .unwrap();
-    writeln!(icon, "in-out property <color> stroke: black;").unwrap();
-    writeln!(icon, "in-out property <length> stroke-width: 1px;").unwrap();
+    writeln!(icon, "out property <IconData> {name}: {{")?;
+    writeln!(icon, "paths: [")?;
     for node in root.children() {
         match node {
             Node::Path(path) => {
                 // TODO: not every path has fill
-                let commands = path_segments_to_string(path.data().segments()).unwrap();
-                let mut component = String::new();
-                write!(component, "Path {{\ncommands:\"{commands}\";\n").unwrap();
-                writeln!(component, "stroke: parent.stroke;").unwrap();
-                writeln!(component, "stroke-width: parent.stroke-width;").unwrap();
-                writeln!(component, "viewbox-width: 24;").unwrap();
-                writeln!(component, "viewbox-height: 24;").unwrap();
-                writeln!(component, "viewbox-x: 0;").unwrap();
-                writeln!(component, "viewbox-y: 0;").unwrap();
-                writeln!(component, "stroke-line-cap: round;").unwrap();
-                writeln!(component, "stroke-line-join: round;").unwrap();
-                write!(component, "}}").unwrap();
-                write!(icon, "\n{component}\n").unwrap();
+                let commands = path_segments_to_string(path.data().segments())?;
+                writeln!(icon,"\"{commands}\",")?;
             }
             _ => {
                 panic!("Unsupported element")
             }
         }
     }
-    write!(icon, "}}").unwrap();
+    writeln!(icon, "],")?;
+    write!(icon, "}};")?;
     Ok(icon)
 }
 
 fn path_segments_to_string(segments: PathSegmentsIter) -> Result<String, std::fmt::Error> {
-    use std::fmt::Write;
     let mut s = String::new();
     for segment in segments {
         match segment {

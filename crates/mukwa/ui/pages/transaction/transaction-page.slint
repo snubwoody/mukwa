@@ -22,8 +22,8 @@ import {
 import { Calendar, Date, CalendarState } from "../../widgets/calendar.slint";
 import { Table, TableRow, TableCell } from "../../widgets/tableview.slint";
 import { Settings } from "../../settings.slint";
-import { IconSet, IconDisplay } from "@lucide";
 import { ImportCsvDialog, ImportCsvState } from "import-csv.slint";
+import { Icon, Icons } from "../../icons.slint";
 
 component ConfirmButton {
     in property <Transaction> transaction;
@@ -63,7 +63,7 @@ component ConfirmButton {
     }
 
     icon-btn := IconButton {
-        icon: IconSet.Info;
+        icon: Icons.info;
         theme: ghost;
         clicked => {
             popup.show();
@@ -524,11 +524,8 @@ component TransactionTableHeader inherits TableRow {
             spacing: 8px;
             cross-axis-alignment: center;
 
-            IconDisplay {
-                icon: IconSet.Info;
-                size: 14px;
-                stroke-width: 2;
-                stroke: Colors.textBody;
+            Icon {
+                icon: Icons.info;
             }
 
             Text {
@@ -632,7 +629,7 @@ export component TransactionPage inherits VerticalLayout {
         spacing: 8px;
 
         if !active-account-id.is-empty: IconButton {
-            icon: IconSet.FileDown;
+            icon: Icons.file-down;
             theme: ghost;
             accessible-label: @tr("Import CSV file");
             clicked => {

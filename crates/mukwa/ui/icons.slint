@@ -1,302 +1,105 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-export component ChartPie inherits Rectangle {
-    in-out property <length> size: 24px;
-    width: size;
-    height: size;
+// Auto generated file, do not edit
+
+export struct IconData {
+    paths: [string],
+}
+
+export component Icon {
+    in-out property <length> size: 16px;
     in-out property <color> stroke: black;
     in-out property <length> stroke-width: 1px;
+    in-out property <IconData> icon;
+    width: self.size;
+    height: self.size;
 
-    Path {
-        commands: "M 21 12 C 21.552 12 22.005 11.551 21.95 11.002 C 21.474669 6.2685843 17.730522 2.5252745 12.997 2.051 C 12.447 1.996 11.999 2.449 11.999 3.001 L 11.999 11.001 C 11.999 11.553285 12.446715 12.001 12.999 12.001 Z ";
+    for path in icon.paths: Path {
         stroke: parent.stroke;
         stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
         stroke-line-cap: round;
         stroke-line-join: round;
-    }
-
-    Path {
-        commands: "M 21.21 15.89 C 19.459848 20.028883 15.163824 22.492043 10.707772 21.911535 C 6.2517214 21.331028 2.7301428 17.849438 2.098787 13.400306 C 1.4674314 8.951174 3.8813727 4.6273007 8 2.83 ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
+        commands: path;
         viewbox-x: 0;
         viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
+        viewbox-width: 24;
+        viewbox-height: 24;
     }
 }
 
-export component FileDown inherits Rectangle {
-    in-out property <length> size: 24px;
-    width: size;
-    height: size;
-    in-out property <color> stroke: black;
-    in-out property <length> stroke-width: 1px;
-
-    Path {
-        commands: "M 6 22 C 4.8954306 22 4 21.10457 4 20 L 4 4 C 4 2.8954306 4.8954306 2 6 2 L 14 2 C 14.639365 1.9989637 15.252715 2.2530866 15.704 2.706 L 19.292 6.294 C 19.74614 6.7454443 20.00104 7.3596535 20 8 L 20 20 C 20 21.10457 19.10457 22 18 22 Z ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-
-    Path {
-        commands: "M 14 2 L 14 7 C 14 7.5522847 14.447715 8 15 8 L 20 8 ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-
-    Path {
-        commands: "M 12 18 L 12 12 ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-
-    Path {
-        commands: "M 9 15 L 12 18 L 15 15 ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-}
-
-export component Check inherits Rectangle {
-    in-out property <length> size: 24px;
-    width: size;
-    height: size;
-    in-out property <color> stroke: black;
-    in-out property <length> stroke-width: 1px;
-
-    Path {
-        commands: "M 20 6 L 9 17 L 4 12 ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-}
-
-export component ChevronRight inherits Rectangle {
-    in-out property <length> size: 24px;
-    width: size;
-    height: size;
-    in-out property <color> stroke: black;
-    in-out property <length> stroke-width: 1px;
-
-    Path {
-        commands: "M 9 18 L 15 12 L 9 6 ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-}
-
-export component PiggyBank inherits Rectangle {
-    in-out property <length> size: 24px;
-    width: size;
-    height: size;
-    in-out property <color> stroke: black;
-    in-out property <length> stroke-width: 1px;
-
-    Path {
-        commands: "M 11 17 L 14 17 L 14 19 C 14 19.552284 14.447715 20 15 20 L 17 20 C 17.552284 20 18 19.552284 18 19 L 18 16 C 18.944466 15.685556 19.685556 14.944466 20 14 L 21 14 C 21.552284 14 22 13.552285 22 13 L 22 11 C 22 10.447715 21.552284 10 21 10 L 20 10 C 20 8.426213 19.25903 6.944272 18 6 L 18 3 C 16.74097 3 15.555417 3.5927765 14.8 4.6 L 14.5 5 L 11 5 C 7.6862917 5 5 7.6862917 5 11 L 5 12 C 5 13.573787 5.7409706 15.055728 7 16 L 7 19 C 7 19.552284 7.4477153 20 8 20 L 10 20 C 10.552285 20 11 19.552284 11 19 Z ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-
-    Path {
-        commands: "M 16 10 L 16.01 10 ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-
-    Path {
-        commands: "M 2 8 L 2 9 C 2 10.104569 2.8954306 11 4 11 L 5 11 ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-}
-
-export component ChevronLeft inherits Rectangle {
-    in-out property <length> size: 24px;
-    width: size;
-    height: size;
-    in-out property <color> stroke: black;
-    in-out property <length> stroke-width: 1px;
-
-    Path {
-        commands: "M 15 18 L 9 12 L 15 6 ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-}
-
-export component Banknote inherits Rectangle {
-    in-out property <length> size: 24px;
-    width: size;
-    height: size;
-    in-out property <color> stroke: black;
-    in-out property <length> stroke-width: 1px;
-
-    Path {
-        commands: "M 4 6 L 20 6 C 21.10457 6 22 6.8954306 22 8 L 22 16 C 22 17.10457 21.10457 18 20 18 L 4 18 C 2.8954306 18 2 17.10457 2 16 L 2 8 C 2 6.8954306 2.8954306 6 4 6 Z ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-
-    Path {
-        commands: "M 14 12 C 14 13.104569 13.104569 14 12 14 C 10.895431 14 10 13.104569 10 12 C 10 10.895431 10.895431 10 12 10 C 13.104569 10 14 10.895431 14 12 Z ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-
-    Path {
-        commands: "M 6 12 L 6.01 12 M 18 12 L 18.01 12 ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-}
-
-export component Settings inherits Rectangle {
-    in-out property <length> size: 24px;
-    width: size;
-    height: size;
-    in-out property <color> stroke: black;
-    in-out property <length> stroke-width: 1px;
-
-    Path {
-        commands: "M 9.671 4.136 C 9.785173 2.934844 10.79393 2.0174267 12.0005 2.0174267 C 13.20707 2.0174267 14.215826 2.934844 14.33 4.136 C 14.39721 4.895941 14.830661 5.5754066 15.491464 5.956677 C 16.152266 6.3379474 16.957445 6.3731484 17.649 6.051 C 18.745247 5.5532923 20.040247 5.9686346 20.642517 7.0111046 C 21.244787 8.053574 20.957748 9.382913 19.979 10.084 C 19.354704 10.52205 18.983046 11.236851 18.983046 11.9995 C 18.983046 12.762149 19.354704 13.476951 19.979 13.915 C 20.957748 14.616087 21.244787 15.945426 20.642517 16.987896 C 20.040247 18.030365 18.745247 18.445707 17.649 17.948 C 16.957445 17.625853 16.152266 17.661053 15.491464 18.042322 C 14.830661 18.423594 14.39721 19.10306 14.33 19.863 C 14.215826 21.064156 13.20707 21.981573 12.0005 21.981573 C 10.79393 21.981573 9.785173 21.064156 9.671 19.863 C 9.603913 19.102781 9.170316 18.42304 8.5092325 18.041723 C 7.84815 17.660406 7.04265 17.625425 6.351 17.948 C 5.2547526 18.445707 3.9597533 18.030365 3.3574834 16.987896 C 2.7552137 15.945426 3.0422518 14.616087 4.021 13.915 C 4.645297 13.476951 5.016954 12.762149 5.016954 11.9995 C 5.016954 11.236851 4.645297 10.52205 4.021 10.084 C 3.043679 9.382598 2.7573965 8.054449 3.3589842 7.012713 C 3.960572 5.9709773 5.254008 5.5550933 6.35 6.051 C 7.0415545 6.3731484 7.846734 6.3379474 8.507537 5.956677 C 9.16834 5.5754066 9.60179 4.895941 9.669 4.136 ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-
-    Path {
-        commands: "M 15 12 C 15 13.656855 13.656855 15 12 15 C 10.343145 15 9 13.656855 9 12 C 9 10.343145 10.343145 9 12 9 C 13.656855 9 15 10.343145 15 12 Z ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-}
-
-export component Plus inherits Rectangle {
-    in-out property <length> size: 24px;
-    width: size;
-    height: size;
-    in-out property <color> stroke: black;
-    in-out property <length> stroke-width: 1px;
-
-    Path {
-        commands: "M 5 12 L 19 12 ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
-
-    Path {
-        commands: "M 12 5 L 12 19 ";
-        stroke: parent.stroke;
-        stroke-width: parent.stroke-width;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        viewbox-x: 0;
-        viewbox-y: 0;
-        stroke-line-cap: round;
-        stroke-line-join: round;
-    }
+export global Icons {
+    out property <IconData> chart-pie: {
+        paths: [
+            "M 21 12 C 21.552 12 22.005 11.551 21.95 11.002 C 21.474669 6.2685843 17.730522 2.5252745 12.997 2.051 C 12.447 1.996 11.999 2.449 11.999 3.001 L 11.999 11.001 C 11.999 11.553285 12.446715 12.001 12.999 12.001 Z ",
+            "M 21.21 15.89 C 19.459848 20.028883 15.163824 22.492043 10.707772 21.911535 C 6.2517214 21.331028 2.7301428 17.849438 2.098787 13.400306 C 1.4674314 8.951174 3.8813727 4.6273007 8 2.83 ",
+        ],
+    };
+    out property <IconData> file-down: {
+        paths: [
+            "M 6 22 C 4.8954306 22 4 21.10457 4 20 L 4 4 C 4 2.8954306 4.8954306 2 6 2 L 14 2 C 14.639365 1.9989637 15.252715 2.2530866 15.704 2.706 L 19.292 6.294 C 19.74614 6.7454443 20.00104 7.3596535 20 8 L 20 20 C 20 21.10457 19.10457 22 18 22 Z ",
+            "M 14 2 L 14 7 C 14 7.5522847 14.447715 8 15 8 L 20 8 ",
+            "M 12 18 L 12 12 ",
+            "M 9 15 L 12 18 L 15 15 ",
+        ],
+    };
+    out property <IconData> check: {
+        paths: [
+            "M 20 6 L 9 17 L 4 12 ",
+        ],
+    };
+    out property <IconData> chevron-down: {
+        paths: [
+            "M 6 9 L 12 15 L 18 9 ",
+        ],
+    };
+    out property <IconData> chevron-right: {
+        paths: [
+            "M 9 18 L 15 12 L 9 6 ",
+        ],
+    };
+    out property <IconData> info: {
+        paths: [
+            "M 22 12 C 22 17.522848 17.522848 22 12 22 C 6.4771523 22 2 17.522848 2 12 C 2 6.4771523 6.4771523 2 12 2 C 17.522848 2 22 6.4771523 22 12 Z ",
+            "M 12 16 L 12 12 ",
+            "M 12 8 L 12.01 8 ",
+        ],
+    };
+    out property <IconData> piggy-bank: {
+        paths: [
+            "M 11 17 L 14 17 L 14 19 C 14 19.552284 14.447715 20 15 20 L 17 20 C 17.552284 20 18 19.552284 18 19 L 18 16 C 18.944466 15.685556 19.685556 14.944466 20 14 L 21 14 C 21.552284 14 22 13.552285 22 13 L 22 11 C 22 10.447715 21.552284 10 21 10 L 20 10 C 20 8.426213 19.25903 6.944272 18 6 L 18 3 C 16.74097 3 15.555417 3.5927765 14.8 4.6 L 14.5 5 L 11 5 C 7.6862917 5 5 7.6862917 5 11 L 5 12 C 5 13.573787 5.7409706 15.055728 7 16 L 7 19 C 7 19.552284 7.4477153 20 8 20 L 10 20 C 10.552285 20 11 19.552284 11 19 Z ",
+            "M 16 10 L 16.01 10 ",
+            "M 2 8 L 2 9 C 2 10.104569 2.8954306 11 4 11 L 5 11 ",
+        ],
+    };
+    out property <IconData> chevron-left: {
+        paths: [
+            "M 15 18 L 9 12 L 15 6 ",
+        ],
+    };
+    out property <IconData> banknote: {
+        paths: [
+            "M 4 6 L 20 6 C 21.10457 6 22 6.8954306 22 8 L 22 16 C 22 17.10457 21.10457 18 20 18 L 4 18 C 2.8954306 18 2 17.10457 2 16 L 2 8 C 2 6.8954306 2.8954306 6 4 6 Z ",
+            "M 14 12 C 14 13.104569 13.104569 14 12 14 C 10.895431 14 10 13.104569 10 12 C 10 10.895431 10.895431 10 12 10 C 13.104569 10 14 10.895431 14 12 Z ",
+            "M 6 12 L 6.01 12 M 18 12 L 18.01 12 ",
+        ],
+    };
+    out property <IconData> x: {
+        paths: [
+            "M 18 6 L 6 18 ",
+            "M 6 6 L 18 18 ",
+        ],
+    };
+    out property <IconData> settings: {
+        paths: [
+            "M 9.671 4.136 C 9.785173 2.934844 10.79393 2.0174267 12.0005 2.0174267 C 13.20707 2.0174267 14.215826 2.934844 14.33 4.136 C 14.39721 4.895941 14.830661 5.5754066 15.491464 5.956677 C 16.152266 6.3379474 16.957445 6.3731484 17.649 6.051 C 18.745247 5.5532923 20.040247 5.9686346 20.642517 7.0111046 C 21.244787 8.053574 20.957748 9.382913 19.979 10.084 C 19.354704 10.52205 18.983046 11.236851 18.983046 11.9995 C 18.983046 12.762149 19.354704 13.476951 19.979 13.915 C 20.957748 14.616087 21.244787 15.945426 20.642517 16.987896 C 20.040247 18.030365 18.745247 18.445707 17.649 17.948 C 16.957445 17.625853 16.152266 17.661053 15.491464 18.042322 C 14.830661 18.423594 14.39721 19.10306 14.33 19.863 C 14.215826 21.064156 13.20707 21.981573 12.0005 21.981573 C 10.79393 21.981573 9.785173 21.064156 9.671 19.863 C 9.603913 19.102781 9.170316 18.42304 8.5092325 18.041723 C 7.84815 17.660406 7.04265 17.625425 6.351 17.948 C 5.2547526 18.445707 3.9597533 18.030365 3.3574834 16.987896 C 2.7552137 15.945426 3.0422518 14.616087 4.021 13.915 C 4.645297 13.476951 5.016954 12.762149 5.016954 11.9995 C 5.016954 11.236851 4.645297 10.52205 4.021 10.084 C 3.043679 9.382598 2.7573965 8.054449 3.3589842 7.012713 C 3.960572 5.9709773 5.254008 5.5550933 6.35 6.051 C 7.0415545 6.3731484 7.846734 6.3379474 8.507537 5.956677 C 9.16834 5.5754066 9.60179 4.895941 9.669 4.136 ",
+            "M 15 12 C 15 13.656855 13.656855 15 12 15 C 10.343145 15 9 13.656855 9 12 C 9 10.343145 10.343145 9 12 9 C 13.656855 9 15 10.343145 15 12 Z ",
+        ],
+    };
+    out property <IconData> plus: {
+        paths: [
+            "M 5 12 L 19 12 ",
+            "M 12 5 L 12 19 ",
+        ],
+    };
 }
