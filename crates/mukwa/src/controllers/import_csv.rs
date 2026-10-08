@@ -164,7 +164,8 @@ fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Re
         len += 1;
     }
 
-    app_state.load_transactions()?;
+    // FIXME
+    //app_state.load_transactions()?;
     Ok(len)
 }
 

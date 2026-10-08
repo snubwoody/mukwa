@@ -12,6 +12,7 @@ import { Colors } from "colors.slint";
 import {
     Account,
     Transaction,
+    TransactionState,
     State,
     Category,
     Api,
@@ -26,6 +27,7 @@ export {
     CategoryGroup,
     AccountType,
     CategoryState,
+    TransactionState,
 } from "globals.slint";
 export { Settings } from "settings.slint";
 export { AnalyticsApi, PieChartSlice } from "pages/analytics-page.slint";
@@ -372,7 +374,7 @@ export component MainWindow inherits Window {
 
             if active-page == Page.transactions: TransactionPage {
                 active-account-id: active-account-id;
-                transactions: State.transactions;
+                transactions: TransactionState.transactions;
             }
         }
     }

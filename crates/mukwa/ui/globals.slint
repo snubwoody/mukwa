@@ -73,6 +73,25 @@ export global Api {
     callback minimize();
 }
 
+export global TransactionState {
+    in-out property <[Transaction]> transactions;
+
+    callback delete-transaction(id: string);
+    callback duplicate-transaction(id: string);
+    callback confirm-transaction(id: string);
+    callback set-transaction-date(id: string, date: string);
+    callback set-transaction-account(id: string, account-id: string);
+    callback set-transaction-payee(id: string, account-id: string);
+    callback set-transaction-note(id: string, note: string);
+    callback set-transaction-category(id: string, category-id: string);
+    callback set-transaction-outflow(id: string, amount: string);
+    callback set-transaction-inflow(id: string, amount: string);
+    callback create-transaction(CreateTransactionOpts);
+
+    pure callback is-transaction-unconfirmed(id: string) -> bool;
+    pure callback total-balance() -> string;
+}
+
 export global CategoryState {
     callback delete-category(id: string);
     callback delete-category-group(id: string);
@@ -105,21 +124,8 @@ export global CategoryState {
 
 export global State {
     callback create-account(name: string, type: AccountType, balance: string);
-    callback create-transaction(CreateTransactionOpts);
-    callback duplicate-transaction(id: string);
-    callback delete-transaction(id: string);
-    callback confirm-transaction(id: string);
-    callback set-transaction-date(id: string, date: string);
-    callback set-transaction-account(id: string, account-id: string);
-    callback set-transaction-payee(id: string, account-id: string);
-    callback set-transaction-note(id: string, note: string);
-    callback set-transaction-category(id: string, category-id: string);
-    callback set-transaction-outflow(id: string, amount: string);
-    callback set-transaction-inflow(id: string, amount: string);
     callback delete-account(string);
 
-    pure callback is-transaction-unconfirmed(id: string) -> bool;
-    pure callback total-balance() -> string;
     pure callback total-spent-all(Date) -> string;
     pure callback get-account(id: string) -> Account;
     pure callback account-balance(id: string) -> string;
@@ -129,7 +135,6 @@ export global State {
     pure callback format-date(string) -> string;
     pure callback format-money(value: string, currency-code: string) -> string;
 
-    in-out property <[Transaction]> transactions;
     // Account options for combo boxes
     in-out property <[ComboBoxItem]> account-options;
     // All the supported currencies
