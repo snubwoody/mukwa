@@ -3,6 +3,7 @@
 
 use crate::ui;
 use crate::ui::{MainWindow, TransactionState};
+use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::Money;
 use mukwa_core::service::Service;
@@ -199,7 +200,11 @@ fn create_transaction(
     state: &TransactionState,
     service: &Service,
 ) -> crate::Result<()> {
-    let date = Date::strptime("%Y-%m-%d", &opts.date)?;
+    let date = if opts.date.is_empty() {
+        Zoned::now().date()
+    } else {
+        Date::strptime("%Y-%m-%d", &opts.date)?
+    };
 
     let transaction =
         if !opts.outflow.is_empty() && opts.inflow.is_empty() && opts.payee_id.is_empty() {
@@ -504,6 +509,75 @@ mod test {
         assert!(transaction.outflow.is_empty());
         assert!(transaction.payee_id.is_empty());
         assert_eq!(transaction.inflow.as_str(), Money::ZERO.to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn create_transaction_with_default_date() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let transaction_state: TransactionState = window.global();
+        let account = service.create_account("", AccountType::Cash)?;
+        bind(&window, service)?;
+        let opts = CreateTransactionOpts {
+            outflow: "50.00".to_shared_string(),
+            account_id: account.id.to_shared_string(),
+            ..Default::default()
+        };
+
+        transaction_state.invoke_create_transaction(opts);
+        let transaction = transaction_state.get_transactions().iter().next().unwrap();
+        assert_eq!(transaction.date, Zoned::now().date().to_shared_string());
+        Ok(())
+    }
+
+    #[test]
+    fn set_outflow_on_an_expense() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let transaction_state: TransactionState = window.global();
+        let account = service.create_account("", AccountType::Cash)?;
+        bind(&window, service)?;
+        let opts = CreateTransactionOpts {
+            outflow: "50.00".to_shared_string(),
+            account_id: account.id.to_shared_string(),
+            ..Default::default()
+        };
+
+        transaction_state.invoke_create_transaction(opts);
+        let transaction = transaction_state.get_transactions().iter().next().unwrap();
+        transaction_state.invoke_set_transaction_outflow(transaction.id, "300".to_shared_string());
+        let transaction = transaction_state.get_transactions().iter().next().unwrap();
+        assert_eq!(transaction.outflow.as_str(), Money::new(300).to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn set_outflow_on_an_income() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let transaction_state: TransactionState = window.global();
+        let account = service.create_account("", AccountType::Cash)?;
+        let group = service.create_category_group("")?;
+        let category = service.create_category("", group.id)?;
+        bind(&window, service)?;
+        let opts = CreateTransactionOpts {
+            account_id: account.id.to_shared_string(),
+            inflow: "50.00".to_shared_string(),
+            category_id: category.id.to_shared_string(),
+            ..Default::default()
+        };
+
+        transaction_state.invoke_create_transaction(opts);
+        let transaction = transaction_state.get_transactions().iter().next().unwrap();
+        transaction_state.invoke_set_transaction_outflow(transaction.id, "300".to_shared_string());
+        let transaction = transaction_state.get_transactions().iter().next().unwrap();
+        assert_eq!(transaction.outflow.as_str(), Money::new(300).to_string());
+        assert!(transaction.inflow.is_empty());
+        assert!(transaction.category_id.is_empty());
         Ok(())
     }
 }
