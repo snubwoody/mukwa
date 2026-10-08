@@ -22,6 +22,45 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
 
     transaction_state.set_transactions(ModelRc::new(VecModel::from(transactions_list)));
 
+    transaction_state.on_select_transaction({
+        let transaction_state = transaction_state.as_weak();
+        move |id| {
+            let transaction_state = transaction_state.unwrap();
+            if transaction_state.get_selected_transactions().iter().find(|transaction_id|*transaction_id == id).is_some(){
+                return;
+            }
+            if let Err(err) = transaction_state.get_selected_transactions().push_row(id){
+                warn!("Failed to select transaction: {err}");
+            }
+        }
+    });
+
+    transaction_state.on_select_all_transactions({
+        let transaction_state = transaction_state.as_weak();
+        move || {
+            let transaction_state = transaction_state.unwrap();
+            transaction_state.set_all_transactions_selected(true);
+        }
+    });
+
+    transaction_state.on_deselect_all_transactions({
+        let transaction_state = transaction_state.as_weak();
+        move || {
+            let transaction_state = transaction_state.unwrap();
+            transaction_state.set_all_transactions_selected(false);
+            transaction_state.set_selected_transactions(ModelRc::new(VecModel::default()));
+        }
+    });
+
+    transaction_state.on_deselect_transaction({
+        let transaction_state = transaction_state.as_weak();
+        move |id| {
+            let transaction_state = transaction_state.unwrap();
+            let selected_transactions: VecModel<_> = transaction_state.get_selected_transactions().iter().filter(|transaction_id|*transaction_id != id).collect();
+            transaction_state.set_selected_transactions(ModelRc::new(selected_transactions));
+        }
+    });
+
     transaction_state.on_delete_transaction({
         let transaction_state = transaction_state.as_weak();
         let service = service.clone();
@@ -578,6 +617,72 @@ mod test {
         assert_eq!(transaction.outflow.as_str(), Money::new(300).to_string());
         assert!(transaction.inflow.is_empty());
         assert!(transaction.category_id.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn select_transaction() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let transaction_state: TransactionState = window.global();
+        bind(&window, service)?;
+
+        transaction_state.invoke_select_transaction("1".to_shared_string());
+        transaction_state.invoke_select_transaction("1".to_shared_string());
+        transaction_state.invoke_select_transaction("2".to_shared_string());
+        let ids: Vec<_> = transaction_state.get_selected_transactions().iter().collect();
+        assert_eq!(ids.len(),2);
+        assert!(ids.contains(&"1".to_shared_string()));
+        assert!(ids.contains(&"2".to_shared_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn deselect_transaction() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let transaction_state: TransactionState = window.global();
+        bind(&window, service)?;
+
+        transaction_state.invoke_select_transaction("2".to_shared_string());
+        transaction_state.invoke_deselect_transaction("2".to_shared_string());
+        let ids: Vec<_> = transaction_state.get_selected_transactions().iter().collect();
+        assert_eq!(ids.len(),1);
+        assert!(ids.contains(&"1".to_shared_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn deselect_all_transaction() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let transaction_state: TransactionState = window.global();
+        bind(&window, service)?;
+
+        transaction_state.invoke_select_transaction("1".to_shared_string());
+        transaction_state.invoke_select_transaction("2".to_shared_string());
+        transaction_state.invoke_select_all_transactions();
+        transaction_state.invoke_deselect_all_transactions();
+        let ids: Vec<_> = transaction_state.get_selected_transactions().iter().collect();
+        assert!(ids.is_empty());
+        assert!(!transaction_state.get_all_transactions_selected());
+        Ok(())
+    }
+
+    #[test]
+    fn select_all_transactions() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let transaction_state: TransactionState = window.global();
+        bind(&window, service)?;
+
+        transaction_state.invoke_select_all_transactions();
+        transaction_state.invoke_deselect_transaction("2".to_shared_string());
+        assert!(transaction_state.get_all_transactions_selected());
         Ok(())
     }
 }
