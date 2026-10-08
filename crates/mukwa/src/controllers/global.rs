@@ -7,7 +7,7 @@ use crate::ui::MainWindow;
 use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::fmt::CurrencyFormatter;
-use mukwa_core::service::{Service, TransactionType};
+use mukwa_core::service::TransactionType;
 use mukwa_core::{Currency, Money, fmt};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::collections::HashSet;
@@ -15,7 +15,6 @@ use std::rc::Rc;
 use std::str::FromStr;
 use std::time::Instant;
 use tracing::warn;
-use uuid::Uuid;
 
 pub fn bind(window: &MainWindow, state: &AppState) {
     let instant = Instant::now();
@@ -111,18 +110,6 @@ pub fn bind(window: &MainWindow, state: &AppState) {
             if let Err(err) = state.delete_account(&id) {
                 warn!("Failed to delete account: {err}")
             }
-        }
-    });
-
-    global_state.on_total_balance({
-        let state = state.clone();
-        move || {
-            let mut total = Money::ZERO;
-            for transaction in state.transactions().iter() {
-                total -= Money::from_str(transaction.outflow.as_str()).unwrap_or_default();
-                total += Money::from_str(transaction.inflow.as_str()).unwrap_or_default();
-            }
-            total.to_shared_string()
         }
     });
 

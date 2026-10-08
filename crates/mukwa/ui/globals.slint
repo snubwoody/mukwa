@@ -89,6 +89,7 @@ export global TransactionState {
     callback create-transaction(CreateTransactionOpts);
 
     pure callback is-transaction-unconfirmed(id: string) -> bool;
+    pure callback total-balance() -> string;
 }
 
 export global CategoryState {
@@ -125,7 +126,6 @@ export global State {
     callback create-account(name: string, type: AccountType, balance: string);
     callback delete-account(string);
 
-    pure callback total-balance() -> string;
     pure callback total-spent-all(Date) -> string;
     pure callback get-account(id: string) -> Account;
     pure callback account-balance(id: string) -> string;
