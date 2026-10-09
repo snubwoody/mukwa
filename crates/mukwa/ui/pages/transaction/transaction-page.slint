@@ -648,7 +648,7 @@ export component TransactionPage inherits VerticalLayout {
                         color: Colors.textBody;
                     }
 
-                    Dropdown {
+                    dropdown := Dropdown {
                         options: [
                             {text: "Is", value: "is"},
                             {text: "Is after", value: "is-after"},
@@ -657,17 +657,15 @@ export component TransactionPage inherits VerticalLayout {
                             {text: "Is on or after", value: "is-on-or-before"},
                         ];
                     }
-                    Text {
-                        text: @tr("Is after");
-                        color: Colors.textBody;
-                    }
                 }
 
-                Calendar { }
+                calendar := Calendar { }
 
                 PrimaryButton {
                     text: @tr("Apply");
                     clicked => {
+                        TransactionState.add-date-filter(calendar.date, dropdown.current-value);
+                        date-popup.close();
                     }
                 }
             }

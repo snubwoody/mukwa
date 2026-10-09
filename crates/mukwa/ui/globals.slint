@@ -76,6 +76,7 @@ export global Api {
 export global TransactionState {
     in-out property <[Transaction]> transactions;
 
+    callback add-date-filter(start-date:Date,filter-type:string);
     callback delete-transaction(id: string);
     callback duplicate-transaction(id: string);
     callback confirm-transaction(id: string);

@@ -7,6 +7,7 @@ use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::Money;
 use mukwa_core::service::Service;
+use slint::ModelExt;
 use slint::{ComponentHandle, Global, Model, ModelRc, ToSharedString, VecModel};
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -21,6 +22,35 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
     let transactions_list: Vec<ui::Transaction> = transactions.iter().map(|t| t.into()).collect();
 
     transaction_state.set_transactions(ModelRc::new(VecModel::from(transactions_list)));
+
+    transaction_state.on_add_date_filter({
+        let transaction_state = transaction_state.as_weak();
+        move |start_date, filter_type| {
+            // TODO: probably just have a filter list and then call apply filters,
+            // - Make sure it's in order
+            // TODO: make sure you only apply filters on the current transaction list?
+            // - Maybe test it as well
+            // TODO: will adding, deleting or editing transactions mess up filters?
+            let start_date = Date::try_from(start_date).unwrap();
+            let transaction_state = transaction_state.unwrap();
+            let transactions = VecModel::default();
+            match filter_type.as_str() {
+                "is" => {
+                    for transaction in transaction_state.get_transactions().iter() {
+                        let transaction_date =
+                            Date::strptime("%Y-%m-%d", transaction.date.clone()).unwrap();
+                        if transaction_date == start_date {
+                            transactions.push(transaction);
+                        }
+                    }
+                    transaction_state.set_transactions(ModelRc::new(transactions));
+                }
+                _ => {
+                    dbg!("Unsupported filter type");
+                }
+            }
+        }
+    });
 
     transaction_state.on_delete_transaction({
         let transaction_state = transaction_state.as_weak();
@@ -379,10 +409,9 @@ mod test {
     use mukwa_core::service::AccountType;
     use slint::{Model, SharedString, ToSharedString};
 
-    use crate::ui::{CreateTransactionOpts};
+    use crate::ui::CreateTransactionOpts;
 
-
-    fn init_test_with_service(service: Service) -> crate::Result<TransactionState<'static>>{
+    fn init_test_with_service(service: Service) -> crate::Result<TransactionState<'static>> {
         i_slint_backend_testing::init_no_event_loop();
         let window = MainWindow::new()?;
         bind(&window, service)?;
@@ -569,6 +598,23 @@ mod test {
         assert_eq!(transaction.outflow.as_str(), Money::new(300).to_string());
         assert!(transaction.inflow.is_empty());
         assert!(transaction.category_id.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn date_is_filter() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        service.create_account("", AccountType::Cash)?;
+        let t1 = service.create_expense().date(date(2020, 1, 1)).submit()?;
+        service.create_expense().date(date(2020, 1, 2)).submit()?;
+        let transaction_state = init_test_with_service(service)?;
+
+        transaction_state.invoke_add_date_filter(date(2020, 1, 1).into(), "is".to_shared_string());
+        let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
+        assert_eq!(transactions.len(), 1);
+        let transaction = &transactions[0];
+        assert_eq!(transaction.id, t1.id.to_shared_string());
+        assert_eq!(transaction.date, t1.date.to_shared_string());
         Ok(())
     }
 }
