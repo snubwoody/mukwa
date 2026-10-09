@@ -28,11 +28,16 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
         move |id| {
             let transaction_state = transaction_state.unwrap();
 
-            if transaction_state.get_all_transactions_selected(){
+            if transaction_state.get_all_transactions_selected() {
                 return true;
             }
 
-            if transaction_state.get_selected_transactions().iter().find(|transaction_id|*transaction_id == id).is_some(){
+            if transaction_state
+                .get_selected_transactions()
+                .iter()
+                .find(|transaction_id| *transaction_id == id)
+                .is_some()
+            {
                 return true;
             }
             return false;
@@ -43,12 +48,21 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
         let transaction_state = transaction_state.as_weak();
         move |id| {
             let transaction_state = transaction_state.unwrap();
-            if transaction_state.get_selected_transactions().iter().find(|transaction_id|*transaction_id == id).is_some(){
-                let selected_transactions: VecModel<_> = transaction_state.get_selected_transactions().iter().filter(|transaction_id|*transaction_id != id).collect();
+            if transaction_state
+                .get_selected_transactions()
+                .iter()
+                .find(|transaction_id| *transaction_id == id)
+                .is_some()
+            {
+                let selected_transactions: VecModel<_> = transaction_state
+                    .get_selected_transactions()
+                    .iter()
+                    .filter(|transaction_id| *transaction_id != id)
+                    .collect();
                 transaction_state.set_selected_transactions(ModelRc::new(selected_transactions));
                 return;
             }
-            if let Err(err) = transaction_state.get_selected_transactions().push_row(id){
+            if let Err(err) = transaction_state.get_selected_transactions().push_row(id) {
                 warn!("Failed to select transaction: {err}");
             }
         }
@@ -62,7 +76,7 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
                 true => {
                     transaction_state.set_all_transactions_selected(false);
                     transaction_state.set_selected_transactions(ModelRc::new(VecModel::default()));
-                },
+                }
                 false => {
                     transaction_state.set_all_transactions_selected(true);
                 }
@@ -70,21 +84,13 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
         }
     });
 
-    transaction_state.on_deselect_all_transactions({
+    transaction_state.on_delete_selected_transactions({
         let transaction_state = transaction_state.as_weak();
+        let service = service.clone();
         move || {
-            let transaction_state = transaction_state.unwrap();
-            transaction_state.set_all_transactions_selected(false);
-            transaction_state.set_selected_transactions(ModelRc::new(VecModel::default()));
-        }
-    });
-
-    transaction_state.on_deselect_transaction({
-        let transaction_state = transaction_state.as_weak();
-        move |id| {
-            let transaction_state = transaction_state.unwrap();
-            let selected_transactions: VecModel<_> = transaction_state.get_selected_transactions().iter().filter(|transaction_id|*transaction_id != id).collect();
-            transaction_state.set_selected_transactions(ModelRc::new(selected_transactions));
+            if let Err(err) = delete_selected_transactions(&transaction_state.unwrap(), &service) {
+                warn!("Failed to delete transactions: {err}");
+            }
         }
     });
 
@@ -103,7 +109,7 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
         let service = service.clone();
         move |id| {
             if let Err(err) = confirm_transaction(&id, &transaction_state.unwrap(), &service) {
-                warn!("Failed to delete transaction: {err}");
+                warn!("Failed to confirm transaction: {err}");
             }
         }
     });
@@ -115,7 +121,7 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
             if let Err(err) =
                 set_transaction_category(&id, &category_id, &transaction_state.unwrap(), &service)
             {
-                warn!("{err}");
+                warn!("Failed to set transaction category: {err}");
             }
         }
     });
@@ -127,7 +133,7 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
             if let Err(err) =
                 set_transaction_date(&id, &date, &transaction_state.unwrap(), &service)
             {
-                warn!("{err}");
+                warn!("Failed to set transaction date: {err}");
             }
         }
     });
@@ -139,7 +145,7 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
             if let Err(err) =
                 set_transaction_outflow(&id, &amount, &transaction_state.unwrap(), &service)
             {
-                warn!("{err}");
+                warn!("Failed to set transaction outflow: {err}");
             }
         }
     });
@@ -151,7 +157,7 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
             if let Err(err) =
                 set_transaction_inflow(&id, &amount, &transaction_state.unwrap(), &service)
             {
-                warn!("{err}");
+                warn!("Failed to set transaction inflow: {err}");
             }
         }
     });
@@ -163,7 +169,7 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
             if let Err(err) =
                 set_transaction_account(&id, &account_id, &transaction_state.unwrap(), &service)
             {
-                warn!("{err}");
+                warn!("Failed to set transaction account: {err}");
             }
         }
     });
@@ -175,7 +181,7 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
             if let Err(err) =
                 set_transaction_payee(&id, &account_id, &transaction_state.unwrap(), &service)
             {
-                warn!("{err}");
+                warn!("Failed to set transaction payee: {err}");
             }
         }
     });
@@ -187,7 +193,7 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
             if let Err(err) =
                 set_transaction_note(&id, &note, &transaction_state.unwrap(), &service)
             {
-                warn!("{err}");
+                warn!("Failed to set transaction note: {err}");
             }
         }
     });
@@ -258,6 +264,27 @@ fn delete_transaction(id: &str, state: &TransactionState, service: &Service) -> 
     let id = Uuid::parse_str(id)?;
     service.delete_transaction(id)?;
     load_transactions(state, service)?;
+    Ok(())
+}
+
+fn delete_selected_transactions(state: &TransactionState, service: &Service) -> crate::Result<()> {
+    if state.get_all_transactions_selected() {
+        for id in state
+            .get_transactions()
+            .iter()
+            .map(|transaction| transaction.id)
+        {
+            let id = Uuid::parse_str(&id)?;
+            service.delete_transaction(id)?;
+        }
+    }
+
+    for id in state.get_selected_transactions().iter() {
+        let id = Uuid::parse_str(&id)?;
+        service.delete_transaction(id)?;
+    }
+    load_transactions(state, service)?;
+    state.set_all_transactions_selected(false);
     Ok(())
 }
 
@@ -657,47 +684,67 @@ mod test {
 
         transaction_state.invoke_select_transaction("1".to_shared_string());
         transaction_state.invoke_select_transaction("2".to_shared_string());
-        let ids: Vec<_> = transaction_state.get_selected_transactions().iter().collect();
-        assert_eq!(ids.len(),2);
+        let ids: Vec<_> = transaction_state
+            .get_selected_transactions()
+            .iter()
+            .collect();
+        assert_eq!(ids.len(), 2);
         assert!(ids.contains(&"1".to_shared_string()));
         assert!(ids.contains(&"2".to_shared_string()));
         transaction_state.invoke_select_transaction("1".to_shared_string());
-        let ids: Vec<_> = transaction_state.get_selected_transactions().iter().collect();
-        assert_eq!(ids.len(),1);
+        let ids: Vec<_> = transaction_state
+            .get_selected_transactions()
+            .iter()
+            .collect();
+        assert_eq!(ids.len(), 1);
         assert!(ids.contains(&"1".to_shared_string()));
         Ok(())
     }
 
     #[test]
-    fn deselect_transaction() -> crate::Result<()> {
+    fn delete_selected_transactions() -> crate::Result<()> {
         i_slint_backend_testing::init_no_event_loop();
         let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
+        service.create_account("", AccountType::Cash)?;
+        let t1 = service.create_expense().submit()?;
+        let t2 = service.create_expense().submit()?;
         let transaction_state: TransactionState = window.global();
         bind(&window, service)?;
 
-        transaction_state.invoke_select_transaction("2".to_shared_string());
-        transaction_state.invoke_deselect_transaction("2".to_shared_string());
-        let ids: Vec<_> = transaction_state.get_selected_transactions().iter().collect();
-        assert_eq!(ids.len(),1);
-        assert!(ids.contains(&"1".to_shared_string()));
+        let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
+        assert_eq!(transactions.len(), 2);
+        transaction_state.invoke_select_transaction(t1.id.to_shared_string());
+        transaction_state.invoke_delete_selected_transactions();
+        let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
+        assert_eq!(transactions.len(), 1);
+        assert_eq!(transactions[0].id, t2.id.to_shared_string());
         Ok(())
     }
 
     #[test]
-    fn deselect_all_transaction() -> crate::Result<()> {
+    fn delete_all_selected_transactions() -> crate::Result<()> {
         i_slint_backend_testing::init_no_event_loop();
         let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
+        service.create_account("", AccountType::Cash)?;
+        let t1 = service.create_expense().submit()?;
+        service.create_expense().submit()?;
         let transaction_state: TransactionState = window.global();
         bind(&window, service)?;
 
-        transaction_state.invoke_select_transaction("1".to_shared_string());
-        transaction_state.invoke_select_transaction("2".to_shared_string());
+        let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
+        assert_eq!(transactions.len(), 2);
+        transaction_state.invoke_select_transaction(t1.id.to_shared_string());
         transaction_state.invoke_select_all_transactions();
-        transaction_state.invoke_deselect_all_transactions();
-        let ids: Vec<_> = transaction_state.get_selected_transactions().iter().collect();
-        assert!(ids.is_empty());
+        transaction_state.invoke_delete_selected_transactions();
+        let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
+        assert_eq!(transactions.len(), 0);
+        let ids: Vec<_> = transaction_state
+            .get_selected_transactions()
+            .iter()
+            .collect();
+        assert_eq!(ids.len(), 0);
         assert!(!transaction_state.get_all_transactions_selected());
         Ok(())
     }
@@ -715,7 +762,10 @@ mod test {
         assert!(transaction_state.get_all_transactions_selected());
         transaction_state.invoke_select_all_transactions();
         assert!(!transaction_state.get_all_transactions_selected());
-        let ids: Vec<_> = transaction_state.get_selected_transactions().iter().collect();
+        let ids: Vec<_> = transaction_state
+            .get_selected_transactions()
+            .iter()
+            .collect();
         assert!(ids.is_empty());
         Ok(())
     }

@@ -269,8 +269,6 @@ component TransactionRow inherits TableRow {
     padding-right: 8px;
     is-selected: TransactionState.is-transaction-selected(transaction.id);
 
-    // FIXME: wrap the whole transaction row in a TouchArea
-
     right-clicked => {
         context-menu.show();
     }
@@ -278,7 +276,7 @@ component TransactionRow inherits TableRow {
     selected => {
         TransactionState.select-transaction(transaction.id);
     }
-
+    
     context-menu := ContextMenu {
         min-width: 250px;
         ContextMenuItem {
@@ -524,7 +522,16 @@ component TransactionTableHeader inherits TableRow {
 
     selected => {
         TransactionState.select-all-transactions();
+
     }
+
+//    changed is-selected => {
+//        debug("Is selected:", self.is-selected );
+//        if !self.is-selected{
+//            TransactionState.selected-transactions = [];
+//            debug("Selected transactions", TransactionState.selected-transactions.length);
+//        }
+//    }
 
     TableCell {
         width: parent.width / length;
@@ -636,6 +643,12 @@ export component TransactionPage inherits VerticalLayout {
         padding-top: 8px;
         padding-bottom: 8px;
         spacing: 8px;
+
+        if TransactionState.selected-transactions.length > 0 || TransactionState.all-transactions-selected: PrimaryButton {
+            text: @tr("Delete");
+            theme: ghost;
+            clicked => TransactionState.delete-selected-transactions();
+        }
 
         if !active-account-id.is-empty: IconButton {
             icon: Icons.file-down;

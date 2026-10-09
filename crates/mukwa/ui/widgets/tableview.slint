@@ -34,7 +34,7 @@ export component TableCell inherits Rectangle {
 
 export component TableRow {
     in-out property <bool> is-editing;
-    in-out property <bool> is-selected <=> checkbox.checked;
+    in-out property <bool> is-selected;
     callback confirmed();
     callback cancelled();
     callback clicked();
@@ -82,6 +82,7 @@ export component TableRow {
                     spacing: 8px;
 
                     checkbox := Checkbox {
+                        checked: root.is-selected;
                         toggled => {
                             root.selected();
                         }
