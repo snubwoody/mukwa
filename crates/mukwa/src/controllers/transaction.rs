@@ -379,21 +379,29 @@ mod test {
     use mukwa_core::service::AccountType;
     use slint::{Model, SharedString, ToSharedString};
 
-    use crate::ui::CreateTransactionOpts;
+    use crate::ui::{CreateTransactionOpts};
+
+
+    fn init_test_with_service(service: Service) -> crate::Result<TransactionState<'static>>{
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        bind(&window, service)?;
+        let transaction_state: TransactionState = window.global();
+        // Hack-ish to make the lifetime 'static
+        let transaction_state = transaction_state.as_weak().unwrap();
+        Ok(transaction_state)
+    }
 
     #[test]
     fn bind_loads_transactions_from_service() -> crate::Result<()> {
-        i_slint_backend_testing::init_no_event_loop();
-        let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let expense = service
             .create_expense()
             .amount(Money::new(50))
             .date(date(2021, 10, 24))
             .submit()?;
-        bind(&window, service)?;
 
-        let transaction_state: TransactionState = window.global();
+        let transaction_state = init_test_with_service(service)?;
         let transaction = transaction_state.get_transactions().iter().next().unwrap();
         assert_eq!(transaction, expense.into());
         Ok(())
@@ -401,8 +409,6 @@ mod test {
 
     #[test]
     fn delete_transaction() -> crate::Result<()> {
-        i_slint_backend_testing::init_no_event_loop();
-        let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let expense = service
             .create_expense()
@@ -414,9 +420,8 @@ mod test {
             .amount(Money::new(500))
             .date(date(2021, 10, 24))
             .submit()?;
-        bind(&window, service)?;
 
-        let transaction_state: TransactionState = window.global();
+        let transaction_state = init_test_with_service(service)?;
         transaction_state.invoke_delete_transaction(expense2.id.to_shared_string());
         let transactions = transaction_state.get_transactions();
         assert_eq!(transactions.iter().len(), 1);
@@ -427,14 +432,11 @@ mod test {
 
     #[test]
     fn create_expense() -> crate::Result<()> {
-        i_slint_backend_testing::init_no_event_loop();
-        let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
-        let transaction_state: TransactionState = window.global();
         let account = service.create_account("", AccountType::Cash)?;
         let group = service.create_category_group("")?;
         let category = service.create_category("", group.id)?;
-        bind(&window, service)?;
+        let transaction_state = init_test_with_service(service)?;
 
         let opts = CreateTransactionOpts {
             account_id: account.id.to_shared_string(),
@@ -460,12 +462,9 @@ mod test {
 
     #[test]
     fn create_income() -> crate::Result<()> {
-        i_slint_backend_testing::init_no_event_loop();
-        let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
-        let transaction_state: TransactionState = window.global();
         let account = service.create_account("", AccountType::Cash)?;
-        bind(&window, service)?;
+        let transaction_state = init_test_with_service(service)?;
         let opts = CreateTransactionOpts {
             account_id: account.id.to_shared_string(),
             inflow: "0.00".to_shared_string(),
@@ -487,12 +486,10 @@ mod test {
 
     #[test]
     fn create_income_ignores_category() -> crate::Result<()> {
-        i_slint_backend_testing::init_no_event_loop();
-        let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
-        let transaction_state: TransactionState = window.global();
         let account = service.create_account("", AccountType::Cash)?;
-        bind(&window, service)?;
+        let transaction_state = init_test_with_service(service)?;
+
         let opts = CreateTransactionOpts {
             account_id: account.id.to_shared_string(),
             inflow: "0.00".to_shared_string(),
@@ -514,12 +511,10 @@ mod test {
 
     #[test]
     fn create_transaction_with_default_date() -> crate::Result<()> {
-        i_slint_backend_testing::init_no_event_loop();
-        let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
-        let transaction_state: TransactionState = window.global();
         let account = service.create_account("", AccountType::Cash)?;
-        bind(&window, service)?;
+        let transaction_state = init_test_with_service(service)?;
+
         let opts = CreateTransactionOpts {
             outflow: "50.00".to_shared_string(),
             account_id: account.id.to_shared_string(),
@@ -534,12 +529,10 @@ mod test {
 
     #[test]
     fn set_outflow_on_an_expense() -> crate::Result<()> {
-        i_slint_backend_testing::init_no_event_loop();
-        let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
-        let transaction_state: TransactionState = window.global();
         let account = service.create_account("", AccountType::Cash)?;
-        bind(&window, service)?;
+        let transaction_state = init_test_with_service(service)?;
+
         let opts = CreateTransactionOpts {
             outflow: "50.00".to_shared_string(),
             account_id: account.id.to_shared_string(),
@@ -556,14 +549,12 @@ mod test {
 
     #[test]
     fn set_outflow_on_an_income() -> crate::Result<()> {
-        i_slint_backend_testing::init_no_event_loop();
-        let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
-        let transaction_state: TransactionState = window.global();
         let account = service.create_account("", AccountType::Cash)?;
         let group = service.create_category_group("")?;
         let category = service.create_category("", group.id)?;
-        bind(&window, service)?;
+        let transaction_state = init_test_with_service(service)?;
+
         let opts = CreateTransactionOpts {
             account_id: account.id.to_shared_string(),
             inflow: "50.00".to_shared_string(),
