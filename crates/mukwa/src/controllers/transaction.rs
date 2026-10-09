@@ -2,12 +2,11 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use crate::ui;
-use crate::ui::{MainWindow, TransactionState};
+use crate::ui::{DateFilter, MainWindow, TransactionState};
 use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::Money;
 use mukwa_core::service::Service;
-use slint::ModelExt;
 use slint::{ComponentHandle, Global, Model, ModelRc, ToSharedString, VecModel};
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -22,6 +21,7 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
     let transactions_list: Vec<ui::Transaction> = transactions.iter().map(|t| t.into()).collect();
 
     transaction_state.set_transactions(ModelRc::new(VecModel::from(transactions_list)));
+    transaction_state.set_date_filters(ModelRc::new(VecModel::default()));
 
     transaction_state.on_add_date_filter({
         let transaction_state = transaction_state.as_weak();
@@ -43,7 +43,12 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
                             transactions.push(transaction);
                         }
                     }
+                    let date_filter = DateFilter {
+                        start_date: start_date.into(),
+                        filter_type: filter_type.clone(),
+                    };
                     transaction_state.set_transactions(ModelRc::new(transactions));
+                    transaction_state.get_date_filters().push_row(date_filter);
                 }
                 _ => {
                     dbg!("Unsupported filter type");
@@ -615,6 +620,10 @@ mod test {
         let transaction = &transactions[0];
         assert_eq!(transaction.id, t1.id.to_shared_string());
         assert_eq!(transaction.date, t1.date.to_shared_string());
+
+        let filter = transaction_state.get_date_filters().iter().next().unwrap();
+        assert_eq!(filter.start_date, date(2020, 1, 1).into());
+        assert_eq!(filter.filter_type, "is".to_shared_string());
         Ok(())
     }
 }

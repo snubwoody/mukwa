@@ -732,6 +732,32 @@ export component TransactionPage inherits VerticalLayout {
         }
     }
 
+    HorizontalLayout {
+        alignment: start;
+        for filter in TransactionState.date-filters: Rectangle {
+            background: Colors.accent.transparentize(0.9);
+            border-radius: 8px;
+            HorizontalLayout {
+                spacing: 2px;
+                padding: 2px;
+                cross-axis-alignment: center;
+
+                Text {
+                    text: @tr("Date: ");
+                    color: Colors.accent;
+                    font-weight: FontWeight.semi-bold;
+                }
+
+                Text {
+                    // TODO: format using backend so that it respects settings
+                    text: filter.start-date.year + "-" + filter.start-date.month + "-" + filter.start-date.day;
+                    color: Colors.accent;
+                    font-weight: FontWeight.semi-bold;
+                }
+            }
+        }
+    }
+
     Table {
         width: 100%;
         property <int> length: active-account-id.is-empty ? 7 : 6;

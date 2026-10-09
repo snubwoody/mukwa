@@ -37,6 +37,11 @@ export struct Budget {
     month: int,
 }
 
+export struct DateFilter {
+    start-date: Date,
+    filter-type: string,
+}
+
 export enum TransactionType { income, expense, transfer }
 
 export struct Transaction {
@@ -75,6 +80,7 @@ export global Api {
 
 export global TransactionState {
     in-out property <[Transaction]> transactions;
+    in-out property <[DateFilter]> date-filters;
 
     callback add-date-filter(start-date:Date,filter-type:string);
     callback delete-transaction(id: string);
