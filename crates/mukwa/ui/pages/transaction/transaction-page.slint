@@ -265,6 +265,9 @@ component TransactionRow inherits TableRow {
     in property <Transaction> transaction;
     in property <int> length;
     in property <string> active-account-id;
+    padding-left: 8px;
+    padding-right: 8px;
+    is-selected: TransactionState.is-transaction-selected(transaction.id);
 
     // FIXME: wrap the whole transaction row in a TouchArea
 
@@ -272,8 +275,9 @@ component TransactionRow inherits TableRow {
         context-menu.show();
     }
 
-    padding-left: 8px;
-    padding-right: 8px;
+    selected => {
+        TransactionState.select-transaction(transaction.id);
+    }
 
     context-menu := ContextMenu {
         min-width: 250px;
@@ -516,6 +520,11 @@ component TransactionTableHeader inherits TableRow {
     in property <bool> show-account;
     padding-left: 8px;
     padding-right: 8px;
+    is-selected: TransactionState.all-transactions-selected;
+
+    selected => {
+        TransactionState.select-all-transactions();
+    }
 
     TableCell {
         width: parent.width / length;

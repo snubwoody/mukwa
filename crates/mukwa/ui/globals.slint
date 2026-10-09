@@ -76,7 +76,7 @@ export global Api {
 export global TransactionState {
     in-out property <[Transaction]> transactions;
     in-out property <[string]> selected-transactions;
-    in-out property <bool> all-transactions-selected;
+    in-out property <bool> all-transactions-selected: false;
 
     callback select-transaction(id: string);
     callback select-all-transactions();
@@ -95,6 +95,7 @@ export global TransactionState {
     callback create-transaction(CreateTransactionOpts);
 
     pure callback is-transaction-unconfirmed(id: string) -> bool;
+    pure callback is-transaction-selected(id: string) -> bool;
     pure callback total-balance() -> string;
 }
 
