@@ -5,6 +5,7 @@ import { ComboBox } from "widgets.slint";
 
 export component TestCase inherits Rectangle {
     out property <int> combobox-current-index <=> combobox.current-index;
+    out property <int> combobox-b-current-index <=> combobox-b.current-index;
     out property <string> combobox-current-value <=> combobox.current-value;
     out property <string> selected-value;
 
@@ -34,6 +35,15 @@ export component TestCase inherits Rectangle {
             selected-value = value;
         }
     }
+
+    combobox-b := ComboBox {
+        current-value: "noodles";
+        options: [
+            { value: "pasta", text: "Pasta"},
+            { value: "fish", text: "Fish"},
+            { value: "noodles", text: "Noodles"},
+        ];
+    }
 }
 
 /*
@@ -41,6 +51,8 @@ use i_slint_backend_testing::{AccessibleRole,ElementHandle};
 use slint::{platform::Key,SharedString};
 
 let instance = TestCase::new().unwrap();
+assert_eq!(instance.get_combobox_b_current_index(), 2);
+
 assert_eq!(instance.get_combobox_current_value(), "bread");
 assert_eq!(instance.get_combobox_current_index(), 0);
 

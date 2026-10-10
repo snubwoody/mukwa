@@ -27,7 +27,7 @@ export component ComboBox {
     callback changed(value: string);
 
     init => {
-        current-index = ComboBoxApi.find-index(options, current-value);
+        current-index = options.find-index((option) => option.value == current-value);
     }
 
     public function open() {
