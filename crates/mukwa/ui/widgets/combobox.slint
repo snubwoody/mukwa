@@ -18,7 +18,7 @@ export component ComboBox {
     out property <int> current-index: 0;
     in-out property <string> current-value: options[current-index].value;
     in property <bool> enabled: true;
-    property <int> selected-index: -1;
+    out property <int> selected-index: -1;
 
     callback changed(value: string);
 
