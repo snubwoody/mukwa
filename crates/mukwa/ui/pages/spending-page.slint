@@ -364,9 +364,7 @@ export component SpendingPage inherits VerticalLayout {
             accessible-label: @tr("Previous month");
             clicked => {
                 current-date = CalendarState.decrement-month(current-date);
-                CategoryState.current-month = current-date;
-                // FIXME
-                //State.set-current-budget-month(current-date);
+                CategoryState.set-current-budget-month(current-date);
             }
         }
 
@@ -382,9 +380,7 @@ export component SpendingPage inherits VerticalLayout {
             accessible-label: @tr("Next month");
             clicked => {
                 current-date = CalendarState.increment-month(current-date);
-                CategoryState.current-month = current-date;
-                // FIXME
-                //State.set-current-budget-month(current-date);
+                CategoryState.set-current-budget-month(current-date);
             }
         }
     }

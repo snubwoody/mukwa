@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::path::Path;
 use std::rc::Rc;
-use tracing::info;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Ord, Eq, Default)]
@@ -839,7 +838,6 @@ impl Service {
         let mut rows = stmt.query_and_then(params, |row| Budget::try_from(row))?;
         let budget = rows.next().unwrap()?;
 
-        tracing::info!("Created new budget {}", budget.id);
         Ok(budget)
     }
 
@@ -1196,7 +1194,6 @@ impl Service {
             let mut rows = stmt.query_and_then(params, |row| Category::try_from(row))?;
 
             let _ = rows.next().unwrap()?;
-            info!("Created category for credit account {}", account.id);
         }
         Ok(())
     }

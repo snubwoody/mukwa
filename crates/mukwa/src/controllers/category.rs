@@ -58,6 +58,18 @@ pub fn bind(window: &MainWindow, state: &AppState) -> crate::Result<()> {
         }
     });
 
+    category_state.on_set_current_budget_month({
+        let category_state = category_state.as_weak();
+        let service = service.clone();
+        move |date| {
+            let category_state = category_state.unwrap();
+            category_state.set_current_month(date);
+            if let Err(err) = load_budgets(&category_state, &service) {
+                warn!("Failed to load budgets: {err}")
+            }
+        }
+    });
+
     category_state.on_get_category({
         let category_state = category_state.as_weak();
         move |id| {
@@ -304,7 +316,7 @@ fn load_category_groups(state: &CategoryState, service: &Service) -> crate::Resu
 fn load_budgets(state: &CategoryState, service: &Service) -> crate::Result<()> {
     let month = Date::try_from(state.get_current_month())?;
     let budgets: Vec<ui::Budget> = service
-        .fetch_budgets_by_month(month)?
+        .fetch_or_init_budgets(month)?
         .iter()
         .map(|b| b.into())
         .collect();
