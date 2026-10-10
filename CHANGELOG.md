@@ -1,5 +1,6 @@
-## (unreleased)
+## 0.2.3 - 2026-10-10
 
+- Fixed an issue where budgets were not being created when changing months on the spending page. 
 - Added checkboxes for selecting transactions.
     - Added button to delete selected transactions.
 
