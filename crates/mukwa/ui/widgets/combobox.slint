@@ -219,7 +219,7 @@ export component ComboBox {
                             inner-touch-area := TouchArea {
                                 clicked => {
                                     root.select(i);
-                                    changed(options[current-index].value);
+                                    changed(options[selected-index].value);
                                     popup.close();
                                 }
                             }
