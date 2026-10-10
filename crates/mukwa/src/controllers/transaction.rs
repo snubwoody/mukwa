@@ -5,15 +5,15 @@ use crate::ui;
 use crate::ui::{MainWindow, TransactionState};
 use jiff::Zoned;
 use jiff::civil::Date;
-use mukwa_core::{Error, Money};
+use mukwa_core::error::ErrorExt;
 use mukwa_core::service::Service;
+use mukwa_core::{Error, Money};
 use slint::{ComponentHandle, Global, Model, ModelRc, ToSharedString, VecModel};
 use std::collections::HashSet;
 use std::rc::Rc;
 use std::str::FromStr;
 use tracing::warn;
 use uuid::Uuid;
-use mukwa_core::error::ErrorExt;
 
 pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
     let transaction_state: TransactionState = window.global();
@@ -85,7 +85,10 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
             if let Err(err) =
                 set_transaction_category(&id, &category_id, &transaction_state.unwrap(), &service)
             {
-                warn!("{}",Error::with_source("Failed to set transaction category",err).report());
+                warn!(
+                    "{}",
+                    Error::with_source("Failed to set transaction category", err).report()
+                );
             }
         }
     });

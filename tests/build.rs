@@ -103,6 +103,14 @@ fn main() {
 
         writeln!(file, "\n#[test]\nfn test_{}(){{", case.name).unwrap();
         writeln!(file, "i_slint_backend_testing::init_no_event_loop();").unwrap();
+        writeln!(
+            file,
+            "tracing_subscriber::fmt()
+                .with_max_level(tracing::Level::DEBUG)
+                .with_test_writer()
+                .init();"
+        )
+        .unwrap();
         writeln!(file, "smol::block_on(async {{\n{}}})\n}}", test_function).unwrap();
     }
 }

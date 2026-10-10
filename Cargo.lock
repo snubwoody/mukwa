@@ -5644,6 +5644,8 @@ dependencies = [
  "lucide-slint",
  "slint",
  "smol",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

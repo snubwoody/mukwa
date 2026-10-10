@@ -123,7 +123,7 @@ component AccountSection inherits VerticalLayout {
         selected: current-page == Page.transactions && active-account-id == "";
         clicked => select-page(Page.transactions);
 
-        Icon{
+        Icon {
             icon: Icons.piggy-bank;
             size: FontSize.body;
             stroke: Colors.textBody;
@@ -253,7 +253,7 @@ component Sidebar {
                     selected: current-page == Page.spending && active-account-id == "";
                     clicked => select-page(Page.spending);
 
-                    Icon{
+                    Icon {
                         icon: Icons.banknote;
                         size: FontSize.body;
                         stroke: Colors.textBody;
@@ -265,7 +265,7 @@ component Sidebar {
                     selected: current-page == Page.analytics && active-account-id == "";
                     clicked => select-page(Page.analytics);
 
-                    Icon{
+                    Icon {
                         icon: Icons.chart-pie;
                         size: FontSize.body;
                         stroke: Colors.textBody;
@@ -300,7 +300,7 @@ component Sidebar {
                 text: @tr("Settings");
                 clicked => settings-dialog.show();
 
-                Icon{
+                Icon {
                     icon: Icons.settings;
                     size: FontSize.body;
                     stroke: Colors.textBody;
