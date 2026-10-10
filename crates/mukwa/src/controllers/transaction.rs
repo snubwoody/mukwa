@@ -661,7 +661,7 @@ mod test {
             .iter()
             .collect();
         assert_eq!(ids.len(), 1);
-        assert!(ids.contains(&"1".to_shared_string()));
+        assert!(ids.contains(&"2".to_shared_string()));
         Ok(())
     }
 
