@@ -12,11 +12,6 @@ export struct ComboBoxItem {
     text: string,
 }
 
-export global ComboBoxApi {
-    // Work around because Slint doesn't have any find-index like API.
-    pure callback find-index(options: [ComboBoxItem], value: string) -> int;
-}
-
 export component ComboBox {
     in-out property <string> label;
     in property <[ComboBoxItem]> options;
@@ -27,7 +22,7 @@ export component ComboBox {
     callback changed(value: string);
 
     init => {
-        current-index = ComboBoxApi.find-index(options, current-value);
+        current-index = options.find-index((option) => option.value == current-value);
     }
 
     public function open() {
