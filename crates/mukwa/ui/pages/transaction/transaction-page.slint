@@ -276,7 +276,7 @@ component TransactionRow inherits TableRow {
     selected => {
         TransactionState.select-transaction(transaction.id);
     }
-    
+
     context-menu := ContextMenu {
         min-width: 250px;
         ContextMenuItem {
@@ -518,20 +518,7 @@ component TransactionTableHeader inherits TableRow {
     in property <bool> show-account;
     padding-left: 8px;
     padding-right: 8px;
-    is-selected: TransactionState.all-transactions-selected;
-
-    selected => {
-        TransactionState.select-all-transactions();
-
-    }
-
-//    changed is-selected => {
-//        debug("Is selected:", self.is-selected );
-//        if !self.is-selected{
-//            TransactionState.selected-transactions = [];
-//            debug("Selected transactions", TransactionState.selected-transactions.length);
-//        }
-//    }
+    is-selected <=> TransactionState.all-transactions-selected;
 
     TableCell {
         width: parent.width / length;
