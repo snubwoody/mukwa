@@ -3,9 +3,7 @@
 
 use crate::settings::SettingsStore;
 use crate::state::AppState;
-use crate::ui;
 use crate::ui::MainWindow;
-use slint::{ComponentHandle, Model};
 
 mod analytics;
 mod api;
@@ -32,20 +30,5 @@ pub fn bind_all(
     import_csv::bind(window, state);
     category::bind(window, state)?;
     transaction::bind(window, service)?;
-
-    bind_combobox_api(window);
     Ok(())
-}
-
-fn bind_combobox_api(window: &MainWindow) {
-    let api = window.global::<ui::ComboBoxApi>();
-
-    api.on_find_index(|options, value| {
-        for (index, option) in options.iter().enumerate() {
-            if option.value == value {
-                return index as i32;
-            }
-        }
-        -1
-    });
 }
