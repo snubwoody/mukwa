@@ -42,6 +42,10 @@ struct TestCase {
 }
 
 fn main() {
+    unsafe {
+        std::env::set_var("SLINT_ENABLE_EXPERIMENTAL_FEATURES", "1");
+    }
+
     println!("cargo:rerun-if-changed=../crates/mukwa/ui");
     println!("cargo:rerun-if-changed=cases");
     let cases_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("cases");
@@ -81,7 +85,6 @@ fn main() {
 
         if diag.has_errors() {
             diag.print_warnings_and_exit_on_error();
-            // TODO: maybe return an error here
         } else {
             diag.print();
         }

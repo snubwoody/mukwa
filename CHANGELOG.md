@@ -1,3 +1,8 @@
+## (unreleased)
+
+- Added checkboxes for selecting transactions.
+    - Added button to delete selected transactions.
+
 ## 0.2.2 - 2026-10-07
 
 - Fixed incorrect left to budget calculation. Transfers to credit accounts are no longer subtracted from the left to budget amount.

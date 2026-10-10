@@ -265,15 +265,17 @@ component TransactionRow inherits TableRow {
     in property <Transaction> transaction;
     in property <int> length;
     in property <string> active-account-id;
-
-    // FIXME: wrap the whole transaction row in a TouchArea
+    padding-left: 8px;
+    padding-right: 8px;
+    is-selected: TransactionState.selected-transactions.any((value) => value == transaction.id) || TransactionState.all-transactions-selected;
 
     right-clicked => {
         context-menu.show();
     }
 
-    padding-left: 8px;
-    padding-right: 8px;
+    selected => {
+        TransactionState.select-transaction(transaction.id);
+    }
 
     context-menu := ContextMenu {
         min-width: 250px;
@@ -516,6 +518,7 @@ component TransactionTableHeader inherits TableRow {
     in property <bool> show-account;
     padding-left: 8px;
     padding-right: 8px;
+    is-selected <=> TransactionState.all-transactions-selected;
 
     TableCell {
         width: parent.width / length;
@@ -620,28 +623,46 @@ export component TransactionPage inherits VerticalLayout {
     }
 
     HorizontalLayout {
-        alignment: end;
         cross-axis-alignment: center;
-        padding-left: 16px;
+        padding-left: 4px;
         padding-right: 16px;
         padding-top: 8px;
         padding-bottom: 8px;
-        spacing: 8px;
 
-        if !active-account-id.is-empty: IconButton {
-            icon: Icons.file-down;
-            theme: ghost;
-            accessible-label: @tr("Import CSV file");
-            clicked => {
-                csv-data = ImportCsvState.open-csv();
-                import-csv-dialog.show();
+        HorizontalLayout {
+            alignment: start;
+
+            if TransactionState.selected-transactions.length > 0 || TransactionState.all-transactions-selected: PrimaryButton {
+                text: @tr("Delete");
+                theme: ghost;
+                clicked => TransactionState.delete-selected-transactions();
+
+                Icon {
+                    icon: Icons.trash;
+                    stroke: Colors.textBody;
+                }
             }
         }
 
-        PrimaryButton {
-            text: @tr("New");
-            clicked => {
-                new-transaction-active = true;
+        HorizontalLayout {
+            cross-axis-alignment: center;
+            spacing: 8px;
+            alignment: end;
+            if !active-account-id.is-empty: IconButton {
+                icon: Icons.file-down;
+                theme: ghost;
+                accessible-label: @tr("Import CSV file");
+                clicked => {
+                    csv-data = ImportCsvState.open-csv();
+                    import-csv-dialog.show();
+                }
+            }
+
+            PrimaryButton {
+                text: @tr("New");
+                clicked => {
+                    new-transaction-active = true;
+                }
             }
         }
     }
