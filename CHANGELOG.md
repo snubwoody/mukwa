@@ -1,6 +1,7 @@
 ## (unreleased)
 
 - Added checkboxes for selecting transactions.
+    - Added button to delete selected transactions.
 
 ## 0.2.2 - 2026-10-07
 
