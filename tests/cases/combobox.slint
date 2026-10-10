@@ -5,7 +5,9 @@ import { ComboBox } from "widgets.slint";
 
 export component TestCase inherits Rectangle {
     out property <int> combobox-current-index <=> combobox.current-index;
+    out property <int> combobox-selected-index <=> combobox.selected-index;
     out property <int> combobox-b-current-index <=> combobox-b.current-index;
+    out property <int> combobox-b-selected-index <=> combobox-b.selected-index;
     out property <string> combobox-current-value <=> combobox.current-value;
     out property <string> selected-value;
 
@@ -13,8 +15,16 @@ export component TestCase inherits Rectangle {
         combobox.move-selection-down();
     }
 
+    public function b-move-selection-down() {
+        combobox-b.move-selection-down();
+    }
+
     public function move-selection-up() {
         combobox.move-selection-up();
+    }
+
+    public function b-move-selection-up() {
+        combobox-b.move-selection-up();
     }
 
     public function select(index: int) {
@@ -37,7 +47,7 @@ export component TestCase inherits Rectangle {
     }
 
     combobox-b := ComboBox {
-        current-value: "noodles";
+        current-value: "fish";
         options: [
             { value: "pasta", text: "Pasta"},
             { value: "fish", text: "Fish"},
@@ -51,30 +61,32 @@ use i_slint_backend_testing::{AccessibleRole,ElementHandle};
 use slint::{platform::Key,SharedString};
 
 let instance = TestCase::new().unwrap();
-assert_eq!(instance.get_combobox_b_current_index(), 2);
+assert_eq!(instance.get_combobox_b_current_index(), 1);
+assert_eq!(instance.get_combobox_b_selected_index(), -1);
+instance.invoke_b_move_selection_down();
+assert_eq!(instance.get_combobox_b_selected_index(), 0);
+instance.invoke_b_move_selection_down();
+assert_eq!(instance.get_combobox_b_selected_index(), 2);
+instance.invoke_b_move_selection_up();
+assert_eq!(instance.get_combobox_b_selected_index(), 0);
 
 assert_eq!(instance.get_combobox_current_value(), "bread");
 assert_eq!(instance.get_combobox_current_index(), 0);
 
 instance.invoke_move_selection_down();
-assert_eq!(instance.get_combobox_current_index(), 1);
-assert_eq!(instance.get_combobox_current_value(), "samp");
+assert_eq!(instance.get_combobox_selected_index(), 1);
 
 instance.invoke_move_selection_down();
-assert_eq!(instance.get_combobox_current_index(), 1);
-assert_eq!(instance.get_combobox_current_value(), "samp");
+assert_eq!(instance.get_combobox_selected_index(), 1);
 
 instance.invoke_move_selection_up();
-assert_eq!(instance.get_combobox_current_index(), 0);
-assert_eq!(instance.get_combobox_current_value(), "bread");
+assert_eq!(instance.get_combobox_selected_index(), 0);
 
 instance.invoke_move_selection_up();
-assert_eq!(instance.get_combobox_current_index(), 0);
-assert_eq!(instance.get_combobox_current_value(), "bread");
+assert_eq!(instance.get_combobox_selected_index(), 0);
 
 instance.invoke_select(1);
-assert_eq!(instance.get_combobox_current_index(), 1);
-assert_eq!(instance.get_combobox_current_value(), "samp");
+assert_eq!(instance.get_combobox_selected_index(), 1);
 
 let mut result = ElementHandle::find_by_element_id(&instance, "TestCase::combobox").collect::<Vec<_>>();
 assert_eq!(result.len(), 1);
@@ -89,12 +101,10 @@ instance.invoke_open();
 assert!(combobox.accessible_expanded().unwrap());
 
 i_slint_backend_testing::send_keyboard_string_sequence(&instance, &SharedString::from(Key::DownArrow));
-assert_eq!(instance.get_combobox_current_index(), 1);
-assert_eq!(instance.get_combobox_current_value(), "samp");
+assert_eq!(instance.get_combobox_selected_index(), 1);
 
 i_slint_backend_testing::send_keyboard_string_sequence(&instance, &SharedString::from(Key::UpArrow));
-assert_eq!(instance.get_combobox_current_index(), 0);
-assert_eq!(instance.get_combobox_current_value(), "bread");
+assert_eq!(instance.get_combobox_selected_index(), 0);
 
 assert_eq!(instance.get_selected_value(), "");
 i_slint_backend_testing::send_keyboard_string_sequence(&instance, &SharedString::from(Key::Return));
@@ -102,8 +112,8 @@ assert_eq!(instance.get_selected_value(), "bread");
 assert!(!combobox.accessible_expanded().unwrap());
 
 instance.invoke_select(-5);
-assert_eq!(instance.get_combobox_current_index(), 0);
+assert_eq!(instance.get_combobox_selected_index(), 0);
 
 instance.invoke_select(9999);
-assert_eq!(instance.get_combobox_current_index(), 1);
+assert_eq!(instance.get_combobox_selected_index(), 1);
 */
