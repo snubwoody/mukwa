@@ -1,0 +1,32 @@
+[project]
+name = "ui-tests"
+version = "0.0.0"
+description = "UI tests for the frontend code"
+authors = [
+    { name = "Wakunguma Kalimukwa", email = "contact@wakunguma.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "pytest>=8.3.5",
+    "slint-testing>=0.4",
+]
+
+[dependency-groups]
+dev = [
+    "ty>=0.0.1a28",
+]
+
+[tool.uv]
+package = false
+
+# slint-testing is distributed through Slint's package index, everything else comes from PyPI.
+[[tool.uv.index]]
+name = "slint-private"
+url = "https://testing.slint.dev/simple/"
+explicit = true
+
+[tool.uv.sources]
+slint-testing = { index = "slint-private" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

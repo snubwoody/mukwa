@@ -19,3 +19,4 @@ cargo-sources.json
 vendor/
 .venv/
 repo/
+screenshots/

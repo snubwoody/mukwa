@@ -27,3 +27,7 @@ branch = "mukwa"
 [build-dependencies]
 slint-build = { git = "https://github.com/snubwoody/slint.git", branch = "mukwa" }
 winresource = "0.1.31"
+
+[features]
+# Enabled only when building for the UI tests; see ui-tests/conftest.py.
+system-testing = ["slint/system-testing"]
