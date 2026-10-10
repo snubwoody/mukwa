@@ -2,6 +2,10 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 fn main() {
+    unsafe {
+        std::env::set_var("SLINT_ENABLE_EXPERIMENTAL_FEATURES", "1");
+    }
+
     slint_build::compile("ui/app.slint").unwrap();
 
     #[cfg(target_os = "windows")]

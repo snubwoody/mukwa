@@ -79,7 +79,6 @@ export global TransactionState {
     in-out property <bool> all-transactions-selected: false;
 
     callback select-transaction(id: string);
-    callback select-all-transactions();
     callback delete-transaction(id: string);
     callback duplicate-transaction(id: string);
     callback confirm-transaction(id: string);
@@ -94,7 +93,6 @@ export global TransactionState {
     callback delete-selected-transactions();
 
     pure callback is-transaction-unconfirmed(id: string) -> bool;
-    pure callback is-transaction-selected(id: string) -> bool;
     pure callback total-balance() -> string;
 }
 

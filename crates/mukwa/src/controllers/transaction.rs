@@ -23,27 +23,6 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
     transaction_state.set_transactions(ModelRc::new(VecModel::from(transactions_list)));
     transaction_state.set_selected_transactions(ModelRc::new(VecModel::default()));
 
-    transaction_state.on_is_transaction_selected({
-        let transaction_state = transaction_state.as_weak();
-        move |id| {
-            let transaction_state = transaction_state.unwrap();
-
-            if transaction_state.get_all_transactions_selected() {
-                return true;
-            }
-
-            if transaction_state
-                .get_selected_transactions()
-                .iter()
-                .find(|transaction_id| *transaction_id == id)
-                .is_some()
-            {
-                return true;
-            }
-            return false;
-        }
-    });
-
     transaction_state.on_select_transaction({
         let transaction_state = transaction_state.as_weak();
         move |id| {
@@ -64,22 +43,6 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
             }
             if let Err(err) = transaction_state.get_selected_transactions().push_row(id) {
                 warn!("Failed to select transaction: {err}");
-            }
-        }
-    });
-
-    transaction_state.on_select_all_transactions({
-        let transaction_state = transaction_state.as_weak();
-        move || {
-            let transaction_state = transaction_state.unwrap();
-            match transaction_state.get_all_transactions_selected() {
-                true => {
-                    transaction_state.set_all_transactions_selected(false);
-                    transaction_state.set_selected_transactions(ModelRc::new(VecModel::default()));
-                }
-                false => {
-                    transaction_state.set_all_transactions_selected(true);
-                }
             }
         }
     });
@@ -285,6 +248,7 @@ fn delete_selected_transactions(state: &TransactionState, service: &Service) -> 
     }
     load_transactions(state, service)?;
     state.set_all_transactions_selected(false);
+    state.set_selected_transactions(ModelRc::new(VecModel::default()));
     Ok(())
 }
 
@@ -719,6 +683,12 @@ mod test {
         let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
         assert_eq!(transactions.len(), 1);
         assert_eq!(transactions[0].id, t2.id.to_shared_string());
+        let ids: Vec<_> = transaction_state
+            .get_selected_transactions()
+            .iter()
+            .collect();
+        assert_eq!(ids.len(), 0);
+        assert!(!transaction_state.get_all_transactions_selected());
         Ok(())
     }
 
@@ -736,7 +706,7 @@ mod test {
         let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
         assert_eq!(transactions.len(), 2);
         transaction_state.invoke_select_transaction(t1.id.to_shared_string());
-        transaction_state.invoke_select_all_transactions();
+        transaction_state.set_all_transactions_selected(true);
         transaction_state.invoke_delete_selected_transactions();
         let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
         assert_eq!(transactions.len(), 0);
@@ -746,27 +716,6 @@ mod test {
             .collect();
         assert_eq!(ids.len(), 0);
         assert!(!transaction_state.get_all_transactions_selected());
-        Ok(())
-    }
-
-    #[test]
-    fn select_all_transactions() -> crate::Result<()> {
-        i_slint_backend_testing::init_no_event_loop();
-        let window = MainWindow::new()?;
-        let service = Service::open_in_memory()?;
-        let transaction_state: TransactionState = window.global();
-        bind(&window, service)?;
-
-        transaction_state.invoke_select_all_transactions();
-        transaction_state.invoke_select_transaction("2".to_shared_string());
-        assert!(transaction_state.get_all_transactions_selected());
-        transaction_state.invoke_select_all_transactions();
-        assert!(!transaction_state.get_all_transactions_selected());
-        let ids: Vec<_> = transaction_state
-            .get_selected_transactions()
-            .iter()
-            .collect();
-        assert!(ids.is_empty());
         Ok(())
     }
 }

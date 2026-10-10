@@ -267,7 +267,7 @@ component TransactionRow inherits TableRow {
     in property <string> active-account-id;
     padding-left: 8px;
     padding-right: 8px;
-    is-selected: TransactionState.is-transaction-selected(transaction.id);
+    is-selected: TransactionState.selected-transactions.any((value) => value == transaction.id) || TransactionState.all-transactions-selected;
 
     right-clicked => {
         context-menu.show();
