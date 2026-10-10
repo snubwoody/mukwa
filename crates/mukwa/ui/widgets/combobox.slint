@@ -18,6 +18,7 @@ export component ComboBox {
     out property <int> current-index: 0;
     in-out property <string> current-value: options[current-index].value;
     in property <bool> enabled: true;
+    property <int> selected-index: -1;
 
     callback changed(value: string);
 
@@ -30,15 +31,23 @@ export component ComboBox {
     }
 
     public function select(index: int) {
-        current-index = Math.min(Math.max(index,0),options.length - 1);
+        selected-index = Math.min(Math.max(index,0),options.length - 1);
     }
 
     public function move-selection-up() {
-        root.select(Math.max(root.current-index - 1, 0));
+        if current-index == selected-index - 1 {
+            root.select(root.selected-index - 2);
+        } else {
+            root.select(root.selected-index - 1);
+        }
     }
 
     public function move-selection-down() {
-        root.select(Math.min(root.current-index + 1, root.options.length - 1));
+        if current-index == selected-index + 1 {
+            root.select(root.selected-index + 2);
+        } else {
+            root.select(root.selected-index + 1);
+        }
     }
 
     accessible-role: combobox;
@@ -131,7 +140,7 @@ export component ComboBox {
                     root.move-selection-down();
                     return accept;
                 } else if (event.text == Key.Return) {
-                    changed(options[current-index].value);
+                    changed(options[selected-index].value);
                     popup.close();
                     return accept;
                 } else if (event.text == Key.Escape) {
@@ -194,7 +203,7 @@ export component ComboBox {
                         spacing: 4px;
 
                         for option[i] in options: Rectangle {
-                            background: current-index == i ? Colors.neutral50 : white;
+                            background: selected-index == i ? Colors.neutral50 : white;
                             visible: current-index != i;
                             height: current-index == i ? 0px : 24px;
                             border-radius: 4px;
