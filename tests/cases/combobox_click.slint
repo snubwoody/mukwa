@@ -58,6 +58,12 @@ assert_eq!(combobox.accessible_role().unwrap(), AccessibleRole::Combobox);
 assert!(!combobox.accessible_expanded().unwrap());
 assert!(combobox.accessible_expandable().unwrap());
 
+let text = combobox.query_descendants()
+    .match_type_name("Text")
+    .find_first()
+    .unwrap();
+assert_eq!(text.accessible_label().unwrap(),"Bread");
+
 // Open the combobox
 combobox.mock_single_click(PointerEventButton::Left);
 assert!(combobox.accessible_expanded().unwrap());
@@ -72,4 +78,5 @@ combobox.visit_descendants(|element|{
 });
 assert!(!combobox.accessible_expanded().unwrap());
 assert_eq!(instance.get_selected_value(),"samp");
+assert_eq!(text.accessible_label().unwrap(),"Samp");
 */

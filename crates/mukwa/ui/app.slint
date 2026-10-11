@@ -146,14 +146,15 @@ component AccountSection inherits VerticalLayout {
     }
 }
 
-component CreateAccount inherits PopupWindow {
+component CreateAccountDialog inherits PopupWindow {
     x: Api.window-size().width * 0.5 - self.width * 0.5;
     y: Api.window-size().height * 0.5 - self.height * 0.5;
     width: 450px;
     close-policy: close-on-click-outside;
+    property <string> selected-account-type: "cash";
 
     function submit() {
-        account-type.current-value == "cash"
+        selected-account-type == "cash"
             ? State.create-account(name.text,cash,balance.text)
             : State.create-account(name.text,credit,balance.text);
         self.close();
@@ -195,10 +196,14 @@ component CreateAccount inherits PopupWindow {
 
             account-type := ComboBox {
                 label: @tr("Account type");
+                current-value: selected-account-type;
                 options: [
                     { value: "cash", text:"Cash account" },
                     { value: "credit", text:"Credit account" },
                 ];
+                changed(value) => {
+                    selected-account-type = value;
+                }
             }
         }
 
@@ -206,13 +211,13 @@ component CreateAccount inherits PopupWindow {
             alignment: end;
             spacing: 12px;
 
-            PrimaryButton {
+            close := PrimaryButton {
                 theme: neutral;
                 text: @tr("Close");
                 clicked => root.close();
             }
 
-            PrimaryButton {
+            create-account := PrimaryButton {
                 text: @tr("Create account");
                 clicked => submit();
             }
@@ -234,7 +239,7 @@ component Sidebar {
         background: Colors.neutral25;
     }
 
-    create-account-dialog := CreateAccount { }
+    create-account-dialog := CreateAccountDialog { }
 
     HorizontalLayout {
         VerticalLayout {

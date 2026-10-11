@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+use std::any::Any;
 use std::ops::ControlFlow;
 
 use crate::ui::{CategoryState, CreateTransactionOpts, Settings, State, TransactionState};
 
 use super::*;
-use i_slint_backend_testing::ElementHandle;
+use i_slint_backend_testing::{ElementHandle, ElementQuery};
 use jiff::civil::date;
 use jiff::{ToSpan, Zoned};
 use mukwa_core::fmt::CurrencyFormatter;
 use mukwa_core::service::AccountType;
 use mukwa_core::{Currency, Money, create_test_db};
-use slint::platform::PointerEventButton;
+use slint::platform::{Key, PointerEventButton};
 use slint::{Model, SharedString, ToSharedString};
 use tempfile::tempdir;
 
@@ -375,6 +376,53 @@ fn edit_transaction_updates_sidebar_account_balance() -> Result<()> {
         cash_account[1].accessible_label().unwrap(),
         formatter.format_money(Money::new(-200))?.to_shared_string()
     );
+    Ok(())
+}
+
+#[test]
+fn create_account_popup() -> Result<()> {
+    let (app, _) = setup()?;
+    let state = app.global::<State>();
+
+    ElementHandle::find_by_accessible_label(&app, "Create account")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    // TODO: maybe test close-on-click-outside
+
+    ElementHandle::find_by_element_id(&app, "CreateAccountDialog::name")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    i_slint_backend_testing::send_keyboard_string_sequence(&app, &SharedString::from("My account"));
+
+    let account_combobox =
+        ElementHandle::find_by_element_id(&app, "CreateAccountDialog::account-type")
+            .next()
+            .unwrap();
+
+    account_combobox.mock_single_click(PointerEventButton::Left);
+    account_combobox.visit_descendants(|element| {
+        if let Some(value) = element.accessible_value()
+            && value == "credit"
+        {
+            element.mock_single_click(PointerEventButton::Left);
+            return ControlFlow::Break(element);
+        }
+        ControlFlow::<ElementHandle>::Continue(())
+    });
+
+    ElementHandle::find_by_element_id(&app, "CreateAccountDialog::create-account")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let accounts: Vec<_> = state.get_accounts().iter().collect();
+    assert_eq!(accounts.len(), 1);
+    assert_eq!(accounts[0].name, "My account");
+    assert_eq!(accounts[0].account_type, ui::AccountType::Credit);
     Ok(())
 }
 

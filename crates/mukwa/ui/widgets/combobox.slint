@@ -141,6 +141,7 @@ export component ComboBox {
                     return accept;
                 } else if (event.text == Key.Return) {
                     changed(options[selected-index].value);
+                    current-index = selected-index;
                     popup.close();
                     return accept;
                 } else if (event.text == Key.Escape) {
@@ -222,6 +223,7 @@ export component ComboBox {
                                 clicked => {
                                     root.select(i);
                                     changed(options[selected-index].value);
+                                    current-index = selected-index;
                                     popup.close();
                                 }
                             }
