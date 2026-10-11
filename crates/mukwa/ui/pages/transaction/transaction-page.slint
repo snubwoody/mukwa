@@ -415,6 +415,8 @@ component NewTransactionRow inherits VerticalLayout {
         if active-account-id.is-empty: AccountCell {
             width: parent.width / length;
             transaction: transaction;
+            options: State.account-options;
+            current-value: transaction.account-id;
             changed(value) => {
                 transaction.account-id = value;
             }
@@ -436,7 +438,6 @@ component NewTransactionRow inherits VerticalLayout {
             category: CategoryState.get-category(transaction.category-id);
             changed(value) => {
                 transaction.category-id = value;
-                transaction.transaction-type = transfer;
             }
         }
 
@@ -608,7 +609,7 @@ export component TransactionPage inherits VerticalLayout {
         Text {
             text: active-account-id.is-empty
                 ? State.format-money(TransactionState.total-balance(),Settings.currency-code)
-                : State.format-money(State.get-account(active-account-id).balance, Settings.currency-code);
+                : State.format-money(State.accounts[State.accounts.find-index((value) => value.id == active-account-id)].balance, Settings.currency-code);
             font-size: FontSize.heading-sm;
             color: Colors.textHeading;
             font-weight: FontWeight.semi-bold;

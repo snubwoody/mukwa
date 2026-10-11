@@ -129,6 +129,7 @@ export global CategoryState {
 export global State {
     callback create-account(name: string, type: AccountType, balance: string);
     callback delete-account(string);
+    callback load-accounts();
 
     pure callback total-spent-all(Date) -> string;
     pure callback get-account(id: string) -> Account;

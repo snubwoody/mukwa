@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use crate::ui;
+use crate::ui::{self, State};
 use crate::ui::{MainWindow, TransactionState};
 use jiff::Zoned;
 use jiff::civil::Date;
@@ -17,6 +17,7 @@ use uuid::Uuid;
 
 pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
     let transaction_state: TransactionState = window.global();
+    let global_state: State = window.global();
     let mut transactions = service.fetch_transactions()?;
     transactions.sort_by(|a, b| a.date.cmp(&b.date).reverse());
     let transactions_list: Vec<ui::Transaction> = transactions.iter().map(|t| t.into()).collect();
@@ -51,20 +52,24 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
     transaction_state.on_delete_selected_transactions({
         let transaction_state = transaction_state.as_weak();
         let service = service.clone();
+        let global_state = global_state.as_weak();
         move || {
             if let Err(err) = delete_selected_transactions(&transaction_state.unwrap(), &service) {
                 warn!("Failed to delete transactions: {err}");
             }
+            global_state.unwrap().invoke_load_accounts();
         }
     });
 
     transaction_state.on_delete_transaction({
         let transaction_state = transaction_state.as_weak();
         let service = service.clone();
+        let global_state = global_state.as_weak();
         move |id| {
             if let Err(err) = delete_transaction(&id, &transaction_state.unwrap(), &service) {
                 warn!("Failed to delete transaction: {err}");
             }
+            global_state.unwrap().invoke_load_accounts();
         }
     });
 
@@ -108,24 +113,28 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
     transaction_state.on_set_transaction_outflow({
         let transaction_state = transaction_state.as_weak();
         let service = service.clone();
+        let global_state = global_state.as_weak();
         move |id, amount| {
             if let Err(err) =
                 set_transaction_outflow(&id, &amount, &transaction_state.unwrap(), &service)
             {
                 warn!("Failed to set transaction outflow: {err}");
             }
+            global_state.unwrap().invoke_load_accounts();
         }
     });
 
     transaction_state.on_set_transaction_inflow({
         let transaction_state = transaction_state.as_weak();
         let service = service.clone();
+        let global_state = global_state.as_weak();
         move |id, amount| {
             if let Err(err) =
                 set_transaction_inflow(&id, &amount, &transaction_state.unwrap(), &service)
             {
                 warn!("Failed to set transaction inflow: {err}");
             }
+            global_state.unwrap().invoke_load_accounts();
         }
     });
 
@@ -167,20 +176,35 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
 
     transaction_state.on_create_transaction({
         let transaction_state = transaction_state.as_weak();
+        let global_state = global_state.as_weak();
         let service = service.clone();
         move |opts| {
             if let Err(err) = create_transaction(opts, &transaction_state.unwrap(), &service) {
                 warn!("Failed to create transaction: {err}")
             }
+            global_state.unwrap().invoke_load_accounts();
         }
     });
 
     transaction_state.on_is_transaction_unconfirmed({
         let service = service.clone();
         move |id| {
-            is_transaction_unconfirmed(&id, &service)
-                .inspect_err(|err| warn!("{err}"))
-                .unwrap_or_default()
+            // Special case for the new transaction row
+            if id == "placeholder-transaction" {
+                return false;
+            }
+
+            match is_transaction_unconfirmed(&id, &service) {
+                Ok(value) => value,
+                Err(err) => {
+                    warn!(
+                        "{}",
+                        Error::with_source("Failed to check if transaction is unconfirmed", err)
+                            .report()
+                    );
+                    false
+                }
+            }
         }
     });
 

@@ -14,9 +14,15 @@ use std::rc::Rc;
 
 use tracing::info;
 
+#[derive(Debug, Clone)]
+pub enum SettingsBuffer {
+    File(PathBuf),
+    Memory,
+}
+
 #[derive(Clone)]
 pub struct SettingsStore {
-    path: PathBuf,
+    buffer: SettingsBuffer,
     inner: Rc<RefCell<Settings>>,
 }
 
@@ -52,10 +58,21 @@ impl SettingsStore {
     }
 
     fn write(&self) -> Result<()> {
-        let settings = self.settings();
-        let contents = toml::to_string(&*settings)?;
-        fs::write(&self.path, contents)?;
+        if let SettingsBuffer::File(path) = &self.buffer {
+            let settings = self.settings();
+            let contents = toml::to_string(&*settings)?;
+            fs::write(path, contents)?;
+        }
         Ok(())
+    }
+
+    // Used for testing
+    #[allow(unused)]
+    pub fn open_in_memory() -> SettingsStore {
+        SettingsStore {
+            buffer: SettingsBuffer::Memory,
+            inner: Rc::new(RefCell::new(Settings::default())),
+        }
     }
 
     pub fn open(path: impl AsRef<Path>) -> Result<SettingsStore> {
@@ -67,7 +84,7 @@ impl SettingsStore {
                 file.read_to_end(&mut buffer)?;
                 let settings: Settings = toml::from_slice(&buffer)?;
                 let store = SettingsStore {
-                    path: path.as_ref().to_path_buf(),
+                    buffer: SettingsBuffer::File(path.as_ref().to_path_buf()),
                     inner: Rc::new(RefCell::new(settings)),
                 };
                 Ok(store)
@@ -83,7 +100,7 @@ impl SettingsStore {
 
                 info!("Initialised settings at {:?}", path.as_ref());
                 let store = SettingsStore {
-                    path: path.as_ref().to_path_buf(),
+                    buffer: SettingsBuffer::File(path.as_ref().to_path_buf()),
                     inner: Rc::new(RefCell::new(settings)),
                 };
                 Ok(store)

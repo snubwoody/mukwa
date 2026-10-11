@@ -4,6 +4,8 @@
 fn main() {
     unsafe {
         std::env::set_var("SLINT_ENABLE_EXPERIMENTAL_FEATURES", "1");
+        #[cfg(debug_assertions)]
+        std::env::set_var("SLINT_EMIT_DEBUG_INFO", "1");
     }
 
     slint_build::compile("ui/app.slint").unwrap();
