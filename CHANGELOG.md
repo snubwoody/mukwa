@@ -1,6 +1,6 @@
-## (unreleased)
+## 0.2.4 - 2026-10-10
 
-- Fixed an issue where comboboxes items were not being selected when clicked.
+- Fixed an issue where combobox items were not being selected when clicked.
 
 ## 0.2.3 - 2026-10-10
 
