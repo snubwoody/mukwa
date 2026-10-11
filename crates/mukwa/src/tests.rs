@@ -1,19 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use std::any::Any;
 use std::ops::ControlFlow;
 
 use crate::ui::{CategoryState, CreateTransactionOpts, Settings, State, TransactionState};
 
 use super::*;
-use i_slint_backend_testing::{ElementHandle, ElementQuery};
+use i_slint_backend_testing::ElementHandle;
 use jiff::civil::date;
 use jiff::{ToSpan, Zoned};
 use mukwa_core::fmt::CurrencyFormatter;
 use mukwa_core::service::AccountType;
 use mukwa_core::{Currency, Money, create_test_db};
-use slint::platform::{Key, PointerEventButton};
+use slint::platform::PointerEventButton;
 use slint::{Model, SharedString, ToSharedString};
 use tempfile::tempdir;
 
@@ -423,6 +422,131 @@ fn create_account_popup() -> Result<()> {
     assert_eq!(accounts.len(), 1);
     assert_eq!(accounts[0].name, "My account");
     assert_eq!(accounts[0].account_type, ui::AccountType::Credit);
+    Ok(())
+}
+
+#[test]
+fn edit_transaction_updates_account_balance() -> Result<()> {
+    let (app, _) = setup()?;
+    let state = app.global::<State>();
+    let transaction_state = app.global::<TransactionState>();
+    let settings = app.global::<Settings>();
+    let mut formatter = CurrencyFormatter::new();
+    formatter.set_currency(Currency::USD);
+
+    settings.invoke_set_currency_code("USD".to_shared_string());
+
+    state.invoke_create_account(
+        "Cash Account".to_shared_string(),
+        ui::AccountType::Cash,
+        "0".to_shared_string(),
+    );
+
+    transaction_state.invoke_create_transaction(CreateTransactionOpts {
+        account_id: SharedString::default(),
+        category_id: SharedString::default(),
+        date: SharedString::default(),
+        inflow: SharedString::default(),
+        note: SharedString::default(),
+        outflow: SharedString::from("0"),
+        payee_id: SharedString::default(),
+    });
+
+    ElementHandle::find_by_element_type_name(&app, "AccountListItem")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let transaction_page = ElementHandle::find_by_element_type_name(&app, "TransactionPage")
+        .next()
+        .unwrap();
+
+    let text_elements = transaction_page
+        .query_descendants()
+        .match_type_name("Text")
+        .find_all();
+
+    assert_eq!(
+        text_elements[1].accessible_label().unwrap(),
+        formatter.format_money(Money::ZERO)?.to_shared_string()
+    );
+
+    let transaction = transaction_state.get_transactions().iter().next().unwrap();
+    transaction_state
+        .invoke_set_transaction_outflow(transaction.id.clone(), "200".to_shared_string());
+
+    assert_eq!(
+        text_elements[1].accessible_label().unwrap(),
+        formatter.format_money(Money::new(-200))?.to_shared_string()
+    );
+
+    transaction_state.invoke_set_transaction_inflow(transaction.id, "750".to_shared_string());
+    assert_eq!(
+        text_elements[1].accessible_label().unwrap(),
+        formatter.format_money(Money::new(750))?.to_shared_string()
+    );
+    Ok(())
+}
+
+#[test]
+fn create_transaction_updates_account_balance() -> Result<()> {
+    let (app, _) = setup()?;
+    let state = app.global::<State>();
+    let transaction_state = app.global::<TransactionState>();
+    let settings = app.global::<Settings>();
+    let mut formatter = CurrencyFormatter::new();
+    formatter.set_currency(Currency::USD);
+
+    settings.invoke_set_currency_code("USD".to_shared_string());
+
+    state.invoke_create_account(
+        "Cash Account".to_shared_string(),
+        ui::AccountType::Cash,
+        "0".to_shared_string(),
+    );
+
+    transaction_state.invoke_create_transaction(CreateTransactionOpts {
+        account_id: SharedString::default(),
+        category_id: SharedString::default(),
+        date: SharedString::default(),
+        inflow: SharedString::default(),
+        note: SharedString::default(),
+        outflow: SharedString::from("0"),
+        payee_id: SharedString::default(),
+    });
+
+    ElementHandle::find_by_element_type_name(&app, "AccountListItem")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let transaction_page = ElementHandle::find_by_element_type_name(&app, "TransactionPage")
+        .next()
+        .unwrap();
+
+    let text_elements = transaction_page
+        .query_descendants()
+        .match_type_name("Text")
+        .find_all();
+
+    assert_eq!(
+        text_elements[1].accessible_label().unwrap(),
+        formatter.format_money(Money::ZERO)?.to_shared_string()
+    );
+
+    transaction_state.invoke_create_transaction(CreateTransactionOpts {
+        account_id: SharedString::default(),
+        category_id: SharedString::default(),
+        date: SharedString::default(),
+        inflow: SharedString::default(),
+        note: SharedString::default(),
+        outflow: SharedString::from("200"),
+        payee_id: SharedString::default(),
+    });
+    assert_eq!(
+        text_elements[1].accessible_label().unwrap(),
+        formatter.format_money(Money::new(-200))?.to_shared_string()
+    );
     Ok(())
 }
 
