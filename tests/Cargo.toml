@@ -6,6 +6,8 @@ edition.workspace = true
 [dependencies]
 slint.workspace = true
 smol = "2.0.2"
+tracing.workspace = true
+tracing-subscriber.workspace = true
 
 [dependencies.i-slint-backend-testing]
 git = "https://github.com/snubwoody/slint.git"
@@ -18,7 +20,6 @@ branch = "mukwa"
 
 [build-dependencies]
 smol = "2.0.2"
-lucide-slint = "1.24.0"
 
 [build-dependencies.i-slint-compiler]
 git = "https://github.com/snubwoody/slint.git"

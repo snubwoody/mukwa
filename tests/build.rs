@@ -5,7 +5,6 @@ use i_slint_compiler::generator::OutputFormat;
 use i_slint_compiler::{
     CompilerConfiguration, compile_syntax_node, diagnostics::BuildDiagnostics, generator, parser,
 };
-use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
@@ -74,11 +73,9 @@ fn main() {
         let mut diag = BuildDiagnostics::default();
 
         let syntax_node = parser::parse(case.source.clone(), None, &mut diag);
-        let library = HashMap::from([("lucide".to_string(), PathBuf::from(lucide_slint::lib()))]);
         let mut compiler_config = CompilerConfiguration::new(OutputFormat::Rust);
         compiler_config.debug_info = true;
         compiler_config.include_paths = vec![include_path.clone()];
-        compiler_config.library_paths = library;
 
         let (root_component, diag, loader) =
             smol::block_on(compile_syntax_node(syntax_node, diag, compiler_config));
@@ -103,6 +100,14 @@ fn main() {
 
         writeln!(file, "\n#[test]\nfn test_{}(){{", case.name).unwrap();
         writeln!(file, "i_slint_backend_testing::init_no_event_loop();").unwrap();
+        writeln!(
+            file,
+            "tracing_subscriber::fmt()
+                .with_max_level(tracing::Level::DEBUG)
+                .with_test_writer()
+                .init();"
+        )
+        .unwrap();
         writeln!(file, "smol::block_on(async {{\n{}}})\n}}", test_function).unwrap();
     }
 }

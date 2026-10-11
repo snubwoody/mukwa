@@ -1,0 +1,75 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { ComboBox } from "widgets.slint";
+
+export component TestCase inherits Window {
+    width: 200px;
+    height: 200px;
+    out property <int> combobox-current-index <=> combobox.current-index;
+    out property <int> combobox-selected-index <=> combobox.selected-index;
+    out property <string> combobox-current-value <=> combobox.current-value;
+    out property <string> selected-value;
+
+    public function move-selection-down() {
+        combobox.move-selection-down();
+    }
+
+    public function move-selection-up() {
+        combobox.move-selection-up();
+    }
+
+    public function select(index: int) {
+        combobox.select(index);
+    }
+
+    public function open() {
+        combobox.open();
+    }
+
+    VerticalLayout {
+        alignment: stretch;
+        combobox := ComboBox {
+            current-value: "bread";
+            options: [
+                { value: "bread", text: "Bread"},
+                { value: "samp", text: "Samp"},
+            ];
+
+            changed(value) => {
+                selected-value = value;
+            }
+        }
+    }
+}
+
+/*
+use i_slint_backend_testing::{AccessibleRole,ElementHandle};
+use i_slint_core::items::PointerEventButton;
+use std::ops::ControlFlow;
+
+let instance = TestCase::new().unwrap();
+
+let mut result = ElementHandle::find_by_element_id(&instance, "TestCase::combobox").collect::<Vec<_>>();
+assert_eq!(result.len(), 1);
+let combobox = result.pop().unwrap();
+
+assert_eq!(combobox.accessible_role().unwrap(), AccessibleRole::Combobox);
+assert!(!combobox.accessible_expanded().unwrap());
+assert!(combobox.accessible_expandable().unwrap());
+
+// Open the combobox
+combobox.mock_single_click(PointerEventButton::Left);
+assert!(combobox.accessible_expanded().unwrap());
+
+combobox.visit_descendants(|element|{
+     if let Some(value) = element.accessible_value() && value == "samp" {
+        // For some reason the element isn't actually returned so we just call it from here
+        element.mock_single_click(PointerEventButton::Left);
+        return ControlFlow::Break(element);
+     }
+    ControlFlow::<ElementHandle>::Continue(())
+});
+assert!(!combobox.accessible_expanded().unwrap());
+assert_eq!(instance.get_selected_value(),"samp");
+*/

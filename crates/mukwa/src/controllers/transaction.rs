@@ -5,8 +5,9 @@ use crate::ui;
 use crate::ui::{MainWindow, TransactionState};
 use jiff::Zoned;
 use jiff::civil::Date;
-use mukwa_core::Money;
+use mukwa_core::error::ErrorExt;
 use mukwa_core::service::Service;
+use mukwa_core::{Error, Money};
 use slint::{ComponentHandle, Global, Model, ModelRc, ToSharedString, VecModel};
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -84,7 +85,10 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
             if let Err(err) =
                 set_transaction_category(&id, &category_id, &transaction_state.unwrap(), &service)
             {
-                warn!("Failed to set transaction category: {err}");
+                warn!(
+                    "{}",
+                    Error::with_source("Failed to set transaction category", err).report()
+                );
             }
         }
     });
@@ -420,8 +424,8 @@ fn set_transaction_category(
     state: &TransactionState,
     service: &Service,
 ) -> crate::Result<()> {
-    let id = Uuid::parse_str(id)?;
-    let category_id = Uuid::parse_str(category_id)?;
+    let id = Uuid::parse_str(id).context("Failed to parse transaction id")?;
+    let category_id = Uuid::parse_str(category_id).context("Failed to parse category id")?;
     service.set_transaction_category(id, category_id)?;
     load_transactions(state, service)?;
     Ok(())

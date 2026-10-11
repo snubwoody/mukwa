@@ -207,6 +207,8 @@ export component ComboBox {
                             visible: current-index != i;
                             height: current-index == i ? 0px : 24px;
                             border-radius: 4px;
+                            accessible-value: option.value;
+                            accessible-role: list-item;
 
                             states [
                                 hovered when inner-touch-area.has-hover: {
@@ -219,7 +221,7 @@ export component ComboBox {
                             inner-touch-area := TouchArea {
                                 clicked => {
                                     root.select(i);
-                                    changed(options[current-index].value);
+                                    changed(options[selected-index].value);
                                     popup.close();
                                 }
                             }

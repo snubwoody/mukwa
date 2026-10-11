@@ -1,3 +1,7 @@
+## (unreleased)
+
+- Fixed an issue where comboboxes items were not being selected when clicked.
+
 ## 0.2.3 - 2026-10-10
 
 - Fixed an issue where budgets were not being created when changing months on the spending page. 
