@@ -415,6 +415,8 @@ component NewTransactionRow inherits VerticalLayout {
         if active-account-id.is-empty: AccountCell {
             width: parent.width / length;
             transaction: transaction;
+            options: State.account-options;
+            current-value: transaction.account-id;
             changed(value) => {
                 transaction.account-id = value;
             }

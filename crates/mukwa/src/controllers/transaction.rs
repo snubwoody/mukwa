@@ -189,9 +189,22 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
     transaction_state.on_is_transaction_unconfirmed({
         let service = service.clone();
         move |id| {
-            is_transaction_unconfirmed(&id, &service)
-                .inspect_err(|err| warn!("{err}"))
-                .unwrap_or_default()
+            // Special case for the new transaction row
+            if id == "placeholder-transaction" {
+                return false;
+            }
+
+            match is_transaction_unconfirmed(&id, &service) {
+                Ok(value) => value,
+                Err(err) => {
+                    warn!(
+                        "{}",
+                        Error::with_source("Failed to check if transaction is unconfirmed", err)
+                            .report()
+                    );
+                    false
+                }
+            }
         }
     });
 

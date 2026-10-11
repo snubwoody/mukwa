@@ -787,6 +787,86 @@ fn new_transaction_row_category_text() -> Result<()> {
 }
 
 #[test]
+fn new_transaction_row_select_account() -> Result<()> {
+    let (app, _) = setup()?;
+    let state = app.global::<State>();
+    let transaction_state = app.global::<TransactionState>();
+    state.invoke_create_account(
+        "Cash Account".to_shared_string(),
+        ui::AccountType::Cash,
+        "0".to_shared_string(),
+    );
+    state.invoke_create_account(
+        "Credit Account".to_shared_string(),
+        ui::AccountType::Credit,
+        "0".to_shared_string(),
+    );
+
+    let button = ElementHandle::find_by_accessible_label(&app, "New")
+        .next()
+        .unwrap();
+    button.mock_single_click(PointerEventButton::Left);
+
+    let new_transaction_row = ElementHandle::find_by_element_type_name(&app, "NewTransactionRow")
+        .next()
+        .unwrap();
+
+    let account_text = new_transaction_row
+        .query_descendants()
+        .match_type_name("AccountCell")
+        .find_first()
+        .unwrap()
+        .query_descendants()
+        .match_type_name("Text")
+        .find_first()
+        .unwrap();
+
+    assert_eq!(account_text.accessible_label().unwrap(), "Cash Account");
+
+    let account_cell = new_transaction_row
+        .query_descendants()
+        .match_type_name("AccountCell")
+        .find_first()
+        .unwrap();
+
+    let accounts: Vec<_> = state.get_accounts().iter().collect();
+    account_cell.mock_single_click(PointerEventButton::Left);
+    account_cell.visit_descendants(|element| {
+        if let Some(value) = element.accessible_value()
+            && value == accounts[1].id
+        {
+            element.mock_single_click(PointerEventButton::Left);
+            return ControlFlow::Break(element);
+        }
+        ControlFlow::<ElementHandle>::Continue(())
+    });
+
+    let account_cell = new_transaction_row
+        .query_descendants()
+        .match_type_name("AccountCell")
+        .find_first()
+        .unwrap()
+        .query_descendants()
+        .match_type_name("Text")
+        .find_first()
+        .unwrap();
+    assert_eq!(account_cell.accessible_label().unwrap(), "Credit Account");
+
+    new_transaction_row
+        .query_descendants()
+        .match_predicate(|element| element.accessible_label() == Some(SharedString::from("Save")))
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let accounts: Vec<_> = state.get_accounts().iter().collect();
+    let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
+    assert_eq!(transactions.len(), 1);
+    assert_eq!(transactions[0].account_id, accounts[1].id);
+    Ok(())
+}
+
+#[test]
 fn cancel_new_transaction_row() -> Result<()> {
     let (app, _) = setup()?;
 

@@ -1,5 +1,6 @@
 ## (unreleased)
 
+- Fixed an issue where the account combobox was not working when creating transactions.
 - Fixed the broken combobox in the create account dialog.
 - Fixed the sidebar account balances not updating when creating and editing transactions.
 - Fixed the buggy text in the payee column when creating a new transaction.
