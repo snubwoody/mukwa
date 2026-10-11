@@ -1,6 +1,6 @@
 ## (unreleased)
 
-- Fixed the sidebar account balances not updating when creating transactions.
+- Fixed the sidebar account balances not updating when creating and editing transactions.
 
 ## 0.2.4 - 2026-10-10
 

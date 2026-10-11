@@ -377,3 +377,84 @@ fn edit_transaction_updates_sidebar_account_balance() -> Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn delete_transaction_updates_sidebar_account_balance() -> Result<()> {
+    let (app, _) = setup()?;
+    let state = app.global::<State>();
+    let transaction_state = app.global::<TransactionState>();
+    let settings = app.global::<Settings>();
+    settings.invoke_set_currency_code("USD".to_shared_string());
+
+    state.invoke_create_account(
+        "Cash Account".to_shared_string(),
+        ui::AccountType::Cash,
+        "0".to_shared_string(),
+    );
+
+    transaction_state.invoke_create_transaction(CreateTransactionOpts {
+        account_id: SharedString::new(),
+        category_id: SharedString::new(),
+        date: SharedString::new(),
+        inflow: SharedString::new(),
+        note: SharedString::new(),
+        outflow: SharedString::from("500"),
+        payee_id: SharedString::new(),
+    });
+
+    transaction_state.invoke_create_transaction(CreateTransactionOpts {
+        account_id: SharedString::new(),
+        category_id: SharedString::new(),
+        date: SharedString::new(),
+        inflow: SharedString::new(),
+        note: SharedString::new(),
+        outflow: SharedString::from("500"),
+        payee_id: SharedString::new(),
+    });
+
+    let cash_account = ElementHandle::find_by_element_type_name(&app, "AccountListItem")
+        .next()
+        .unwrap()
+        .query_descendants()
+        .match_type_name("Text")
+        .find_all();
+
+    let mut formatter = CurrencyFormatter::new();
+    formatter.set_currency(Currency::USD);
+
+    assert_eq!(
+        cash_account[1].accessible_label().unwrap(),
+        formatter
+            .format_money(Money::new(-1000))?
+            .to_shared_string()
+    );
+
+    let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
+    transaction_state.invoke_delete_transaction(transactions[0].id.clone());
+
+    let cash_account = ElementHandle::find_by_element_type_name(&app, "AccountListItem")
+        .next()
+        .unwrap()
+        .query_descendants()
+        .match_type_name("Text")
+        .find_all();
+    assert_eq!(
+        cash_account[1].accessible_label().unwrap(),
+        formatter.format_money(Money::new(-500))?.to_shared_string()
+    );
+
+    transaction_state.invoke_select_transaction(transactions[1].id.clone());
+    transaction_state.invoke_delete_selected_transactions();
+
+    let cash_account = ElementHandle::find_by_element_type_name(&app, "AccountListItem")
+        .next()
+        .unwrap()
+        .query_descendants()
+        .match_type_name("Text")
+        .find_all();
+    assert_eq!(
+        cash_account[1].accessible_label().unwrap(),
+        formatter.format_money(Money::ZERO)?.to_shared_string()
+    );
+    Ok(())
+}
