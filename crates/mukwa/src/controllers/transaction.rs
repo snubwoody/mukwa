@@ -52,20 +52,24 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
     transaction_state.on_delete_selected_transactions({
         let transaction_state = transaction_state.as_weak();
         let service = service.clone();
+        let global_state = global_state.as_weak();
         move || {
             if let Err(err) = delete_selected_transactions(&transaction_state.unwrap(), &service) {
                 warn!("Failed to delete transactions: {err}");
             }
+            global_state.unwrap().invoke_load_accounts();
         }
     });
 
     transaction_state.on_delete_transaction({
         let transaction_state = transaction_state.as_weak();
         let service = service.clone();
+        let global_state = global_state.as_weak();
         move |id| {
             if let Err(err) = delete_transaction(&id, &transaction_state.unwrap(), &service) {
                 warn!("Failed to delete transaction: {err}");
             }
+            global_state.unwrap().invoke_load_accounts();
         }
     });
 
@@ -109,24 +113,28 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
     transaction_state.on_set_transaction_outflow({
         let transaction_state = transaction_state.as_weak();
         let service = service.clone();
+        let global_state = global_state.as_weak();
         move |id, amount| {
             if let Err(err) =
                 set_transaction_outflow(&id, &amount, &transaction_state.unwrap(), &service)
             {
                 warn!("Failed to set transaction outflow: {err}");
             }
+            global_state.unwrap().invoke_load_accounts();
         }
     });
 
     transaction_state.on_set_transaction_inflow({
         let transaction_state = transaction_state.as_weak();
         let service = service.clone();
+        let global_state = global_state.as_weak();
         move |id, amount| {
             if let Err(err) =
                 set_transaction_inflow(&id, &amount, &transaction_state.unwrap(), &service)
             {
                 warn!("Failed to set transaction inflow: {err}");
             }
+            global_state.unwrap().invoke_load_accounts();
         }
     });
 
