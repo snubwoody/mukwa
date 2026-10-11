@@ -106,7 +106,7 @@ impl AppState {
         self.service.account_balance(id)
     }
 
-    fn load_accounts(&mut self) -> crate::Result<()> {
+    pub fn load_accounts(&mut self) -> crate::Result<()> {
         let accounts = self.service.fetch_accounts()?;
         let mut account_list = vec![];
         for account in accounts {

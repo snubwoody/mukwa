@@ -8,7 +8,7 @@ use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::fmt::CurrencyFormatter;
 use mukwa_core::service::TransactionType;
-use mukwa_core::{Currency, Money, fmt};
+use mukwa_core::{Currency, Error, Money, fmt};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -65,6 +65,7 @@ pub fn bind(window: &MainWindow, state: &AppState) {
 
     global_state.on_total_spent_all({
         let state = state.clone();
+
         move |month| match state.service().fetch_transactions() {
             Ok(transactions) => {
                 let date = Date::new(month.year as i16, month.month as i8, month.day as i8)
@@ -89,6 +90,18 @@ pub fn bind(window: &MainWindow, state: &AppState) {
         move |name, account_type, balance| {
             if let Err(err) = state.create_account(name.as_str(), account_type, balance.as_str()) {
                 warn!("Failed to create account: {err}")
+            }
+        }
+    });
+
+    global_state.on_load_accounts({
+        let mut state = state.clone();
+        move || {
+            if let Err(err) = state.load_accounts() {
+                warn!(
+                    "{}",
+                    Error::with_source("Failed to load accounts", err).report()
+                )
             }
         }
     });

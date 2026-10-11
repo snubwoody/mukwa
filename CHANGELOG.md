@@ -1,3 +1,7 @@
+## (unreleased)
+
+- Fixed the sidebar account balances not updating when creating transactions.
+
 ## 0.2.4 - 2026-10-10
 
 - Fixed an issue where combobox items were not being selected when clicked.

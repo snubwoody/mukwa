@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use crate::ui;
+use crate::ui::{self, State};
 use crate::ui::{MainWindow, TransactionState};
 use jiff::Zoned;
 use jiff::civil::Date;
@@ -17,6 +17,7 @@ use uuid::Uuid;
 
 pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
     let transaction_state: TransactionState = window.global();
+    let global_state: State = window.global();
     let mut transactions = service.fetch_transactions()?;
     transactions.sort_by(|a, b| a.date.cmp(&b.date).reverse());
     let transactions_list: Vec<ui::Transaction> = transactions.iter().map(|t| t.into()).collect();
@@ -167,11 +168,13 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
 
     transaction_state.on_create_transaction({
         let transaction_state = transaction_state.as_weak();
+        let global_state = global_state.as_weak();
         let service = service.clone();
         move |opts| {
             if let Err(err) = create_transaction(opts, &transaction_state.unwrap(), &service) {
                 warn!("Failed to create transaction: {err}")
             }
+            global_state.unwrap().invoke_load_accounts();
         }
     });
 

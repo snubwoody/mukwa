@@ -1,6 +1,9 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
 use std::time::Duration;
 
-use crate::ui::{Settings, State};
+use crate::ui::{CreateTransactionOpts, Settings, State, TransactionState};
 
 use super::*;
 use i_slint_backend_testing::{ElementHandle, ElementQuery, ElementRoot};
@@ -10,7 +13,7 @@ use mukwa_core::fmt::CurrencyFormatter;
 use mukwa_core::service::AccountType;
 use mukwa_core::{Currency, Money, create_test_db};
 use slint::platform::PointerEventButton;
-use slint::{Model, ToSharedString};
+use slint::{Model, SharedString, ToSharedString};
 use tempfile::tempdir;
 
 fn setup() -> crate::Result<(MainWindow, Service)> {
@@ -221,12 +224,10 @@ fn switch_pages() -> Result<()> {
 #[test]
 fn accounts_shown_in_sidebar() -> Result<()> {
     let (app, _) = setup()?;
-
     let state = app.global::<State>();
     let settings = app.global::<Settings>();
     settings.invoke_set_currency_code("JPY".to_shared_string());
-    // TODO: set currency code
-    dbg!(settings.get_currency_code());
+
     state.invoke_create_account(
         "Cash Account".to_shared_string(),
         ui::AccountType::Cash,
@@ -237,7 +238,7 @@ fn accounts_shown_in_sidebar() -> Result<()> {
         ui::AccountType::Credit,
         "550".to_shared_string(),
     );
-    //i_slint_backend_testing::mock_elapsed_time(Duration::from_nanos(10));
+
     let account_list_items: Vec<_> =
         ElementHandle::find_by_element_type_name(&app, "AccountListItem").collect();
     assert_eq!(account_list_items.len(), 2);
@@ -267,6 +268,58 @@ fn accounts_shown_in_sidebar() -> Result<()> {
     assert_eq!(
         credit_account[1].accessible_label().unwrap(),
         formatter.format_money(Money::new(-550))?.to_shared_string()
+    );
+    Ok(())
+}
+
+#[test]
+fn create_transaction_updates_sidebar_account_balance() -> Result<()> {
+    let (app, _) = setup()?;
+    let state = app.global::<State>();
+    let transaction_state = app.global::<TransactionState>();
+    let settings = app.global::<Settings>();
+    settings.invoke_set_currency_code("USD".to_shared_string());
+
+    state.invoke_create_account(
+        "Cash Account".to_shared_string(),
+        ui::AccountType::Cash,
+        "0".to_shared_string(),
+    );
+
+    let account_list_items: Vec<_> =
+        ElementHandle::find_by_element_type_name(&app, "AccountListItem").collect();
+
+    let cash_account = &account_list_items[0]
+        .query_descendants()
+        .match_type_name("Text")
+        .find_all();
+    let mut formatter = CurrencyFormatter::new();
+    formatter.set_currency(Currency::USD);
+
+    assert_eq!(
+        cash_account[1].accessible_label().unwrap(),
+        formatter.format_money(Money::ZERO)?.to_shared_string()
+    );
+
+    transaction_state.invoke_create_transaction(CreateTransactionOpts {
+        account_id: SharedString::new(),
+        category_id: SharedString::new(),
+        date: SharedString::new(),
+        inflow: SharedString::new(),
+        note: SharedString::new(),
+        outflow: SharedString::from("500"),
+        payee_id: SharedString::new(),
+    });
+
+    let cash_account = ElementHandle::find_by_element_type_name(&app, "AccountListItem")
+        .next()
+        .unwrap()
+        .query_descendants()
+        .match_type_name("Text")
+        .find_all();
+    assert_eq!(
+        cash_account[1].accessible_label().unwrap(),
+        formatter.format_money(Money::new(-500))?.to_shared_string()
     );
     Ok(())
 }
