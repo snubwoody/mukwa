@@ -436,7 +436,6 @@ component NewTransactionRow inherits VerticalLayout {
             category: CategoryState.get-category(transaction.category-id);
             changed(value) => {
                 transaction.category-id = value;
-                transaction.transaction-type = transfer;
             }
         }
 

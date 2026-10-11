@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+use std::ops::ControlFlow;
+
 use crate::ui::{CategoryState, CreateTransactionOpts, Settings, State, TransactionState};
 
 use super::*;
@@ -600,6 +602,70 @@ fn create_simple_transaction() -> Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn new_transaction_row_payee_text() -> Result<()> {
+    let (app, service) = setup()?;
+    let state = app.global::<State>();
+    let category_state = app.global::<CategoryState>();
+    state.invoke_create_account(
+        "Cash Account".to_shared_string(),
+        ui::AccountType::Cash,
+        "0".to_shared_string(),
+    );
+
+    let group = service.create_category_group("")?;
+    category_state.invoke_create_category(
+        "Entertainment".to_shared_string(),
+        group.id.to_shared_string(),
+    );
+    category_state
+        .invoke_create_category("Groceries".to_shared_string(), group.id.to_shared_string());
+
+    let button = ElementHandle::find_by_accessible_label(&app, "New")
+        .next()
+        .unwrap();
+    button.mock_single_click(PointerEventButton::Left);
+
+    let new_transaction_row = ElementHandle::find_by_element_type_name(&app, "NewTransactionRow")
+        .next()
+        .unwrap();
+
+    let payee_text = new_transaction_row
+        .query_descendants()
+        .match_type_name("PayeeCell")
+        .find_first()
+        .unwrap()
+        .query_descendants()
+        .match_type_name("Text")
+        .find_first()
+        .unwrap();
+
+    assert!(payee_text.accessible_label().unwrap().is_empty());
+
+    let category_cell = new_transaction_row
+        .query_descendants()
+        .match_type_name("CategoryCell")
+        .find_first()
+        .unwrap();
+
+    let categories: Vec<_> = category_state.get_categories().iter().collect();
+
+    category_cell.mock_single_click(PointerEventButton::Left);
+    category_cell.visit_descendants(|element| {
+        if let Some(value) = element.accessible_value()
+            && value == categories[1].id
+        {
+            element.mock_single_click(PointerEventButton::Left);
+            return ControlFlow::Break(element);
+        }
+        ControlFlow::<ElementHandle>::Continue(())
+    });
+
+    assert!(payee_text.accessible_label().unwrap().is_empty());
+    Ok(())
+}
+
 #[test]
 fn cancel_new_transaction_row() -> Result<()> {
     let (app, _) = setup()?;

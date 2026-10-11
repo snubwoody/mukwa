@@ -1,6 +1,7 @@
 ## (unreleased)
 
 - Fixed the sidebar account balances not updating when creating and editing transactions.
+- Fixed the buggy text in the payee column when creating a new transaction.
 
 ## 0.2.4 - 2026-10-10
 
