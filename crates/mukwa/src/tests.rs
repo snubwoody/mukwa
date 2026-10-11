@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use std::time::Duration;
-
-use crate::ui::{CreateTransactionOpts, Settings, State, TransactionState};
+use crate::ui::{CategoryState, CreateTransactionOpts, Settings, State, TransactionState};
 
 use super::*;
-use i_slint_backend_testing::{ElementHandle, ElementQuery, ElementRoot};
+use i_slint_backend_testing::ElementHandle;
 use jiff::civil::date;
 use jiff::{ToSpan, Zoned};
 use mukwa_core::fmt::CurrencyFormatter;
@@ -456,5 +454,179 @@ fn delete_transaction_updates_sidebar_account_balance() -> Result<()> {
         cash_account[1].accessible_label().unwrap(),
         formatter.format_money(Money::ZERO)?.to_shared_string()
     );
+    Ok(())
+}
+
+#[test]
+fn transactions_shown_in_table() -> Result<()> {
+    let (app, service) = setup()?;
+    let state = app.global::<State>();
+    let transaction_state = app.global::<TransactionState>();
+    let category_state = app.global::<CategoryState>();
+    let settings = app.global::<Settings>();
+    settings.invoke_set_currency_code("USD".to_shared_string());
+
+    let group = service.create_category_group("")?;
+
+    state.invoke_create_account(
+        "Cash Account".to_shared_string(),
+        ui::AccountType::Cash,
+        "0".to_shared_string(),
+    );
+
+    category_state.invoke_create_category(
+        "Entertainment".to_shared_string(),
+        group.id.to_shared_string(),
+    );
+
+    let category = category_state.get_categories().iter().next().unwrap();
+
+    transaction_state.invoke_create_transaction(CreateTransactionOpts {
+        account_id: SharedString::new(),
+        category_id: category.id,
+        date: SharedString::from("2026-10-12"),
+        note: SharedString::from("Note"),
+        inflow: SharedString::new(),
+        outflow: SharedString::from("500"),
+        payee_id: SharedString::new(),
+    });
+
+    let transaction_table = ElementHandle::find_by_element_type_name(&app, "Table")
+        .next()
+        .unwrap();
+
+    let rows = transaction_table
+        .query_descendants()
+        .match_type_name("TransactionRow")
+        .find_all();
+    assert_eq!(rows.len(), 1);
+
+    let test_has_text = |type_name: &str, text: &str| {
+        let cell = rows[0]
+            .query_descendants()
+            .match_type_name(type_name)
+            .find_first()
+            .unwrap()
+            .query_descendants()
+            .match_type_name("Text")
+            .find_first()
+            .unwrap();
+
+        assert_eq!(cell.accessible_label().unwrap(), SharedString::from(text));
+    };
+
+    let mut formatter = CurrencyFormatter::new();
+    formatter.set_currency(Currency::USD);
+
+    test_has_text("CategoryCell", "Entertainment");
+    test_has_text("AccountCell", "Cash Account");
+    test_has_text("MoneyCell", &formatter.format_money(Money::new(500))?);
+    test_has_text("NoteCell", "Note");
+    test_has_text(
+        "DateCell",
+        &state.invoke_format_date(SharedString::from("2026-10-12")),
+    );
+    Ok(())
+}
+
+#[test]
+fn create_simple_transaction() -> Result<()> {
+    let (app, _) = setup()?;
+    let state = app.global::<State>();
+    let transaction_state = app.global::<TransactionState>();
+    state.invoke_create_account(
+        "Cash Account".to_shared_string(),
+        ui::AccountType::Cash,
+        "0".to_shared_string(),
+    );
+
+    let new_transaction_row =
+        ElementHandle::find_by_element_type_name(&app, "NewTransactionRow").next();
+    assert!(new_transaction_row.is_none());
+
+    let button = ElementHandle::find_by_accessible_label(&app, "New")
+        .next()
+        .unwrap();
+
+    button.mock_single_click(PointerEventButton::Left);
+
+    let new_transaction_row = ElementHandle::find_by_element_type_name(&app, "NewTransactionRow")
+        .next()
+        .unwrap();
+
+    new_transaction_row
+        .query_descendants()
+        .match_predicate(|element| element.accessible_label() == Some(SharedString::from("Save")))
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let account = state.get_accounts().iter().next().unwrap();
+    let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
+    assert_eq!(transactions.len(), 1);
+    assert_eq!(transactions[0].date, Zoned::now().date().to_shared_string());
+    assert_eq!(transactions[0].amount, Money::ZERO.to_shared_string());
+    assert_eq!(transactions[0].account_id, account.id);
+    assert!(transactions[0].category_id.is_empty());
+    assert!(transactions[0].payee_id.is_empty());
+    assert!(transactions[0].note.is_empty());
+
+    assert!(
+        ElementHandle::find_by_element_type_name(&app, "NewTransactionRow")
+            .next()
+            .is_none()
+    );
+
+    button.mock_single_click(PointerEventButton::Left);
+    let new_transaction_row = ElementHandle::find_by_element_type_name(&app, "NewTransactionRow")
+        .next()
+        .unwrap();
+    new_transaction_row
+        .query_descendants()
+        .match_predicate(|element| {
+            element.accessible_label() == Some(SharedString::from("Save and add another"))
+        })
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
+    assert_eq!(transactions.len(), 2);
+
+    assert!(
+        ElementHandle::find_by_element_type_name(&app, "NewTransactionRow")
+            .next()
+            .is_some()
+    );
+    Ok(())
+}
+#[test]
+fn cancel_new_transaction_row() -> Result<()> {
+    let (app, _) = setup()?;
+
+    let new_transaction_row =
+        ElementHandle::find_by_element_type_name(&app, "NewTransactionRow").next();
+    assert!(new_transaction_row.is_none());
+
+    let button = ElementHandle::find_by_accessible_label(&app, "New")
+        .next()
+        .unwrap();
+
+    button.mock_single_click(PointerEventButton::Left);
+
+    let new_transaction_row = ElementHandle::find_by_element_type_name(&app, "NewTransactionRow")
+        .next()
+        .unwrap();
+
+    new_transaction_row
+        .query_descendants()
+        .match_predicate(|element| element.accessible_label() == Some(SharedString::from("Cancel")))
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let new_transaction_row =
+        ElementHandle::find_by_element_type_name(&app, "NewTransactionRow").next();
+    assert!(new_transaction_row.is_none());
     Ok(())
 }

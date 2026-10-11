@@ -66,6 +66,8 @@ impl SettingsStore {
         Ok(())
     }
 
+    // Used for testing
+    #[allow(unused)]
     pub fn open_in_memory() -> SettingsStore {
         SettingsStore {
             buffer: SettingsBuffer::Memory,
