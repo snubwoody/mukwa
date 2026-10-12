@@ -16,6 +16,7 @@ use slint::platform::PointerEventButton;
 use slint::{Model, SharedString, ToSharedString};
 use tempfile::tempdir;
 
+mod spending_page;
 mod analytics_page;
 
 fn setup() -> crate::Result<(MainWindow, Service)> {
