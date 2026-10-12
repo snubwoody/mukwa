@@ -21,6 +21,7 @@ use tracing::{debug, info, warn};
 pub fn bind(main_window: &ui::MainWindow) {
     let api = main_window.global::<ui::Api>();
 
+    // TODO: only run in release
     let _ = slint::spawn_local({
         let api = api.as_weak();
         async move {
@@ -138,6 +139,18 @@ pub fn bind(main_window: &ui::MainWindow) {
 async fn check_for_update(api: &Api<'_>) -> crate::Result<()> {
     // FIXME: app hanging while writing update file
     // TODO: add arm64 support
+    // let manifest_url = "https://raw.githubusercontent.com/snubwoody/mukwa/refs/heads/main/release-manifest.json";
+    // TODO: set user agent?
+    let manifest_url =
+        "https://raw.githubusercontent.com/snubwoody/mukwa/refs/heads/main/release-manifest.json";
+    let response = smol::unblock(move || ureq::get(&manifest_url).call()).await?;
+
+    if !response.status().is_success() {
+        // TODO: read response body
+        return Err(Error::new("Response error"));
+    }
+    // TODO: use serde_json to read release manifest
+
     let mut artifacts = HashMap::new();
     artifacts.insert(
         Platform::WindowsX64,

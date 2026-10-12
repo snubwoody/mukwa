@@ -3884,6 +3884,7 @@ dependencies = [
  "rusqlite",
  "semver",
  "serde",
+ "serde_json",
  "slint",
  "slint-build",
  "smol",
