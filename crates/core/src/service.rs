@@ -636,6 +636,38 @@ impl Service {
         Ok(total)
     }
 
+    /// Creates a monthly target amount for a category.
+    pub fn create_budget_target(&self, category_id: Uuid, amount: Money) -> crate::Result<()> {
+        let connection = self.connection();
+        let sql = "INSERT INTO budget_targets(category_id,amount) VALUES(?1,?2)";
+        connection.execute(sql, params![category_id.to_string(), amount.inner()])?;
+        Ok(())
+    }
+
+    pub fn get_budget_target(&self, category_id: Uuid) -> crate::Result<Money> {
+        let connection = self.connection();
+        let sql = "SELECT amount from budget_targets WHERE category_id = ?";
+        let amount = connection.query_one(sql, [category_id.to_string()], |row| {
+            row.get::<_, i64>(0)
+                .map(|amount| Money::from_scaled(amount))
+        })?;
+        Ok(amount)
+    }
+
+    pub fn update_budget_target(&self, category_id: Uuid, amount: Money) -> crate::Result<()> {
+        let connection = self.connection();
+        let sql = "UPDATE budget_targets SET amount = ?1 WHERE category_id = ?2";
+        connection.execute(sql, params![amount.inner(), category_id.to_string(),])?;
+        Ok(())
+    }
+
+    pub fn delete_budget_target(&self, category_id: Uuid) -> crate::Result<()> {
+        let connection = self.connection();
+        let sql = "DELETE FROM budget_targets WHERE category_id = ?";
+        connection.execute(sql, [category_id.to_string()])?;
+        Ok(())
+    }
+
     /// Calculates the total amount spent in the category group.
     pub fn total_spent_in_group(&self, group_id: Uuid, month: Date) -> crate::Result<Money> {
         let connection = self.connection();

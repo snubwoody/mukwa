@@ -5,7 +5,7 @@ CREATE TABLE budget_targets(
     amount INTEGER NOT NULL DEFAULT 0,
 
     -- One target per budget
-    UNIQUE(id,category_id),
+    UNIQUE(category_id),
     CHECK(amount >= 0)
 );
 
