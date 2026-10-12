@@ -92,9 +92,7 @@ export component TitleBar inherits WindowMoveArea {
 
                 if Api.update-state == ready: PrimaryButton {
                     text: @tr("Update & Restart");
-                    clicked => {
-                        //Api.check-for-update();
-                    }
+                    clicked => Api.update-and-restart();
                 }
 
                 if Api.update-state == downloading: Text {

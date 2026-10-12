@@ -118,7 +118,7 @@ pub fn run() -> Result<()> {
             WinitWindowAccessor,
             winit::platform::windows::{CornerPreference, WindowExtWindows},
         };
-        
+
         let main_window_weak = main_window.as_weak();
         slint::spawn_local(async move {
             let main_window = main_window_weak.unwrap();

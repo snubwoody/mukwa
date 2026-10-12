@@ -7,7 +7,6 @@ use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -95,7 +94,7 @@ pub fn gen_release_manifest(releases: &[ReleaseJson]) -> crate::Result<Manifest>
 
         let tag_name = &release.tag_name.strip_prefix("v").unwrap_or_default();
         let mut release_info = Release {
-            version: Version::parse(&tag_name)?,
+            version: Version::parse(tag_name)?,
             published_at: release.published_at,
             artifacts: HashMap::new(),
             prerelease: release.prerelease,
@@ -173,9 +172,11 @@ pub fn install_update(path: impl AsRef<Path>) -> crate::Result<()> {
     Command::new(absolute_path)
         .arg("/verysilent")
         .arg("/update=1")
-        .arg(&format!("/log={}", log_path.display()))
+        .arg(format!("/log={}", log_path.display()))
         .spawn()?;
-    Ok(())
+    // TODO: maybe use cleaner exit method to run destructors
+    // TODO: use never type when stabilized
+    std::process::exit(0);
 }
 
 pub fn check_for_update(current_version: Version, mut manifest: Manifest) -> Option<Release> {

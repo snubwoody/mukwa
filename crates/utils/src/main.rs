@@ -94,7 +94,7 @@ async fn create_manifest() -> mukwa_core::Result<()> {
     let manifest = gen_release_manifest(&releases)?;
     let json = serde_json::to_string_pretty(&manifest).unwrap();
     let path = Path::new("release-manifest.json");
-    std::fs::write(&path, &json)?;
+    std::fs::write(path, &json)?;
     info!("Created release manifest at {}", path.display());
     Ok(())
 }
@@ -222,23 +222,4 @@ fn path_segments_to_string(segments: PathSegmentsIter) -> Result<String, std::fm
         }
     }
     Ok(s)
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn gen_release_info() -> mukwa_core::Result<()> {
-        smol::block_on(async {
-            let release = octocrab::instance()
-                .repos("snubwoody", "mukwa")
-                .releases()
-                .get_latest()
-                .await
-                .unwrap();
-            dbg!(release);
-        });
-        Ok(())
-    }
 }
