@@ -138,6 +138,7 @@ pub fn bind(main_window: &ui::MainWindow) {
 
 async fn check_for_update(api: &Api<'_>) -> crate::Result<()> {
     // FIXME: app hanging while writing update file
+    // TODO: add arm64 support
     let mut artifacts = HashMap::new();
     artifacts.insert(
         Platform::WindowsX64,
@@ -161,8 +162,7 @@ async fn check_for_update(api: &Api<'_>) -> crate::Result<()> {
     smol::fs::create_dir_all(&update_dir).await?;
     api.set_update_state(AutoUpdaterState::Checking);
     info!("Checking for updates");
-    // FIXME: use actual version
-    match auto_update::check_for_update(Version::new(0, 1, 0), manifest) {
+    match auto_update::check_for_update(Version::parse(env!("CARGO_PKG_VERSION"))?, manifest) {
         Some(release) => {
             info!("New update found, version {}", release.version);
             api.set_update_state(AutoUpdaterState::Downloading);
