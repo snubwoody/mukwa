@@ -3,7 +3,7 @@
 
 use std::ops::ControlFlow;
 
-use crate::ui::{CategoryState, CreateTransactionOpts, Settings, State, TransactionState};
+use crate::ui::{Api, CategoryState, CreateTransactionOpts, Settings, State, TransactionState};
 
 use super::*;
 use i_slint_backend_testing::ElementHandle;
@@ -269,6 +269,36 @@ fn accounts_shown_in_sidebar() -> Result<()> {
         credit_account[1].accessible_label().unwrap(),
         formatter.format_money(Money::new(-550))?.to_shared_string()
     );
+    Ok(())
+}
+
+#[cfg(windows)]
+#[test]
+fn display_downloading_update_in_titlebar() -> Result<()> {
+    let (app, _) = setup()?;
+    let api: ui::Api = app.global();
+
+    let titlebar = ElementHandle::find_by_element_type_name(&app, "TitleBar")
+        .next()
+        .unwrap();
+
+    api.set_update_state(ui::AutoUpdaterState::Idle);
+    let text = titlebar
+        .query_descendants()
+        .match_predicate(|element| {
+            element.accessible_label() == Some("Downloading update...".to_shared_string())
+        })
+        .find_first();
+    assert!(text.is_none());
+
+    api.set_update_state(ui::AutoUpdaterState::Downloading);
+    let text = titlebar
+        .query_descendants()
+        .match_predicate(|element| {
+            element.accessible_label() == Some("Downloading update...".to_shared_string())
+        })
+        .find_first();
+    assert!(text.is_some());
     Ok(())
 }
 

@@ -2,20 +2,39 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use crate::ui;
+use crate::ui::{Api, AutoUpdaterState};
 use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::Money;
-use mukwa_core::auto_update::{self, download_update, install_update, Artifact, Manifest, Platform, Release};
+use mukwa_core::auto_update::{
+    self, Artifact, Manifest, Platform, Release, download_update, install_update,
+};
+use mukwa_core::error::ErrorExt;
 use mukwa_core::fmt::CurrencyFormatter;
 use semver::Version;
 use slint::{ComponentHandle, Global, ToSharedString};
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::time::Duration;
 use tracing::{debug, info, warn};
-use crate::ui::{Api, AutoUpdaterState};
 
 pub fn bind(main_window: &ui::MainWindow) {
     let api = main_window.global::<ui::Api>();
+
+    slint::spawn_local({
+        let api = api.as_weak();
+        async move {
+            let api = api.unwrap();
+            tracing::debug!("Hello world");
+            smol::Timer::after(Duration::from_secs(10)).await;
+            if let Err(err) = check_for_update(&api)
+                .await
+                .context("Failed to check for update")
+            {
+                warn!("{}", err.report());
+            }
+        }
+    });
 
     api.on_check_for_update({
         let api = api.as_weak();
@@ -23,7 +42,7 @@ pub fn bind(main_window: &ui::MainWindow) {
             let api = api.unwrap();
             // TODO: store updater state to prevent multiple button clicks
             let _ = slint::spawn_local(async move {
-                if let Err(err) = check_for_update(&api).await{
+                if let Err(err) = check_for_update(&api).await {
                     warn!("Failed to update: {err}");
                 }
             });
@@ -116,7 +135,7 @@ pub fn bind(main_window: &ui::MainWindow) {
     });
 }
 
-async fn check_for_update(api: &Api<'_>) -> crate::Result<()>{
+async fn check_for_update(api: &Api<'_>) -> crate::Result<()> {
     // FIXME: app hanging while writing update file
     let mut artifacts = HashMap::new();
     artifacts.insert(
@@ -133,13 +152,16 @@ async fn check_for_update(api: &Api<'_>) -> crate::Result<()>{
     }];
     let manifest = Manifest { releases };
 
-    let update_dir = dirs::data_local_dir().unwrap().join("Mukwa").join("updates");
+    let update_dir = dirs::data_local_dir()
+        .unwrap()
+        .join("Mukwa")
+        .join("updates");
     smol::fs::create_dir_all(&update_dir).await?;
     api.set_update_state(AutoUpdaterState::Checking);
     info!("Checking for updates");
     match auto_update::check_for_update(Version::new(0, 1, 0), manifest) {
         Some(release) => {
-            info!("New update found, version {}",release.version);
+            info!("New update found, version {}", release.version);
             api.set_update_state(AutoUpdaterState::Downloading);
             info!("Downloading new update...");
             let update_path = download_update(release, &update_dir).await?;
