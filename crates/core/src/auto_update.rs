@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+use crate::{Error, log_dir};
 use jiff::Timestamp;
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -9,13 +10,13 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use crate::{log_dir, Error};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Manifest {
     pub releases: Vec<Release>,
 }
 
+// TODO: add is_updatedable method
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Platform {
     #[serde(rename = "windows_x86_64_exe")]
@@ -151,7 +152,7 @@ pub async fn download_update(release: Release, dir: impl AsRef<Path>) -> crate::
 
     if !response.status().is_success() {
         // TODO: read response body
-        return Err(Error::new("Response error"))
+        return Err(Error::new("Response error"));
     }
     let dest = dir.as_ref().join("Mukwa-Update.exe");
     smol::unblock({
@@ -159,19 +160,20 @@ pub async fn download_update(release: Release, dir: impl AsRef<Path>) -> crate::
         move || {
             let mut file = File::create(dest)?;
             let mut reader = response.into_body().into_reader();
-            std::io::copy(&mut reader,&mut file)
+            std::io::copy(&mut reader, &mut file)
         }
-    }).await?;
+    })
+    .await?;
     Ok(dest)
 }
 
-pub fn install_update(path: impl AsRef<Path>) -> crate::Result<()>{
+pub fn install_update(path: impl AsRef<Path>) -> crate::Result<()> {
     let absolute_path = path.as_ref().canonicalize()?;
     let log_path = log_dir().join("inno-setup.log");
     Command::new(absolute_path)
         .arg("/verysilent")
         .arg("/update=1")
-        .arg(&format!("/log={}",log_path.display()))
+        .arg(&format!("/log={}", log_path.display()))
         .spawn()?;
     Ok(())
 }
