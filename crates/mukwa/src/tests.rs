@@ -3,7 +3,7 @@
 
 use std::ops::ControlFlow;
 
-use crate::ui::{Api, CategoryState, CreateTransactionOpts, Settings, State, TransactionState};
+use crate::ui::{CategoryState, CreateTransactionOpts, Settings, State, TransactionState};
 
 use super::*;
 use i_slint_backend_testing::ElementHandle;

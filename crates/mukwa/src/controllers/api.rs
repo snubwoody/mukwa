@@ -21,11 +21,12 @@ use tracing::{debug, info, warn};
 pub fn bind(main_window: &ui::MainWindow) {
     let api = main_window.global::<ui::Api>();
 
-    slint::spawn_local({
+    let _ = slint::spawn_local({
         let api = api.as_weak();
         async move {
             let api = api.unwrap();
             tracing::debug!("Hello world");
+            // Give the app some time to setup the state and callbacks
             smol::Timer::after(Duration::from_secs(10)).await;
             if let Err(err) = check_for_update(&api)
                 .await
@@ -36,16 +37,16 @@ pub fn bind(main_window: &ui::MainWindow) {
         }
     });
 
-    api.on_check_for_update({
-        let api = api.as_weak();
+    api.on_update_and_restart({
         move || {
-            let api = api.unwrap();
-            // TODO: store updater state to prevent multiple button clicks
-            let _ = slint::spawn_local(async move {
-                if let Err(err) = check_for_update(&api).await {
-                    warn!("Failed to update: {err}");
-                }
-            });
+            let update_path = dirs::data_local_dir()
+                .unwrap()
+                .join("Mukwa")
+                .join("updates")
+                .join("Mukwa-Update.exe");
+            if let Err(err) = install_update(update_path).context("Failed to update app") {
+                warn!("{}", err.report())
+            }
         }
     });
 
@@ -146,7 +147,7 @@ async fn check_for_update(api: &Api<'_>) -> crate::Result<()> {
         },
     );
     let releases = vec![Release {
-        version: Version::new(0, 2, 0),
+        version: Version::new(0, 2, 4),
         artifacts,
         ..Default::default()
     }];
@@ -156,9 +157,11 @@ async fn check_for_update(api: &Api<'_>) -> crate::Result<()> {
         .unwrap()
         .join("Mukwa")
         .join("updates");
+    // TODO: only check in release mode once done
     smol::fs::create_dir_all(&update_dir).await?;
     api.set_update_state(AutoUpdaterState::Checking);
     info!("Checking for updates");
+    // FIXME: use actual version
     match auto_update::check_for_update(Version::new(0, 1, 0), manifest) {
         Some(release) => {
             info!("New update found, version {}", release.version);
@@ -167,9 +170,9 @@ async fn check_for_update(api: &Api<'_>) -> crate::Result<()> {
             let update_path = download_update(release, &update_dir).await?;
             debug!(path=?update_path,"Successfully downloaded new update");
             api.set_update_state(AutoUpdaterState::Ready);
-            //install_update(update_path)?;
         }
         None => {
+            api.set_update_state(AutoUpdaterState::Idle);
             info!("No new update found");
         }
     }
