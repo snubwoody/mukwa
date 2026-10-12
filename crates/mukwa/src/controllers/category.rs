@@ -48,6 +48,58 @@ pub fn bind(window: &MainWindow, state: &AppState) -> crate::Result<()> {
     category_state.set_category_options(ModelRc::new(category_options_model));
     category_state.set_current_month(Zoned::now().date().into());
 
+    category_state.on_edit_budget_target({
+        let service = service.clone();
+        move |category_id, amount| {
+            if let Err(err) = edit_budget_target(&service, &category_id, &amount)
+                .context("Failed to edit budget target")
+            {
+                warn!("{}", err.report());
+            }
+        }
+    });
+
+    category_state.on_create_budget_target({
+        let service = service.clone();
+        move |category_id, amount| {
+            if let Err(err) = create_budget_target(&service, &category_id, &amount)
+                .context("Failed to create budget target")
+            {
+                warn!("{}", err.report());
+            }
+        }
+    });
+
+    category_state.on_delete_budget_target({
+        let service = service.clone();
+        move |category_id| {
+            if let Err(err) = delete_budget_target(&service, &category_id)
+                .context("Failed to delete budget target")
+            {
+                warn!("{}", err.report());
+            }
+        }
+    });
+
+    category_state.on_has_budget_target({
+        let service = service.clone();
+        move |category_id| {
+            has_budget_target(&service, &category_id)
+                .inspect_err(|err| warn!("{}", err.report()))
+                .unwrap_or(false)
+        }
+    });
+
+    category_state.on_get_budget_target({
+        let service = service.clone();
+        move |category_id| {
+            get_budget_target(&service, &category_id)
+                .inspect_err(|err| warn!("{}", err.report()))
+                .unwrap_or_default()
+                .to_shared_string()
+        }
+    });
+
     category_state.on_left_to_assign({
         let service = service.clone();
         move || {
@@ -340,6 +392,37 @@ fn load_budgets(state: &CategoryState, service: &Service) -> crate::Result<()> {
         .collect();
     state.set_budgets(ModelRc::new(Rc::new(VecModel::from(budgets))));
     Ok(())
+}
+
+fn edit_budget_target(service: &Service, category_id: &str, amount: &str) -> crate::Result<()> {
+    let category_id = Uuid::parse_str(category_id)?;
+    let amount = Money::from_str(&amount)?;
+    service.update_budget_target(category_id, amount)?;
+    Ok(())
+}
+
+fn create_budget_target(service: &Service, category_id: &str, amount: &str) -> crate::Result<()> {
+    let category_id = Uuid::parse_str(category_id)?;
+    let amount = Money::from_str(&amount)?;
+    service.create_budget_target(category_id, amount)?;
+    Ok(())
+}
+
+fn delete_budget_target(service: &Service, category_id: &str) -> crate::Result<()> {
+    let category_id = Uuid::parse_str(category_id)?;
+    service.delete_budget_target(category_id)?;
+    Ok(())
+}
+
+fn get_budget_target(service: &Service, category_id: &str) -> crate::Result<Money> {
+    let category_id = Uuid::parse_str(category_id)?;
+    Ok(service.get_budget_target(category_id)?)
+}
+
+fn has_budget_target(service: &Service, category_id: &str) -> crate::Result<bool> {
+    let category_id = Uuid::parse_str(category_id)?;
+    let result = service.get_budget_target(category_id);
+    Ok(result.is_ok())
 }
 
 fn delete_category(state: &CategoryState, service: &Service, id: &str) -> crate::Result<Uuid> {
@@ -674,6 +757,78 @@ mod test {
             .submit()?;
         let total = category_state.invoke_left_to_spend(budget.id.to_shared_string());
         assert_eq!(total, Money::ZERO.to_shared_string());
+        Ok(())
+    }
+
+    #[test]
+    fn get_budget_target() -> crate::Result<()> {
+        let (service, category_state, _) = setup()?;
+        let group = service.create_category_group("")?;
+        let category = service.create_category("", group.id)?;
+
+        // Default value when there is no target
+        let target = category_state.invoke_get_budget_target(category.id.to_shared_string());
+        assert_eq!(target, Money::new(0).to_shared_string());
+
+        service.create_budget_target(category.id, Money::new(10))?;
+        let target = category_state.invoke_get_budget_target(category.id.to_shared_string());
+        assert_eq!(target, Money::new(10).to_shared_string());
+        Ok(())
+    }
+
+    #[test]
+    fn create_budget_target() -> crate::Result<()> {
+        let (service, category_state, _) = setup()?;
+        let group = service.create_category_group("")?;
+        let category = service.create_category("", group.id)?;
+        category_state
+            .invoke_create_budget_target(category.id.to_shared_string(), "500".to_shared_string());
+        // Should not create duplicate targets
+        category_state
+            .invoke_create_budget_target(category.id.to_shared_string(), "0".to_shared_string());
+        let target = category_state.invoke_get_budget_target(category.id.to_shared_string());
+        assert_eq!(target, Money::new(500).to_shared_string());
+        Ok(())
+    }
+
+    #[test]
+    fn has_budget_target() -> crate::Result<()> {
+        let (service, category_state, _) = setup()?;
+        let group = service.create_category_group("")?;
+        let category = service.create_category("", group.id)?;
+        let has_target = category_state.invoke_has_budget_target(category.id.to_shared_string());
+        assert!(!has_target);
+        category_state
+            .invoke_create_budget_target(category.id.to_shared_string(), "500".to_shared_string());
+        let has_target = category_state.invoke_has_budget_target(category.id.to_shared_string());
+        assert!(has_target);
+        Ok(())
+    }
+
+    #[test]
+    fn delete_budget_target() -> crate::Result<()> {
+        let (service, category_state, _) = setup()?;
+        let group = service.create_category_group("")?;
+        let category = service.create_category("", group.id)?;
+        category_state
+            .invoke_create_budget_target(category.id.to_shared_string(), "500".to_shared_string());
+        category_state.invoke_delete_budget_target(category.id.to_shared_string());
+        let has_target = category_state.invoke_has_budget_target(category.id.to_shared_string());
+        assert!(!has_target);
+        Ok(())
+    }
+
+    #[test]
+    fn edit_budget_target() -> crate::Result<()> {
+        let (service, category_state, _) = setup()?;
+        let group = service.create_category_group("")?;
+        let category = service.create_category("", group.id)?;
+        category_state
+            .invoke_create_budget_target(category.id.to_shared_string(), "500".to_shared_string());
+        category_state
+            .invoke_edit_budget_target(category.id.to_shared_string(), "100".to_shared_string());
+        let target = category_state.invoke_get_budget_target(category.id.to_shared_string());
+        assert_eq!(target, Money::new(100).to_shared_string());
         Ok(())
     }
 }
