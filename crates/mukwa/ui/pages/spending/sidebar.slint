@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { Colors } from "../../colors.slint";
+import { Category } from "../../globals.slint";
+
+export component SpendingPageSideBar inherits Rectangle {
+    in property <Category> category;
+    background: Colors.surface0;
+    VerticalLayout {
+        padding: 20px;
+        Text {
+            text: category.title;
+            color: Colors.textBody;
+        }
+    }
+}

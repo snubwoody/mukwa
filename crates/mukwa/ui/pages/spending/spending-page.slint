@@ -23,6 +23,7 @@ import {
 import { Settings } from "../../settings.slint";
 import { FontSize } from "../../theme.slint";
 import { Icons } from "../../icons.slint";
+import { SpendingPageSideBar } from "sidebar.slint";
 
 export global SpendingPageState {
     in-out property <string> left-to-budget;
@@ -32,6 +33,7 @@ component CategoryItem inherits VerticalLayout {
     in property <Date> current-date;
     in property <Category> category;
     property <Budget> budget: CategoryState.get-budget(category.id, current-date);
+    callback selected(string);
 
     function budget-progress() -> float {
         if Api.money-to-float(budget.amount) <= 0 && Api.money-to-float(CategoryState.total-spent(budget.id)) > 0 {
@@ -62,6 +64,9 @@ component CategoryItem inherits VerticalLayout {
         allow-move: true;
 
         TouchArea {
+            clicked => {
+                selected(category.id);
+            }
             pointer-event(event) => {
                 if (event.button == PointerEventButton.right) {
                     context-menu.show();
@@ -159,6 +164,7 @@ component CategoryGroupItem {
     in property <Date> current-date;
     in property <CategoryGroup> category-group;
     property <bool> open: true;
+    callback category-selected(string);
 
     drop-area := DropArea {
         can-drop(event) => event.proposed-action;
@@ -337,14 +343,16 @@ component CategoryGroupItem {
             for category in CategoryState.categories-in-group(category-group.id): CategoryItem {
                 current-date: current-date;
                 category: category;
+                selected(id) => category-selected(id);
             }
         }
     }
 }
 
-export component SpendingPage inherits VerticalLayout {
+component SpendingPageBody inherits VerticalLayout {
     in-out property <Date> current-date: CalendarState.today();
     property <string> left-to-budget: SpendingPageState.left-to-budget;
+    callback category-selected(string);
     alignment: start;
     spacing: 12px;
 
@@ -529,8 +537,24 @@ export component SpendingPage inherits VerticalLayout {
                 for category-group in CategoryState.category-groups: CategoryGroupItem {
                     category-group: category-group;
                     current-date: current-date;
+                    category-selected(id) => category-selected(id);
                 }
             }
         }
+    }
+}
+
+export component SpendingPage inherits HorizontalLayout {
+    property <string> selected-category-id;
+
+    SpendingPageBody {
+        category-selected(id) => {
+            selected-category-id = id;
+        }
+    }
+
+    if !selected-category-id.is-empty: SpendingPageSideBar {
+        preferred-width: 250px;
+        category: CategoryState.categories[CategoryState.categories.find-index((value) => value.id == selected-category-id)];
     }
 }
