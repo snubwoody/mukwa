@@ -9,10 +9,10 @@ enum TitleBarButtonTheme { windows, windows-x }
 
 export component TitleBarButton {
     in-out property <TitleBarButtonTheme> theme;
-    in property <length> size: 36px;
+    in property <length> size: 40px;
 
     width: size;
-    height: size;
+    height: 100%;
     accessible-enabled: true;
     accessible-role: button;
 
@@ -61,6 +61,7 @@ export component TitleBar inherits WindowMoveArea {
     callback minimized();
     callback maximized();
     callback closed();
+    height: 40px;
 
     Rectangle {
         background: Colors.neutral25;
@@ -75,6 +76,7 @@ export component TitleBar inherits WindowMoveArea {
     HorizontalLayout {
         padding-left: 12px;
         cross-axis-alignment: center;
+        height: parent.height;
         Text {
             text: "Mukwa";
             font-weight: FontWeight.semi-bold;
@@ -84,14 +86,17 @@ export component TitleBar inherits WindowMoveArea {
         HorizontalLayout {
             alignment: end;
             spacing: 12px;
+            height: 100%;
 
             HorizontalLayout {
                 spacing: 12px;
                 padding: 12px;
                 alignment: end;
+                height: 100%;
 
                 if Api.update-state == ready: PrimaryButton {
                     text: @tr("Update & Restart");
+                    size: small;
                     clicked => Api.update-and-restart();
                 }
 
@@ -102,6 +107,7 @@ export component TitleBar inherits WindowMoveArea {
             }
 
             HorizontalLayout {
+                height: 100%;
                 TitleBarButton {
                     theme: windows;
                     accessible-label: @tr("Minimize window");
