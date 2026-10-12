@@ -24,6 +24,10 @@ pub enum Platform {
     WindowsArm64,
     #[serde(rename = "linux_x86_64_appimage")]
     LinuxX64AppImage,
+    #[serde(rename = "linux_x86_64_tarball")]
+    LinuxX64Tarball,
+    #[serde(rename = "linux_x86_64_deb")]
+    LinuxX64Deb,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -112,6 +116,14 @@ pub fn gen_release_manifest(releases: &[ReleaseJson]) -> crate::Result<Manifest>
 
             if asset.name.ends_with("x86_64.AppImage") {
                 platform = Platform::LinuxX64AppImage;
+            }
+
+            if asset.name.ends_with("x86_64.deb") {
+                platform = Platform::LinuxX64Deb;
+            }
+
+            if asset.name.ends_with("x86_64.tar.gz") {
+                platform = Platform::LinuxX64Tarball;
             }
 
             let artifact = Artifact {

@@ -24,10 +24,9 @@ pub fn bind(main_window: &ui::MainWindow) {
     let _ = slint::spawn_local({
         let api = api.as_weak();
         async move {
-            let api = api.unwrap();
-            tracing::debug!("Hello world");
             // Give the app some time to setup the state and callbacks
             smol::Timer::after(Duration::from_secs(10)).await;
+            let api = api.unwrap();
             if let Err(err) = check_for_update(&api)
                 .await
                 .context("Failed to check for update")
