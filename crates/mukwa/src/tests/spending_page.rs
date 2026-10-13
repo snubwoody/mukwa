@@ -24,6 +24,33 @@ fn setup() -> crate::Result<(MainWindow, Service)> {
 }
 
 #[test]
+fn assign_button_assigns_target_amount() -> Result<()> {
+    let (app, _) = setup()?;
+    let category_state: CategoryState = app.global();
+    category_state.invoke_create_category_group(SharedString::new());
+    let groups: Vec<_> = category_state.get_category_groups().iter().collect();
+    category_state.invoke_create_category(SharedString::from("Rent"), groups[1].id.clone());
+
+    let category = category_state.get_categories().iter().next().unwrap();
+    category_state.invoke_create_budget_target(category.id.clone(), "200".to_shared_string());
+
+    ElementHandle::find_by_element_type_name(&app, "CategoryItem")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    ElementHandle::find_by_accessible_label(&app, "Assign")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let budgets: Vec<_> = category_state.get_budgets().iter().collect();
+    let budget = category_state.get_budgets().iter().next().unwrap();
+    assert_eq!(budget.amount, Money::new(200).to_shared_string());
+    Ok(())
+}
+
+#[test]
 fn create_budget_target() -> Result<()> {
     let (app, _) = setup()?;
     let category_state: CategoryState = app.global();
