@@ -2,16 +2,126 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 import { Colors } from "../../colors.slint";
-import { Category } from "../../globals.slint";
+import { Category, CategoryState, State } from "../../globals.slint";
+import { PrimaryButton, TextField } from "../../widgets.slint";
+import { Settings } from "../../settings.slint";
 
+component BudgetTarget inherits VerticalLayout {
+    in property <Category> category;
+    property <bool> form-active: false;
+    property <bool> has-target: CategoryState.has-budget-target(category.id);
+    alignment: start;
+
+    if has-target: VerticalLayout {
+        spacing: 8px;
+        alignment: start;
+
+        HorizontalLayout {
+            alignment: space-between;
+            Text {
+                text: @tr("Target");
+                color: Colors.textBody;
+                font-weight: FontWeight.semi-bold;
+            }
+
+            Text {
+                text: State.format-money(CategoryState.get-budget-target(category.id), Settings.currency-code);
+                color: Colors.textBody;
+                font-weight: FontWeight.semi-bold;
+            }
+        }
+
+        Text {
+            text: "Assign $100 more to meet your budget";
+            color: Colors.textMuted;
+            wrap: word-wrap;
+        }
+
+        PrimaryButton {
+            text: @tr("Assign");
+            theme: neutral;
+            clicked => {
+                CategoryState.edit-budget(get-budget-id(), CategoryState.get-budget-target(category.id));
+            }
+            function get-budget-id() -> string {
+                return CategoryState.budgets[CategoryState.budgets.find-index((value) => value.category-id == category.id)].id;
+            }
+        }
+    }
+
+    if !form-active && !has-target: VerticalLayout {
+        spacing: 8px;
+        alignment: start;
+        Text {
+            text: @tr("Target");
+            color: Colors.textBody;
+        }
+
+        Text {
+            text: @tr("A budget target is an estimate of how much you want to assign to a category each month.");
+            wrap: word-wrap;
+            color: Colors.textMuted;
+        }
+
+        PrimaryButton {
+            text: @tr("Create target");
+            clicked => {
+                form-active = true;
+            }
+        }
+    }
+
+    if form-active: VerticalLayout {
+        spacing: 8px;
+        function submit() {
+            CategoryState.create-budget-target(category.id, text-field.text);
+            has-target = CategoryState.has-budget-target(category.id);
+            form-active = false;
+        }
+
+        text-field := TextField {
+            label: @tr("Every month I want to assign:");
+            input-type: decimal;
+            init => self.focus();
+            accepted => submit();
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: end;
+
+            PrimaryButton {
+                text: @tr("Cancel");
+                theme: ghost;
+                clicked => {
+                    form-active = false;
+                }
+            }
+
+            PrimaryButton {
+                text: @tr("Save target");
+                clicked => submit();
+            }
+        }
+    }
+}
 export component SpendingPageSideBar inherits Rectangle {
     in property <Category> category;
     background: Colors.surface0;
+
     VerticalLayout {
         padding: 20px;
+        spacing: 20px;
+        alignment: start;
+
         Text {
             text: category.title;
             color: Colors.textBody;
+            font-weight: FontWeight.semi-bold;
+        }
+
+        BudgetTarget {
+            category: category;
         }
     }
 }
