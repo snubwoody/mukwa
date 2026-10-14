@@ -26,19 +26,19 @@ export global AnalyticsApi {
     callback filter-category(string);
     pure callback is-category-filtered(string) -> bool;
     in-out property <[string]> filtered-categories;
+    in-out property <Date> current-date: Api.parse-date(Api.today());
 }
 
 component MonthSwitch inherits HorizontalLayout {
     spacing: 12px;
     cross-axis-alignment: center;
-    in property <Date> current-date;
-    callback changed(Date);
+    property <Date> current-date: AnalyticsApi.current-date;
 
     if current-date != Api.parse-date(Api.today()): PrimaryButton {
         text: @tr("Today");
         theme: text-accent;
         clicked => {
-            changed(Api.parse-date(Api.today()));
+            AnalyticsApi.current-date = Api.parse-date(Api.today());
         }
     }
 
@@ -57,7 +57,7 @@ component MonthSwitch inherits HorizontalLayout {
                 theme: ghost;
                 accessible-label: @tr("Previous month");
                 clicked => {
-                    changed(CalendarState.decrement-month(current-date));
+                    AnalyticsApi.current-date = CalendarState.decrement-month(current-date);
                 }
             }
 
@@ -83,7 +83,7 @@ component MonthSwitch inherits HorizontalLayout {
                 theme: ghost;
                 accessible-label: @tr("Next month");
                 clicked => {
-                    changed(CalendarState.increment-month(current-date));
+                    AnalyticsApi.current-date = CalendarState.increment-month(current-date);
                 }
             }
         }
@@ -146,6 +146,7 @@ component CategoryFilter {
             }
             return CategoryState.categories.length - filters.length + " categories";
         }
+
         clicked => {
             popup.show();
         }
@@ -223,8 +224,7 @@ component SideBar inherits VerticalLayout {
 }
 
 export component AnalyticsPage inherits HorizontalLayout {
-    property <[PieChartSlice]> pie-chart-slices: AnalyticsApi.draw-pie-chart(500px, 500px,current-date);
-    property <Date> current-date: Api.parse-date(Api.today());
+    property <[PieChartSlice]> pie-chart-slices: AnalyticsApi.draw-pie-chart(500px, 500px,AnalyticsApi.current-date);
 
     VerticalLayout {
         spacing: 24px;
@@ -250,12 +250,7 @@ export component AnalyticsPage inherits HorizontalLayout {
                     }
                 }
 
-                MonthSwitch {
-                    current-date: current-date;
-                    changed(date) => {
-                        current-date = date
-                    }
-                }
+                MonthSwitch {}
             }
         }
 
@@ -272,7 +267,7 @@ export component AnalyticsPage inherits HorizontalLayout {
                 }
 
                 Text {
-                    text: State.format-money(State.total-spent-all(current-date), Settings.currency-code);
+                    text: State.format-money(State.total-spent-all(AnalyticsApi.current-date), Settings.currency-code);
                     color: Colors.textHeading;
                     font-size: FontSize.heading-sm;
                     font-weight: FontWeight.medium;
@@ -326,7 +321,7 @@ export component AnalyticsPage inherits HorizontalLayout {
                         }
 
                         Text {
-                            text: State.format-money(State.total-spent-all(current-date), Settings.currency-code);
+                            text: State.format-money(State.total-spent-all(AnalyticsApi.current-date), Settings.currency-code);
                             color: Colors.textHeading;
                             font-size: FontSize.heading;
                             font-weight: FontWeight.medium;
