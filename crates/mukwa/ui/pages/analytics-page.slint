@@ -224,6 +224,85 @@ component SideBar inherits VerticalLayout {
     }
 }
 
+component PieChart inherits VerticalLayout {
+    in property <[PieChartSlice]> pie-chart-slices;
+    spacing: 36px;
+    alignment: start;
+
+    VerticalLayout {
+        spacing: 8px;
+        alignment: start;
+        Text {
+            text: @tr("Total spent");
+            color: Colors.textBody;
+            font-weight: FontWeight.medium;
+        }
+
+        Text {
+            text: State.format-money(AnalyticsApi.total-spent(), Settings.currency-code);
+            color: Colors.textHeading;
+            font-size: FontSize.heading-sm;
+            font-weight: FontWeight.medium;
+        }
+    }
+
+    HorizontalLayout {
+        alignment: center;
+        Rectangle {
+            width: 500px;
+            height: 500px;
+
+            for slice in pie-chart-slices: Rectangle {
+                Path {
+                    width: 100%;
+                    height: 100%;
+                    viewbox-width: 500;
+                    viewbox-height: 500;
+                    fill: slice.fill;
+                    commands: slice.arc-path;
+                }
+
+                Path {
+                    width: 100%;
+                    height: 100%;
+                    viewbox-width: 500;
+                    viewbox-height: 500;
+                    stroke: Colors.neutral200;
+                    commands: slice.line-path;
+                }
+
+                Text {
+                    x: slice.label-x;
+                    y: slice.label-y;
+                    text: slice.label;
+                    color: Colors.textMuted;
+                    font-size: FontSize.caption;
+                    font-weight: FontWeight.light;
+                }
+            }
+
+            VerticalLayout {
+                width: parent.width;
+                height: parent.height;
+                alignment: center;
+                cross-axis-alignment: center;
+                spacing: 4px;
+                Text {
+                    text: @tr("Total spent");
+                    color: Colors.textBody;
+                }
+
+                Text {
+                    text: State.format-money(AnalyticsApi.total-spent(), Settings.currency-code);
+                    color: Colors.textHeading;
+                    font-size: FontSize.heading;
+                    font-weight: FontWeight.medium;
+                }
+            }
+        }
+    }
+}
+
 export component AnalyticsPage inherits HorizontalLayout {
     property <[PieChartSlice]> pie-chart-slices: AnalyticsApi.draw-pie-chart(500px, 500px,AnalyticsApi.current-date);
 
@@ -251,85 +330,12 @@ export component AnalyticsPage inherits HorizontalLayout {
                     }
                 }
 
-                MonthSwitch {}
+                MonthSwitch { }
             }
         }
 
-        VerticalLayout {
-            spacing: 36px;
-            alignment: start;
-            VerticalLayout {
-                spacing: 8px;
-                alignment: start;
-                Text {
-                    text: @tr("Total spent");
-                    color: Colors.textBody;
-                    font-weight: FontWeight.medium;
-                }
-
-                Text {
-                    text: State.format-money(AnalyticsApi.total-spent(), Settings.currency-code);
-                    color: Colors.textHeading;
-                    font-size: FontSize.heading-sm;
-                    font-weight: FontWeight.medium;
-                }
-            }
-
-            HorizontalLayout {
-                alignment: center;
-                Rectangle {
-                    width: 500px;
-                    height: 500px;
-
-                    for slice in pie-chart-slices: Rectangle {
-                        Path {
-                            width: 100%;
-                            height: 100%;
-                            viewbox-width: 500;
-                            viewbox-height: 500;
-                            fill: slice.fill;
-                            commands: slice.arc-path;
-                        }
-
-                        Path {
-                            width: 100%;
-                            height: 100%;
-                            viewbox-width: 500;
-                            viewbox-height: 500;
-                            stroke: Colors.neutral200;
-                            commands: slice.line-path;
-                        }
-
-                        Text {
-                            x: slice.label-x;
-                            y: slice.label-y;
-                            text: slice.label;
-                            color: Colors.textMuted;
-                            font-size: FontSize.caption;
-                            font-weight: FontWeight.light;
-                        }
-                    }
-
-                    VerticalLayout {
-                        width: parent.width;
-                        height: parent.height;
-                        alignment: center;
-                        cross-axis-alignment: center;
-                        spacing: 4px;
-                        Text {
-                            text: @tr("Total spent");
-                            color: Colors.textBody;
-                        }
-
-                        Text {
-                            text: State.format-money(AnalyticsApi.total-spent(), Settings.currency-code);
-                            color: Colors.textHeading;
-                            font-size: FontSize.heading;
-                            font-weight: FontWeight.medium;
-                        }
-                    }
-                }
-            }
+        PieChart {
+            pie-chart-slices: pie-chart-slices;
         }
     }
 
