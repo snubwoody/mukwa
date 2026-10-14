@@ -23,7 +23,8 @@ export struct PieChartSlice {
 
 export global AnalyticsApi {
     pure callback draw-pie-chart(width: length, height: length, Date) -> [PieChartSlice];
-    callback filter-category(string);
+    pure callback filter-category(string);
+    pure callback total-spent() -> string;
     pure callback is-category-filtered(string) -> bool;
     in-out property <[string]> filtered-categories;
     in-out property <Date> current-date: Api.parse-date(Api.today());
@@ -267,7 +268,7 @@ export component AnalyticsPage inherits HorizontalLayout {
                 }
 
                 Text {
-                    text: State.format-money(State.total-spent-all(AnalyticsApi.current-date), Settings.currency-code);
+                    text: State.format-money(AnalyticsApi.total-spent(), Settings.currency-code);
                     color: Colors.textHeading;
                     font-size: FontSize.heading-sm;
                     font-weight: FontWeight.medium;
@@ -321,7 +322,7 @@ export component AnalyticsPage inherits HorizontalLayout {
                         }
 
                         Text {
-                            text: State.format-money(State.total-spent-all(AnalyticsApi.current-date), Settings.currency-code);
+                            text: State.format-money(AnalyticsApi.total-spent(), Settings.currency-code);
                             color: Colors.textHeading;
                             font-size: FontSize.heading;
                             font-weight: FontWeight.medium;
