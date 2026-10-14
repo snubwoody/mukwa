@@ -9,7 +9,7 @@ use jiff::civil::Date;
 use mukwa_core::Money;
 use mukwa_core::error::ErrorExt;
 use mukwa_core::plot::PieChart;
-use mukwa_core::service::{Category, Service};
+use mukwa_core::service::{Category, Service, TransactionType};
 use slint::{ComponentHandle, Global, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -57,12 +57,45 @@ impl AnalyticsController {
             }
         });
 
+        analytics.on_total_spent({
+            let controller = controller.clone();
+            move || {
+                controller
+                    .total_spent()
+                    .context("Failed to calculate total spent")
+                    .inspect_err(|err| warn!("{}", err.report()))
+                    .unwrap_or_default()
+                    .to_shared_string()
+            }
+        });
+
         analytics.on_is_category_filtered({
             let controller = controller.clone();
             move |id| controller.is_category_filtered(&id)
         });
 
         controller
+    }
+
+    fn total_spent(&self) -> crate::Result<Money> {
+        let date = Date::try_from(self.analytics_state.get_current_date())?;
+        let filtered_categories: HashSet<SharedString> = self
+            .analytics_state
+            .get_filtered_categories()
+            .iter()
+            .collect();
+        let total: Money = self
+            .service
+            .fetch_transactions()?
+            .iter()
+            .filter(|t| t.transaction_type() == TransactionType::Expense)
+            .filter(|t| t.date.year() == date.year() && t.date.month() == date.month())
+            .filter(|t| {
+                !filtered_categories.contains(&t.category_id.unwrap_or_default().to_shared_string())
+            })
+            .map(|t| t.amount)
+            .sum();
+        Ok(total)
     }
 
     fn is_category_filtered(&self, id: &str) -> bool {

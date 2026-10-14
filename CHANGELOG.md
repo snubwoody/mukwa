@@ -5,6 +5,7 @@
 - Fixed the broken combobox in the create account dialog.
 - Fixed the sidebar account balances not updating when creating or editing transactions.
 - Fixed the buggy text in the payee column when creating a new transaction.
+- Fixed a bug on the analytics page where the total spent was not updating when filtering categories.
 
 ## 0.2.4 - 2026-10-10
 

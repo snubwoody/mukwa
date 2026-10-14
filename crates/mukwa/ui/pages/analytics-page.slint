@@ -23,22 +23,23 @@ export struct PieChartSlice {
 
 export global AnalyticsApi {
     pure callback draw-pie-chart(width: length, height: length, Date) -> [PieChartSlice];
-    callback filter-category(string);
+    pure callback filter-category(string);
+    pure callback total-spent() -> string;
     pure callback is-category-filtered(string) -> bool;
     in-out property <[string]> filtered-categories;
+    in-out property <Date> current-date: Api.parse-date(Api.today());
 }
 
 component MonthSwitch inherits HorizontalLayout {
     spacing: 12px;
     cross-axis-alignment: center;
-    in property <Date> current-date;
-    callback changed(Date);
+    property <Date> current-date: AnalyticsApi.current-date;
 
     if current-date != Api.parse-date(Api.today()): PrimaryButton {
         text: @tr("Today");
         theme: text-accent;
         clicked => {
-            changed(Api.parse-date(Api.today()));
+            AnalyticsApi.current-date = Api.parse-date(Api.today());
         }
     }
 
@@ -57,7 +58,7 @@ component MonthSwitch inherits HorizontalLayout {
                 theme: ghost;
                 accessible-label: @tr("Previous month");
                 clicked => {
-                    changed(CalendarState.decrement-month(current-date));
+                    AnalyticsApi.current-date = CalendarState.decrement-month(current-date);
                 }
             }
 
@@ -83,7 +84,7 @@ component MonthSwitch inherits HorizontalLayout {
                 theme: ghost;
                 accessible-label: @tr("Next month");
                 clicked => {
-                    changed(CalendarState.increment-month(current-date));
+                    AnalyticsApi.current-date = CalendarState.increment-month(current-date);
                 }
             }
         }
@@ -146,16 +147,164 @@ component CategoryFilter {
             }
             return CategoryState.categories.length - filters.length + " categories";
         }
+
         clicked => {
             popup.show();
         }
     }
 }
 
-// TODO: wrap Path in TouchArea
+component SideBar inherits VerticalLayout {
+    in property <[PieChartSlice]> pie-chart-slices;
+    alignment: start;
+
+    HorizontalLayout {
+        padding: 16px;
+        alignment: space-between;
+        cross-axis-alignment: center;
+        Text {
+            text: @tr("Category");
+            font-weight: FontWeight.medium;
+            color: Colors.textBody;
+        }
+
+        Text {
+            text: @tr("Total spent");
+            font-weight: FontWeight.medium;
+            color: Colors.textBody;
+        }
+    }
+
+    Rectangle {
+        width: 100%;
+        height: 1px;
+        background: Colors.borderNeutral;
+    }
+
+    VerticalLayout {
+        width: 350px;
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-top: 16px;
+        padding-bottom: 16px;
+        spacing: 16px;
+        for slice in pie-chart-slices: VerticalLayout {
+            spacing: 8px;
+            HorizontalLayout {
+                alignment: space-between;
+                cross-axis-alignment: center;
+                Text {
+                    text: slice.label;
+                    color: Colors.textBody;
+                }
+
+                Text {
+                    text: State.format-money(slice.amount, Settings.currency-code);
+                    color: Colors.textBody;
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                width: 100%;
+                cross-axis-alignment: center;
+                Rectangle {
+                    width: parent.width * max(slice.ratio,0.08) - percent.preferred-width;
+                    height: 20px;
+                    border-radius: 4px;
+                    background: slice.fill;
+                }
+
+                percent := Text {
+                    text: slice.ratio >= 0.01 ? (slice.ratio * 100).round() + "%" : "<1%";
+                    color: Colors.textMuted;
+                }
+            }
+        }
+    }
+}
+
+component PieChart inherits VerticalLayout {
+    in property <[PieChartSlice]> pie-chart-slices;
+    spacing: 36px;
+    alignment: start;
+
+    VerticalLayout {
+        spacing: 8px;
+        alignment: start;
+        Text {
+            text: @tr("Total spent");
+            color: Colors.textBody;
+            font-weight: FontWeight.medium;
+        }
+
+        Text {
+            text: State.format-money(AnalyticsApi.total-spent(), Settings.currency-code);
+            color: Colors.textHeading;
+            font-size: FontSize.heading-sm;
+            font-weight: FontWeight.medium;
+        }
+    }
+
+    HorizontalLayout {
+        alignment: center;
+        Rectangle {
+            width: 500px;
+            height: 500px;
+
+            for slice in pie-chart-slices: Rectangle {
+                Path {
+                    width: 100%;
+                    height: 100%;
+                    viewbox-width: 500;
+                    viewbox-height: 500;
+                    fill: slice.fill;
+                    commands: slice.arc-path;
+                }
+
+                Path {
+                    width: 100%;
+                    height: 100%;
+                    viewbox-width: 500;
+                    viewbox-height: 500;
+                    stroke: Colors.neutral200;
+                    commands: slice.line-path;
+                }
+
+                Text {
+                    x: slice.label-x;
+                    y: slice.label-y;
+                    text: slice.label;
+                    color: Colors.textMuted;
+                    font-size: FontSize.caption;
+                    font-weight: FontWeight.light;
+                }
+            }
+
+            VerticalLayout {
+                width: parent.width;
+                height: parent.height;
+                alignment: center;
+                cross-axis-alignment: center;
+                spacing: 4px;
+                Text {
+                    text: @tr("Total spent");
+                    color: Colors.textBody;
+                }
+
+                Text {
+                    text: State.format-money(AnalyticsApi.total-spent(), Settings.currency-code);
+                    color: Colors.textHeading;
+                    font-size: FontSize.heading;
+                    font-weight: FontWeight.medium;
+                }
+            }
+        }
+    }
+}
+
 export component AnalyticsPage inherits HorizontalLayout {
-    property <[PieChartSlice]> pie-chart-slices: AnalyticsApi.draw-pie-chart(500px, 500px,current-date);
-    property <Date> current-date: Api.parse-date(Api.today());
+    property <[PieChartSlice]> pie-chart-slices: AnalyticsApi.draw-pie-chart(500px, 500px,AnalyticsApi.current-date);
 
     VerticalLayout {
         spacing: 24px;
@@ -181,90 +330,12 @@ export component AnalyticsPage inherits HorizontalLayout {
                     }
                 }
 
-                MonthSwitch {
-                    current-date: current-date;
-                    changed(date) => {
-                        current-date = date
-                    }
-                }
+                MonthSwitch { }
             }
         }
 
-        VerticalLayout {
-            spacing: 36px;
-            alignment: start;
-            VerticalLayout {
-                spacing: 8px;
-                alignment: start;
-                Text {
-                    text: @tr("Total spent");
-                    color: Colors.textBody;
-                    font-weight: FontWeight.medium;
-                }
-
-                Text {
-                    text: State.format-money(State.total-spent-all(current-date), Settings.currency-code);
-                    color: Colors.textHeading;
-                    font-size: FontSize.heading-sm;
-                    font-weight: FontWeight.medium;
-                }
-            }
-
-            HorizontalLayout {
-                alignment: center;
-                Rectangle {
-                    width: 500px;
-                    height: 500px;
-
-                    for slice in pie-chart-slices: Rectangle {
-                        Path {
-                            width: 100%;
-                            height: 100%;
-                            viewbox-width: 500;
-                            viewbox-height: 500;
-                            fill: slice.fill;
-                            commands: slice.arc-path;
-                        }
-
-                        Path {
-                            width: 100%;
-                            height: 100%;
-                            viewbox-width: 500;
-                            viewbox-height: 500;
-                            stroke: Colors.neutral200;
-                            commands: slice.line-path;
-                        }
-
-                        Text {
-                            x: slice.label-x;
-                            y: slice.label-y;
-                            text: slice.label;
-                            color: Colors.textMuted;
-                            font-size: FontSize.caption;
-                            font-weight: FontWeight.light;
-                        }
-                    }
-
-                    VerticalLayout {
-                        width: parent.width;
-                        height: parent.height;
-                        alignment: center;
-                        cross-axis-alignment: center;
-                        spacing: 4px;
-                        Text {
-                            text: @tr("Total spent");
-                            color: Colors.textBody;
-                        }
-
-                        Text {
-                            text: State.format-money(State.total-spent-all(current-date), Settings.currency-code);
-                            color: Colors.textHeading;
-                            font-size: FontSize.heading;
-                            font-weight: FontWeight.medium;
-                        }
-                    }
-                }
-            }
+        PieChart {
+            pie-chart-slices: pie-chart-slices;
         }
     }
 
@@ -274,74 +345,7 @@ export component AnalyticsPage inherits HorizontalLayout {
         background: Colors.borderNeutral;
     }
 
-    VerticalLayout {
-        alignment: start;
-        HorizontalLayout {
-            padding: 20px;
-            alignment: space-between;
-            cross-axis-alignment: center;
-            Text {
-                text: @tr("Category");
-                font-weight: FontWeight.medium;
-                color: Colors.textBody;
-                font-size: FontSize.body-lg;
-            }
-
-            Text {
-                text: @tr("Total spent");
-                font-weight: FontWeight.medium;
-                color: Colors.textBody;
-                font-size: FontSize.body-lg;
-            }
-        }
-
-        Rectangle {
-            width: 100%;
-            height: 1px;
-            background: Colors.borderNeutral;
-        }
-
-        VerticalLayout {
-            width: 350px;
-            padding-left: 20px;
-            padding-right: 20px;
-            padding-top: 16px;
-            padding-bottom: 16px;
-            spacing: 16px;
-            for slice in pie-chart-slices: VerticalLayout {
-                spacing: 8px;
-                HorizontalLayout {
-                    alignment: space-between;
-                    cross-axis-alignment: center;
-                    Text {
-                        text: slice.label;
-                        color: Colors.textBody;
-                    }
-
-                    Text {
-                        text: State.format-money(slice.amount, Settings.currency-code);
-                        color: Colors.textBody;
-                    }
-                }
-
-                HorizontalLayout {
-                    spacing: 8px;
-                    width: 100%;
-                    cross-axis-alignment: center;
-                    Rectangle {
-                        width: parent.width * max(slice.ratio,0.08) - percent.preferred-width;
-                        height: 20px;
-                        border-radius: 4px;
-                        background: slice.fill;
-                    }
-
-                    percent := Text {
-                        property <int> perc;
-                        text: slice.ratio >= 0.01 ? (slice.ratio * 100).round() + "%" : "<1%";
-                        color: Colors.textMuted;
-                    }
-                }
-            }
-        }
+    SideBar {
+        pie-chart-slices: pie-chart-slices;
     }
 }
