@@ -12,6 +12,27 @@ concurrency:
   cancel-in-progress: true
   group: ${{github.ref}}-${{github.job}}
 jobs:
+  measure-compile-times:
+    strategy:
+      fail-fast: false
+      matrix:
+        rust-flags:
+          - "-Zshare-generics=y"
+          - "-Clinker=rust-lld.exe -Clink-arg=/FORCE:MULTIPLE"
+          - ""
+    runs-on: windows-latest
+    env:
+      RUSTFLAGS: ${{matrix.rust-flags}}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: hustcer/setup-nu@v3
+        with:
+          version: 0.114.1
+      - name: Install nightly toolchain
+        run: rustup toolchain install nightly
+      - run: cargo +nightly build -p mukwa
+      - run: cargo +nightly clean -p mukwa
+      - run: cargo +nightly build -p mukwa
   format:
     strategy:
       fail-fast: false
