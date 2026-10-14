@@ -20,6 +20,7 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v6
+      - run: rustup component add --toolchain nightly-2026-10-13 rustfmt
       - run: cargo fmt --check
   clippy:
     strategy:
@@ -30,6 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: Swatinem/rust-cache@v2
+      - run: rustup component add --toolchain nightly-2026-10-13 clippy
       - name: Install system dependencies
         if: ${{runner.os == 'Linux'}}
         run: |
@@ -51,6 +53,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: Swatinem/rust-cache@v2
+      - run: rustup toolchain install nightly-2026-10-13
       - uses: taiki-e/install-action@v2
         with:
           tool: nextest
@@ -75,6 +78,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: Swatinem/rust-cache@v2
+      - run: rustup toolchain install nightly-2026-10-13
       - name: Install system dependencies
         if: ${{runner.os == 'Linux'}}
         run: |
