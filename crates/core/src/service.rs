@@ -962,11 +962,18 @@ impl Service {
         id: Uuid,
         category_id: Uuid,
     ) -> crate::Result<Transaction> {
+        let category = self.get_category(category_id)?;
+        if category.account_id.is_some() {
+            let error = Error::new("Cannot assign meta category to transaction");
+            return Err(error);
+        }
+
         let transaction = self.get_transaction(id)?;
         if transaction.transaction_type() != TransactionType::Expense {
             let error = Error::new("Invalid transaction type (only expenses can have a category)");
             return Err(error);
         }
+
         let connection = self.connection();
         let sql = "UPDATE transactions SET category_id = ?1 WHERE id = ?2 RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
