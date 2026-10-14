@@ -778,14 +778,32 @@ impl Service {
                 .ok_or(Error::new("Credit payments group does not exist"))?;
 
             let connection = self.connection();
-            let sql = "INSERT INTO categories(id,title,group_id,account_id) VALUES(?1,?2,?3,?4)";
+            let sql = "INSERT INTO categories(id,title,group_id,account_id) VALUES(?1,?2,?3,?4) RETURNING id";
             let mut stmt = connection.prepare_cached(sql)?;
-            stmt.execute(params![
+            let category_id: String = stmt.query_one(
+                params![
+                    Uuid::now_v7().to_string(),
+                    account.name.clone(),
+                    credit_group.id.to_string(),
+                    account.id.to_string()
+                ],
+                |row| row.get(0),
+            )?;
+
+            let date = Zoned::now().date();
+            let sql = "INSERT INTO budgets(id,amount,category_id,month,year) \
+            VALUES(?1,?2,?3,?4,?5) \
+            RETURNING *";
+
+            let mut stmt = connection.prepare_cached(sql)?;
+            let params = params![
                 Uuid::now_v7().to_string(),
-                account.name.clone(),
-                credit_group.id.to_string(),
-                account.id.to_string()
-            ])?;
+                Money::ZERO.inner(),
+                category_id,
+                date.month(),
+                date.year()
+            ];
+            stmt.execute(params)?;
         }
         Ok(account)
     }
