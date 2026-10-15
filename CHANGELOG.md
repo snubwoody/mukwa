@@ -1,5 +1,6 @@
 ## (unreleased)
 
+- Added helper text for creating accounts.
 - Fixed the account balance not updating when creating or editing transactions.
 - Fixed an issue where the account combobox was not working when creating transactions.
 - Fixed the broken combobox in the create account dialog.

@@ -228,14 +228,17 @@ component CreateAccountDialog inherits PopupWindow {
 }
 
 component Sidebar {
+    width: 350px;
+    accessible-role: navigation;
     in-out property <[Account]> accounts;
     in property <Page> current-page;
     in property <string> active-account-id;
     callback select-page(Page);
     callback select-account(string);
-    width: 350px;
 
-    accessible-role: navigation;
+    public function show-account-dialog() {
+        create-account-dialog.show();
+    }
 
     background := Rectangle {
         background: Colors.neutral25;
@@ -360,7 +363,7 @@ export component MainWindow inherits Window {
         }
 
         HorizontalLayout {
-            Sidebar {
+            sidebar := Sidebar {
                 accounts: State.accounts;
                 current-page: active-page;
                 active-account-id: active-account-id;
@@ -381,6 +384,7 @@ export component MainWindow inherits Window {
             if active-page == Page.transactions: TransactionPage {
                 active-account-id: active-account-id;
                 transactions: TransactionState.transactions;
+                create-account => sidebar.show-account-dialog();
             }
         }
     }
