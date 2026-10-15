@@ -7,6 +7,7 @@ use crate::ui::{CategoryState, MainWindow};
 use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::Money;
+use mukwa_core::error::ErrorExt;
 use mukwa_core::service::{CreateBudgetOpts, Service};
 use slint::{
     ComponentHandle, DataTransfer, Global, Model, ModelExt, ModelRc, SharedString, ToSharedString,
@@ -67,6 +68,23 @@ pub fn bind(window: &MainWindow, state: &AppState) -> crate::Result<()> {
             if let Err(err) = load_budgets(&category_state, &service) {
                 warn!("Failed to load budgets: {err}")
             }
+        }
+    });
+
+    category_state.on_load_state({
+        let category_state = category_state.as_weak();
+        let service = service.clone();
+        move || {
+            let category_state = category_state.unwrap();
+            load_category_groups(&category_state, &service)
+                .context("Failed to load category groups")
+                .inspect_err(|err| warn!("{}", err.report()));
+            load_categories(&category_state, &service)
+                .context("Failed to load categories")
+                .inspect_err(|err| warn!("{}", err.report()));
+            load_budgets(&category_state, &service)
+                .context("Failed to load budgets")
+                .inspect_err(|err| warn!("{}", err.report()));
         }
     });
 

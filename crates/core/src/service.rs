@@ -792,8 +792,7 @@ impl Service {
 
             let date = Zoned::now().date();
             let sql = "INSERT INTO budgets(id,amount,category_id,month,year) \
-            VALUES(?1,?2,?3,?4,?5) \
-            RETURNING *";
+            VALUES(?1,?2,?3,?4,?5)";
 
             let mut stmt = connection.prepare_cached(sql)?;
             let params = params![
