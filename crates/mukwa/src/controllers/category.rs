@@ -76,13 +76,13 @@ pub fn bind(window: &MainWindow, state: &AppState) -> crate::Result<()> {
         let service = service.clone();
         move || {
             let category_state = category_state.unwrap();
-            load_category_groups(&category_state, &service)
+            let _ = load_category_groups(&category_state, &service)
                 .context("Failed to load category groups")
                 .inspect_err(|err| warn!("{}", err.report()));
-            load_categories(&category_state, &service)
+            let _ = load_categories(&category_state, &service)
                 .context("Failed to load categories")
                 .inspect_err(|err| warn!("{}", err.report()));
-            load_budgets(&category_state, &service)
+            let _ = load_budgets(&category_state, &service)
                 .context("Failed to load budgets")
                 .inspect_err(|err| warn!("{}", err.report()));
         }
