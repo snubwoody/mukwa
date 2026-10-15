@@ -224,6 +224,63 @@ fn switch_pages() -> Result<()> {
 }
 
 #[test]
+fn create_account_helper_text() -> Result<()> {
+    let (app, _) = setup()?;
+    let state: State = app.global();
+
+    let helper_text =
+        "Create your first account. You can import transactions or add them manually.";
+    let accounts: Vec<_> = state.get_accounts().iter().collect();
+    assert!(accounts.is_empty());
+
+    let page = ElementHandle::find_by_element_type_name(&app, "TransactionPage")
+        .next()
+        .unwrap();
+
+    assert!(
+        page.query_descendants()
+            .match_predicate(|element| {
+                element.accessible_label() == Some(helper_text.to_shared_string())
+            })
+            .find_first()
+            .is_some()
+    );
+
+    page.query_descendants()
+        .match_predicate(|element| {
+            element.accessible_label() == Some("Create account".to_shared_string())
+        })
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    ElementHandle::find_by_element_id(&app, "CreateAccountDialog::name")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    i_slint_backend_testing::send_keyboard_string_sequence(&app, &SharedString::from("My account"));
+
+    ElementHandle::find_by_element_id(&app, "CreateAccountDialog::create-account")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let accounts: Vec<_> = state.get_accounts().iter().collect();
+    assert_eq!(accounts[0].name, "My account".to_shared_string());
+
+    assert!(
+        page.query_descendants()
+            .match_predicate(|element| {
+                element.accessible_label() == Some(helper_text.to_shared_string())
+            })
+            .find_first()
+            .is_none()
+    );
+    Ok(())
+}
+
+#[test]
 fn accounts_shown_in_sidebar() -> Result<()> {
     let (app, _) = setup()?;
     let state = app.global::<State>();
