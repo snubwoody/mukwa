@@ -6181,7 +6181,6 @@ dependencies = [
  "mukwa-core",
  "rusqlite",
  "tracing",
- "tracing-appender",
  "tracing-subscriber",
  "ureq",
  "usvg",
