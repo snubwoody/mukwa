@@ -14,11 +14,7 @@ Mukwa is a free and open source personal finance app. It is designed to be simpl
 ## Installation
 
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./assets/windows_dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="./assets/windows_light.svg">
-    <img src="./assets/windows_light.svg" width="24px" align="top" alt="">
-  </picture>
+  <img src="./assets/windows_dark.svg" width="24px" align="top" alt="">
   <span>Windows</span>
 </h3>
 
@@ -31,11 +27,7 @@ winget install -e --id Wakunguma.Mukwa
 ```
 
 <h3>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./assets/linux_dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="./assets/linux_light.svg">
-    <img src="./assets/linux_light.svg" width="24px" align="top" alt="">
-  </picture>
+  <img src="./assets/linux_dark.svg" width="24px" align="top" alt="">
   <span>Linux</span>
 </h3>
 
