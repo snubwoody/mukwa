@@ -14,6 +14,7 @@ import {
     Transaction,
     TransactionState,
     State,
+    CategoryState,
     Category,
     Api,
 } from "globals.slint";
@@ -157,6 +158,7 @@ component CreateAccountDialog inherits PopupWindow {
         selected-account-type == "cash"
             ? State.create-account(name.text,cash,balance.text)
             : State.create-account(name.text,credit,balance.text);
+        CategoryState.load-state();
         self.close();
     }
 

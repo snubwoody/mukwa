@@ -757,7 +757,7 @@ impl Service {
 
     /// Creates a new [`Account`].
     pub fn create_account(&self, name: &str, account_type: AccountType) -> crate::Result<Account> {
-        let account_type = match account_type {
+        let account_type_id = match account_type {
             AccountType::Cash => 1,
             AccountType::Credit => 2,
         };
@@ -765,10 +765,45 @@ impl Service {
         let sql = "INSERT INTO accounts(id,name,account_type_id) VALUES(?1,?2,?3) RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
         let mut rows = stmt.query_and_then(
-            params![&Uuid::now_v7().to_string(), name, account_type],
+            params![&Uuid::now_v7().to_string(), name, account_type_id],
             |row| Account::try_from(row),
         )?;
         let account = rows.next().unwrap()?;
+
+        if account_type == AccountType::Credit {
+            let groups = self.fetch_category_groups()?;
+            let credit_group = groups
+                .iter()
+                .find(|group| group.is_meta)
+                .ok_or(Error::new("Credit payments group does not exist"))?;
+
+            let connection = self.connection();
+            let sql = "INSERT INTO categories(id,title,group_id,account_id) VALUES(?1,?2,?3,?4) RETURNING id";
+            let mut stmt = connection.prepare_cached(sql)?;
+            let category_id: String = stmt.query_one(
+                params![
+                    Uuid::now_v7().to_string(),
+                    account.name.clone(),
+                    credit_group.id.to_string(),
+                    account.id.to_string()
+                ],
+                |row| row.get(0),
+            )?;
+
+            let date = Zoned::now().date();
+            let sql = "INSERT INTO budgets(id,amount,category_id,month,year) \
+            VALUES(?1,?2,?3,?4,?5)";
+
+            let mut stmt = connection.prepare_cached(sql)?;
+            let params = params![
+                Uuid::now_v7().to_string(),
+                Money::ZERO.inner(),
+                category_id,
+                date.month(),
+                date.year()
+            ];
+            stmt.execute(params)?;
+        }
         Ok(account)
     }
 
@@ -944,11 +979,18 @@ impl Service {
         id: Uuid,
         category_id: Uuid,
     ) -> crate::Result<Transaction> {
+        let category = self.get_category(category_id)?;
+        if category.account_id.is_some() {
+            let error = Error::new("Cannot assign meta category to transaction");
+            return Err(error);
+        }
+
         let transaction = self.get_transaction(id)?;
         if transaction.transaction_type() != TransactionType::Expense {
             let error = Error::new("Invalid transaction type (only expenses can have a category)");
             return Err(error);
         }
+
         let connection = self.connection();
         let sql = "UPDATE transactions SET category_id = ?1 WHERE id = ?2 RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;

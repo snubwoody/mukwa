@@ -106,6 +106,7 @@ export global CategoryState {
     callback create-category(title: string, group-id: string);
     callback move-category(id: string, group-id: string);
     callback create-category-group(title: string);
+    callback load-state();
 
     pure callback category-to-transfer(id: string) -> data-transfer;
     pure callback transfer-to-category(data-transfer) -> string;
@@ -127,6 +128,7 @@ export global CategoryState {
 }
 
 export global State {
+    // Account state
     callback create-account(name: string, type: AccountType, balance: string);
     callback delete-account(string);
     callback load-accounts();
@@ -135,7 +137,7 @@ export global State {
     pure callback get-account(id: string) -> Account;
     pure callback account-balance(id: string) -> string;
 
-    // Returns the year and month as a formatted string
+    // Date and money formatting
     pure callback format-dateym(Date) -> string;
     pure callback format-date(string) -> string;
     pure callback format-money(value: string, currency-code: string) -> string;

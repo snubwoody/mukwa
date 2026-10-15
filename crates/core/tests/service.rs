@@ -730,6 +730,31 @@ fn can_only_set_category_for_expenses() -> mukwa_core::Result<()> {
 }
 
 #[test]
+fn cannot_set_meta_categories() -> mukwa_core::Result<()> {
+    let connection = create_test_db();
+
+    let service = Service::new(connection);
+    let account = service.create_account("", AccountType::Credit)?;
+
+    let categories = service.fetch_categories()?;
+    let transaction = service
+        .create_income()
+        .amount(Money::new(300))
+        .account(account.id)
+        .submit()?;
+    let result = service.set_transaction_category(transaction.id, categories[0].id);
+    assert!(result.is_err());
+    service
+        .connection()
+        .query_one("SELECT * FROM transactions", [], |row| {
+            let category_id: Option<String> = row.get("category_id")?;
+            assert!(category_id.is_none());
+            Ok(())
+        })?;
+    Ok(())
+}
+
+#[test]
 fn set_transaction_note() -> mukwa_core::Result<()> {
     let connection = create_test_db();
     let service = Service::new(connection);
