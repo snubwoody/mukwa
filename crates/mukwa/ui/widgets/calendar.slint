@@ -24,7 +24,7 @@ export global CalendarState {
 
 export component Calendar {
     in-out property <Date> date: CalendarState.today();
-    property <[[int]]> weeks-in-month: CalendarState.days-in-month(date);
+    in property <[[int]]> weeks-in-month: CalendarState.days-in-month(date);
     property <[string]> day-titles: [
         @tr("Su"),
         @tr("Mo"),
@@ -166,7 +166,9 @@ export component Calendar {
                     accessible-enabled: enabled;
                     accessible-label: enabled ? day : "";
                     accessible-action-default => {
-                        touch-area.clicked()
+                        if enabled {
+                            touch-area.clicked()
+                        }
                     }
 
                     touch-area := TouchArea {
