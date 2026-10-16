@@ -1,0 +1,110 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { Calendar, Date } from "widgets/calendar.slint";
+
+export component TestCase inherits Window {
+    in-out property <Date> date: { day: 6, month: 1, year: 2026 };
+    out property <[[int]]> weeks-in-month: [
+        [-1,1,2,3,4,5,6,7],
+        [8,9,10,11,12,13,14,-1],
+    ];
+    out property <Date> changed-date;
+
+    Calendar {
+        weeks-in-month: weeks-in-month;
+        date <=> parent.date;
+        changed(value) => {
+            changed-date = value;
+        }
+    }
+}
+
+/*
+use slint::Model;
+use i_slint_backend_testing::{ElementRoot,AccessibleRole};
+use i_slint_core::items::PointerEventButton;
+let instance = TestCase::new().unwrap();
+let root_element = instance.root_element();
+
+let day_labels = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+for label in day_labels{
+    assert!(root_element.query_descendants().match_accessible_label(label).find_first().is_some());
+}
+
+for week in instance.get_weeks_in_month().iter(){
+    for day in week.iter(){
+        if day < 0 {
+            continue;
+        }
+
+        let element = root_element
+            .query_descendants()
+            .match_accessible_label(day.to_string())
+            .find_first()
+            .unwrap();
+        assert_eq!(element.accessible_role(),Some(AccessibleRole::Button));
+        assert_eq!(element.accessible_enabled(),Some(true));
+        assert_eq!(element.accessible_checkable(),Some(true));
+        assert_eq!(element.accessible_checked(),Some(day == 6));
+    }
+}
+
+// Days with the value -1 are used for aligning the calendar grid
+let spacer_elements = root_element
+    .query_descendants()
+    .match_accessible_role(AccessibleRole::Button)
+    .match_accessible_label("")
+    .find_all();
+
+assert_eq!(spacer_elements.len(), 2);
+assert_eq!(spacer_elements[0].accessible_enabled(), Some(false));
+instance.set_date(Date { year: 2020, month: 12, day: 1 });
+spacer_elements[0].mock_single_click(PointerEventButton::Left);
+spacer_elements[0].invoke_accessible_default_action();
+assert_eq!(instance.get_date(),Date { year: 2020, month: 12, day: 1 });
+
+instance.set_date(Date { year: 2026, month: 1, day: 1 });
+root_element
+    .query_descendants()
+    .match_accessible_label("7")
+    .find_first()
+    .unwrap()
+    .mock_single_click(PointerEventButton::Left);
+
+assert_eq!(instance.get_changed_date(),Date { year: 2026, month: 1, day: 7 });
+assert_eq!(instance.get_date(),Date { year: 2026, month: 1, day: 7 });
+
+root_element
+    .query_descendants()
+    .match_accessible_label("10")
+    .find_first()
+    .unwrap()
+    .invoke_accessible_default_action();
+
+assert_eq!(instance.get_changed_date(),Date { year: 2026, month: 1, day: 10 });
+assert_eq!(instance.get_date(),Date { year: 2026, month: 1, day: 10 });
+
+let month_labels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+for (index,label) in month_labels.iter().enumerate(){
+    instance.set_date(Date { year: 2026, month: index as i32 + 1, day: 10 });
+    assert!(
+        root_element
+            .query_descendants()
+            .match_type_name("Text")
+            .match_accessible_label(format!("{label} 2026"))
+            .find_first()
+            .is_some()
+    );
+}
+
+instance.set_date(Date { year: 1900, month: 12, day: 1 });
+assert!(
+    root_element
+        .query_descendants()
+        .match_type_name("Text")
+        .match_accessible_label("Dec 1900")
+        .find_first()
+        .is_some()
+);
+*/
