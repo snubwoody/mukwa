@@ -79,6 +79,8 @@ export global Api {
     pure callback window-size() -> { width: length, height: length };
     pure callback parse-date(string) -> Date;
     pure callback money-to-float(string) -> float;
+    pure callback money-to-int(string) -> int;
+    pure callback int-to-money(int) -> string;
     pure callback today() -> string;
     pure callback format-money-without-symbol(value: string) -> string;
     callback set-maximized(bool) -> bool;
