@@ -178,6 +178,7 @@ export enum PrimaryButtonTheme {
     neutral,
     ghost,
     text-accent,
+    danger,
 }
 
 export enum PrimaryButtonSize {
@@ -198,6 +199,9 @@ export component PrimaryButton {
         if (button-theme == PrimaryButtonTheme.neutral) {
             return Colors.neutral50;
         }
+        if (button-theme == PrimaryButtonTheme.danger) {
+            return Colors.red500.transparentize(0.9);
+        }
         return transparent;
     }
 
@@ -214,12 +218,18 @@ export component PrimaryButton {
         if (button-theme == PrimaryButtonTheme.text-accent) {
             return Colors.accent.transparentize(0.85);
         }
+        if (button-theme == PrimaryButtonTheme.danger) {
+            return Colors.red500.transparentize(0.8);
+        }
         return transparent;
     }
 
     function text-color(button-theme: PrimaryButtonTheme) -> color {
         if (button-theme == PrimaryButtonTheme.accent) {
             return white;
+        }
+        if (button-theme == PrimaryButtonTheme.danger) {
+            return Colors.red500;
         }
         if (button-theme == PrimaryButtonTheme.text-accent) {
             return Colors.accent;
