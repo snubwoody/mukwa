@@ -200,6 +200,9 @@ export component PrimaryButton {
         if (button-theme == PrimaryButtonTheme.neutral) {
             return Colors.neutral100;
         }
+        if (button-theme == PrimaryButtonTheme.ghost) {
+            return Colors.neutral100;
+        }
         if (button-theme == PrimaryButtonTheme.text-accent) {
             return Colors.accent.transparentize(0.85);
         }
