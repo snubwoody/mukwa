@@ -7,6 +7,42 @@ import { PrimaryButton, TextField, ProgressBar, IconButton } from "../../widgets
 import { Settings } from "../../settings.slint";
 import { Icons } from "../../icons.slint";
 
+component EditBudgetTarget inherits VerticalLayout {
+    spacing: 12px;
+    callback cancel();
+    callback submit(string);
+    callback delete();
+
+    text-field := TextField {
+        label: @tr("Every month I want to assign:");
+        input-type: decimal;
+        init => self.focus();
+        accepted => submit(self.text);
+    }
+
+    VerticalLayout {
+        spacing: 8px;
+        alignment: start;
+
+        PrimaryButton {
+            text: @tr("Cancel");
+            theme: ghost;
+            clicked => cancel();
+        }
+
+        PrimaryButton {
+            text: @tr("Save target");
+            clicked => submit(text-field.text);
+        }
+
+        PrimaryButton {
+            text: @tr("Delete target");
+            theme: danger;
+            clicked => delete();
+        }
+    }
+}
+
 component CreateBudgetTarget inherits VerticalLayout {
     spacing: 8px;
     callback submit(string);
@@ -123,6 +159,7 @@ component BudgetTarget inherits Rectangle{
                 IconButton {
                     icon: Icons.pen;
                     theme: neutral;
+                    accessible-label: @tr("Edit target");
                     clicked => {
                         is-editing = true;
                     }
@@ -130,48 +167,20 @@ component BudgetTarget inherits Rectangle{
             }
         }
 
-        if is-editing: VerticalLayout {
-            spacing: 12px;
-            function submit() {
-                CategoryState.edit-budget-target(category.id, edit-text-field.text);
+        if is-editing: EditBudgetTarget{
+            cancel => {
+                is-editing = false;
+            }
+            submit(value) => {
+                CategoryState.edit-budget-target(category.id, value);
                 target = CategoryState.get-budget-target(category.id);
                 has-target = CategoryState.has-budget-target(category.id);
                 is-editing = false;
             }
-
-            edit-text-field := TextField {
-                label: @tr("Every month I want to assign:");
-                input-type: decimal;
-                init => self.focus();
-                accepted => submit();
-            }
-
-            VerticalLayout {
-                spacing: 8px;
-                alignment: start;
-
-                PrimaryButton {
-                    text: @tr("Cancel");
-                    theme: ghost;
-                    clicked => {
-                        is-editing = false;
-                    }
-                }
-
-                PrimaryButton {
-                    text: @tr("Save target");
-                    clicked => submit();
-                }
-
-                PrimaryButton {
-                    text: @tr("Delete target");
-                    theme: danger;
-                    clicked => {
-                        CategoryState.delete-budget-target(category.id);
-                        is-editing = false;
-                        has-target = false;
-                    }
-                }
+            delete => {
+                CategoryState.delete-budget-target(category.id);
+                is-editing = false;
+                has-target = false;
             }
         }
 
