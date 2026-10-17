@@ -331,6 +331,36 @@ fn accounts_shown_in_sidebar() -> Result<()> {
     Ok(())
 }
 
+#[cfg(windows)]
+#[test]
+fn display_downloading_update_in_titlebar() -> Result<()> {
+    let (app, _) = setup()?;
+    let api: ui::Api = app.global();
+
+    let titlebar = ElementHandle::find_by_element_type_name(&app, "TitleBar")
+        .next()
+        .unwrap();
+
+    api.set_update_state(ui::AutoUpdaterState::Idle);
+    let text = titlebar
+        .query_descendants()
+        .match_predicate(|element| {
+            element.accessible_label() == Some("Downloading update...".to_shared_string())
+        })
+        .find_first();
+    assert!(text.is_none());
+
+    api.set_update_state(ui::AutoUpdaterState::Downloading);
+    let text = titlebar
+        .query_descendants()
+        .match_predicate(|element| {
+            element.accessible_label() == Some("Downloading update...".to_shared_string())
+        })
+        .find_first();
+    assert!(text.is_some());
+    Ok(())
+}
+
 #[test]
 fn create_transaction_updates_sidebar_account_balance() -> Result<()> {
     let (app, _) = setup()?;

@@ -37,7 +37,18 @@ export struct Budget {
     month: int,
 }
 
-export enum TransactionType { income, expense, transfer }
+export enum TransactionType {
+    income,
+    expense,
+    transfer,
+}
+
+export enum AutoUpdaterState {
+    idle,
+    checking,
+    downloading,
+    ready,
+}
 
 export struct Transaction {
     id: string,
@@ -70,7 +81,10 @@ export global Api {
     pure callback today() -> string;
     pure callback format-money-without-symbol(value: string) -> string;
     callback set-maximized(bool) -> bool;
+    callback update-and-restart();
     callback minimize();
+
+    in-out property <AutoUpdaterState> update-state: AutoUpdaterState.idle;
 }
 
 export global TransactionState {

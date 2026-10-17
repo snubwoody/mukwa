@@ -129,7 +129,10 @@ from_error! {
     rusqlite::Error,
     std::str::Utf8Error,
     std::string::FromUtf16Error,
+    std::string::FromUtf8Error,
     slint::PlatformError,
     slint::ModelError,
+    ureq::Error,
+    semver::Error,
     std::fmt::Error
 }

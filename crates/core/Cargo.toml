@@ -16,6 +16,10 @@ serde.workspace = true
 tiny-skia.workspace = true
 image.workspace = true
 slint.workspace = true
+ureq.workspace = true
+serde_json.workspace = true
+smol.workspace = true
+semver.workspace = true
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.189"
