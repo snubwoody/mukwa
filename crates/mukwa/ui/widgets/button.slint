@@ -84,7 +84,11 @@ export component Button inherits Rectangle {
     }
 }
 
-export enum IconButtonTheme { accent, neutral, ghost }
+export enum IconButtonTheme {
+    accent,
+    neutral,
+    ghost,
+}
 
 export component IconButton {
     in property <IconButtonTheme> theme: accent;
@@ -141,6 +145,7 @@ export component IconButton {
 
     HorizontalLayout {
         padding: root.padding;
+        cross-axis-alignment: center;
 
         Icon {
             icon: root.icon;
