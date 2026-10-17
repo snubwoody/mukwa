@@ -44,6 +44,222 @@ fn create_budget_target(app: &MainWindow, amount: Money) {
 }
 
 #[test]
+fn edit_budget_target() -> Result<()> {
+    let (app, _) = setup()?;
+    let category_state: CategoryState = app.global();
+    category_state.invoke_create_category_group(SharedString::new());
+    let groups: Vec<_> = category_state.get_category_groups().iter().collect();
+    category_state.invoke_create_category(SharedString::from("Rent"), groups[1].id.clone());
+
+    ElementHandle::find_by_element_type_name(&app, "CategoryItem")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    create_budget_target(&app, Money::new(50));
+
+    let sidebar = ElementHandle::find_by_element_type_name(&app, "SpendingPageSideBar")
+        .next()
+        .unwrap();
+
+    sidebar
+        .query_descendants()
+        .match_accessible_label("Edit target")
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let edit_form = sidebar
+        .query_descendants()
+        .match_type_name("EditBudgetTarget")
+        .find_first()
+        .unwrap();
+
+    edit_form
+        .query_descendants()
+        .match_type_name("TextField")
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+    i_slint_backend_testing::send_keyboard_string_sequence(&app, "750");
+
+    sidebar
+        .query_descendants()
+        .match_accessible_label("Save target")
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    assert!(
+        sidebar
+            .query_descendants()
+            .match_type_name("EditBudgetTarget")
+            .find_first()
+            .is_none()
+    );
+
+    let category = category_state.get_categories().iter().next().unwrap();
+    let target = category_state.invoke_get_budget_target(category.id);
+    assert_eq!(target, Money::new(750).to_shared_string());
+    Ok(())
+}
+
+#[test]
+fn delete_budget_target() -> Result<()> {
+    let (app, _) = setup()?;
+    let category_state: CategoryState = app.global();
+    category_state.invoke_create_category_group(SharedString::new());
+    let groups: Vec<_> = category_state.get_category_groups().iter().collect();
+    category_state.invoke_create_category(SharedString::from("Rent"), groups[1].id.clone());
+
+    ElementHandle::find_by_element_type_name(&app, "CategoryItem")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    create_budget_target(&app, Money::new(50));
+
+    let sidebar = ElementHandle::find_by_element_type_name(&app, "SpendingPageSideBar")
+        .next()
+        .unwrap();
+
+    sidebar
+        .query_descendants()
+        .match_accessible_label("Edit target")
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let edit_form = sidebar
+        .query_descendants()
+        .match_type_name("EditBudgetTarget")
+        .find_first()
+        .unwrap();
+
+    edit_form
+        .query_descendants()
+        .match_accessible_label("Delete target")
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    assert!(
+        sidebar
+            .query_descendants()
+            .match_type_name("EditBudgetTarget")
+            .find_first()
+            .is_none()
+    );
+
+    let category = category_state.get_categories().iter().next().unwrap();
+    assert!(!category_state.invoke_has_budget_target(category.id));
+
+    let helper_text =
+        "A budget target is an estimate of how much you want to assign to a category each month.";
+    assert!(
+        sidebar
+            .query_descendants()
+            .match_accessible_label(helper_text)
+            .find_first()
+            .is_some()
+    );
+    Ok(())
+}
+
+#[test]
+fn cancel_edit_budget_target_form() -> Result<()> {
+    let (app, _) = setup()?;
+    let category_state: CategoryState = app.global();
+    category_state.invoke_create_category_group(SharedString::new());
+    let groups: Vec<_> = category_state.get_category_groups().iter().collect();
+    category_state.invoke_create_category(SharedString::from("Rent"), groups[1].id.clone());
+
+    ElementHandle::find_by_element_type_name(&app, "CategoryItem")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    create_budget_target(&app, Money::new(50));
+
+    let sidebar = ElementHandle::find_by_element_type_name(&app, "SpendingPageSideBar")
+        .next()
+        .unwrap();
+
+    sidebar
+        .query_descendants()
+        .match_accessible_label("Edit target")
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let edit_form = sidebar
+        .query_descendants()
+        .match_type_name("EditBudgetTarget")
+        .find_first()
+        .unwrap();
+
+    edit_form
+        .query_descendants()
+        .match_accessible_label("Cancel")
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    assert!(
+        sidebar
+            .query_descendants()
+            .match_type_name("EditBudgetTarget")
+            .find_first()
+            .is_none()
+    );
+
+    let category = category_state.get_categories().iter().next().unwrap();
+    let target = category_state.invoke_get_budget_target(category.id);
+    assert_eq!(target, Money::new(50).to_shared_string());
+    Ok(())
+}
+
+#[test]
+fn cancel_create_budget_target_form() -> Result<()> {
+    let (app, _) = setup()?;
+    let category_state: CategoryState = app.global();
+    category_state.invoke_create_category_group(SharedString::new());
+    let groups: Vec<_> = category_state.get_category_groups().iter().collect();
+    category_state.invoke_create_category(SharedString::from("Rent"), groups[1].id.clone());
+
+    ElementHandle::find_by_element_type_name(&app, "CategoryItem")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    ElementHandle::find_by_accessible_label(&app, "Create target")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    ElementHandle::find_by_accessible_label(&app, "Cancel")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let sidebar = ElementHandle::find_by_element_type_name(&app, "SpendingPageSideBar")
+        .next()
+        .unwrap();
+
+    assert!(
+        sidebar
+            .query_descendants()
+            .match_type_name("CreateBudgetTarget")
+            .find_first()
+            .is_none()
+    );
+
+    let category = category_state.get_categories().iter().next().unwrap();
+    assert!(!category_state.invoke_has_budget_target(category.id));
+    Ok(())
+}
+
+#[test]
 fn budget_target_helper_text() -> Result<()> {
     let (app, _) = setup()?;
     let category_state: CategoryState = app.global();
