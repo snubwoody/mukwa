@@ -3,13 +3,16 @@
 
 import { Colors } from "../../colors.slint";
 import { Category, CategoryState, State, Budget, Api } from "../../globals.slint";
-import { PrimaryButton, TextField, ProgressBar } from "../../widgets.slint";
+import { PrimaryButton, TextField, ProgressBar, IconButton } from "../../widgets.slint";
 import { Settings } from "../../settings.slint";
+import { Icons } from "../../icons.slint";
 
 component BudgetTarget inherits Rectangle{
     in property <Category> category;
     property <Budget> budget: CategoryState.get-budget(category.id, CategoryState.current-month);
+    // TODO: use enum
     property <bool> form-active: false;
+    property <bool> is-editing: false;
     property <bool> has-target: CategoryState.has-budget-target(category.id);
     property <string> target: CategoryState.get-budget-target(category.id);
     background: white;
@@ -52,7 +55,7 @@ component BudgetTarget inherits Rectangle{
             }
         }
 
-        if has-target: VerticalLayout {
+        if has-target && !is-editing: VerticalLayout {
             alignment: start;
             spacing: 8px;
             property <int> difference: Api.money-to-int(target) - Api.money-to-int(budget.amount);
@@ -78,14 +81,67 @@ component BudgetTarget inherits Rectangle{
                 wrap: word-wrap;
             }
 
-            PrimaryButton {
-                text: @tr("Assign");
-                theme: neutral;
-                clicked => {
-                    CategoryState.edit-budget(get-budget-id(), CategoryState.get-budget-target(category.id));
+            HorizontalLayout {
+                spacing: 8px;
+                PrimaryButton {
+                    text: @tr("Assign");
+                    theme: neutral;
+                    clicked => {
+                        CategoryState.edit-budget(budget.id, CategoryState.get-budget-target(category.id));
+                    }
                 }
-                function get-budget-id() -> string {
-                    return CategoryState.budgets[CategoryState.budgets.find-index((value) => value.category-id == category.id)].id;
+
+                IconButton {
+                    icon: Icons.pen;
+                    theme: neutral;
+                    clicked => {
+                        is-editing = true;
+                    }
+                }
+            }
+        }
+
+        if is-editing: VerticalLayout {
+            spacing: 12px;
+            function submit() {
+                CategoryState.edit-budget-target(category.id, edit-text-field.text);
+                target = CategoryState.get-budget-target(category.id);
+                has-target = CategoryState.has-budget-target(category.id);
+                is-editing = false;
+            }
+
+            edit-text-field := TextField {
+                label: @tr("Every month I want to assign:");
+                input-type: decimal;
+                init => self.focus();
+                accepted => submit();
+            }
+
+            VerticalLayout {
+                spacing: 8px;
+                alignment: start;
+
+                PrimaryButton {
+                    text: @tr("Cancel");
+                    theme: ghost;
+                    clicked => {
+                        is-editing = false;
+                    }
+                }
+
+                PrimaryButton {
+                    text: @tr("Save target");
+                    clicked => submit();
+                }
+
+                PrimaryButton {
+                    text: @tr("Delete target");
+                    theme: danger;
+                    clicked => {
+                        CategoryState.delete-budget-target(category.id);
+                        is-editing = false;
+                        has-target = false;
+                    }
                 }
             }
         }
