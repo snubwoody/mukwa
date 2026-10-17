@@ -46,6 +46,32 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.2.4" date="2026-10-10">
+          <url type="details">https://github.com/snubwoody/mukwa/blob/main/CHANGELOG.md#024---2026-10-10</url>
+          <description>
+              <ul>
+                  <li>Fixed an issue where combobox items were not being selected when clicked.</li>
+              </ul>
+          </description>
+        </release>
+        <release version="0.2.3" date="2026-10-10">
+          <url type="details">https://github.com/snubwoody/mukwa/blob/main/CHANGELOG.md#023---2026-10-10</url>
+          <description>
+              <ul>
+                  <li>Fixed an issue where budgets were not being created when changing months on the spending page.</li>
+                  <li>Added checkboxes for selecting transactions.</li>
+                  <li>Added button to delete selected transactions.</li>
+              </ul>
+          </description>
+        </release>
+        <release version="0.2.2" date="2026-10-04">
+          <url type="details">https://github.com/snubwoody/mukwa/blob/main/CHANGELOG.md#022---2026-10-07</url>
+          <description>
+              <ul>
+                  <li>Fixed incorrect left to budget calculation. Transfers to credit accounts are no longer subtracted from the left to budget amount.</li>
+              </ul>
+          </description>
+        </release>
         <release version="0.2.1" date="2026-10-04">
           <url type="details">https://github.com/snubwoody/mukwa/blob/main/CHANGELOG.md#021---2026-10-04</url>
           <description>
