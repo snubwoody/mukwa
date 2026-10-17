@@ -2,14 +2,16 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 import { Colors } from "../../colors.slint";
-import { Category, CategoryState, State } from "../../globals.slint";
+import { Category, CategoryState, State, Budget, Api } from "../../globals.slint";
 import { PrimaryButton, TextField, ProgressBar } from "../../widgets.slint";
 import { Settings } from "../../settings.slint";
 
 component BudgetTarget inherits Rectangle{
     in property <Category> category;
+    property <Budget> budget: CategoryState.get-budget(category.id, CategoryState.current-month);
     property <bool> form-active: false;
     property <bool> has-target: CategoryState.has-budget-target(category.id);
+    property <string> target: CategoryState.get-budget-target(category.id);
     background: white;
     border-radius: 12px;
 
@@ -27,7 +29,7 @@ component BudgetTarget inherits Rectangle{
             }
 
             Text {
-                text: State.format-money(CategoryState.get-budget-target(category.id), Settings.currency-code);
+                text: State.format-money(target, Settings.currency-code);
                 color: Colors.textBody;
                 font-weight: FontWeight.semi-bold;
             }
@@ -53,8 +55,16 @@ component BudgetTarget inherits Rectangle{
         if has-target: VerticalLayout {
             alignment: start;
             spacing: 8px;
+            property <int> difference: Api.money-to-int(target) - Api.money-to-int(budget.amount);
+
             Text {
-                text: "Assigned $10 of $100";
+                text: {
+                    if difference <= 0 {
+                        return "You've reached your target.";
+                    }
+
+                    return "Assigned " + State.format-money(budget.amount, Settings.currency-code) + " of " + State.format-money(target,Settings.currency-code);
+                };
                 color: Colors.textBody;
             }
 
@@ -62,8 +72,8 @@ component BudgetTarget inherits Rectangle{
                 progress: 0.5;
             }
 
-            Text {
-                text: "Assign $100 more to meet your budget";
+            if difference > 0: Text {
+                text: "Assign " + State.format-money(Api.int-to-money(difference), Settings.currency-code) + " more to reach your target.";
                 color: Colors.textMuted;
                 wrap: word-wrap;
             }
@@ -84,6 +94,7 @@ component BudgetTarget inherits Rectangle{
             spacing: 8px;
             function submit() {
                 CategoryState.create-budget-target(category.id, text-field.text);
+                target = CategoryState.get-budget-target(category.id);
                 has-target = CategoryState.has-budget-target(category.id);
                 form-active = false;
             }

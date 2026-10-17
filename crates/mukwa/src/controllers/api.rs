@@ -4,8 +4,8 @@
 use crate::ui;
 use jiff::Zoned;
 use jiff::civil::Date;
-use mukwa_core::Money;
 use mukwa_core::fmt::CurrencyFormatter;
+use mukwa_core::{Money, error::ErrorExt};
 use slint::{ComponentHandle, ToSharedString};
 use std::str::FromStr;
 use tracing::warn;
@@ -93,8 +93,17 @@ pub fn bind(main_window: &ui::MainWindow) {
     api.on_today(|| Zoned::now().date().to_shared_string());
     api.on_money_to_float(|money| {
         Money::from_str(&money)
-            .inspect_err(|err| warn!("{err}"))
+            .context("Failed to parse Money")
+            .inspect_err(|err| warn!("{}", err.report()))
             .unwrap_or_default()
             .inner() as f32
     });
+    api.on_money_to_int(|money| {
+        Money::from_str(&money)
+            .context("Failed to parse Money")
+            .inspect_err(|err| warn!("{}", err.report()))
+            .unwrap_or_default()
+            .inner() as i32 // FIXME: this is lossy, and large amounts will be clipped, anything over ~2400
+    });
+    api.on_int_to_money(|value| Money::from_scaled(value.into()).to_shared_string());
 }
