@@ -157,7 +157,12 @@ pub async fn fetch_releases() -> crate::Result<Vec<ReleaseJson>> {
 }
 
 pub async fn download_update(release: Release, dir: impl AsRef<Path>) -> crate::Result<PathBuf> {
-    let artifact = release.artifacts.get(&Platform::WindowsX64).unwrap();
+    #[cfg(target_arch = "x86_64")]
+    let platform = Platform::WindowsX64;
+    #[cfg(target_arch = "aarch64")]
+    let platform = Platform::WindowsArm64;
+    
+    let artifact = release.artifacts.get(&platform).unwrap();
     let download_url = artifact.download_url.clone();
     let response = smol::unblock(move || ureq::get(&download_url).call()).await?;
 

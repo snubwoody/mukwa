@@ -134,5 +134,6 @@ from_error! {
     slint::ModelError,
     ureq::Error,
     semver::Error,
-    std::fmt::Error
+    std::fmt::Error,
+    serde_json::Error
 }

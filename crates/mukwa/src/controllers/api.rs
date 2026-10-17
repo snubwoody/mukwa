@@ -5,7 +5,7 @@ use crate::ui;
 use crate::ui::{Api, AutoUpdaterState};
 use jiff::Zoned;
 use jiff::civil::Date;
-use mukwa_core::Money;
+use mukwa_core::{Error, Money};
 use mukwa_core::auto_update::{
     self, Artifact, Manifest, Platform, Release, download_update, install_update,
 };
@@ -143,7 +143,7 @@ async fn check_for_update(api: &Api<'_>) -> crate::Result<()> {
     // TODO: set user agent?
     let manifest_url =
         "https://raw.githubusercontent.com/snubwoody/mukwa/refs/heads/main/release-manifest.json";
-    let response = smol::unblock(move || ureq::get(&manifest_url).call()).await?;
+    let response = smol::unblock(move || ureq::get(manifest_url).call()).await?;
 
     if !response.status().is_success() {
         // TODO: read response body

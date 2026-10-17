@@ -13,6 +13,7 @@ mod global;
 mod import_csv;
 mod settings;
 mod transaction;
+mod auto_update;
 
 pub fn bind_all(
     window: &MainWindow,
@@ -30,5 +31,6 @@ pub fn bind_all(
     import_csv::bind(window, state);
     category::bind(window, state)?;
     transaction::bind(window, service)?;
+    auto_update::bind(window)?;
     Ok(())
 }
