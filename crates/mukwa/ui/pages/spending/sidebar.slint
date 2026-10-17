@@ -7,6 +7,35 @@ import { PrimaryButton, TextField, ProgressBar, IconButton } from "../../widgets
 import { Settings } from "../../settings.slint";
 import { Icons } from "../../icons.slint";
 
+component CreateBudgetTarget inherits VerticalLayout {
+    spacing: 8px;
+    callback submit(string);
+    callback cancel();
+
+    text-field := TextField {
+        label: @tr("Every month I want to assign:");
+        input-type: decimal;
+        init => self.focus();
+        accepted => submit(self.text);
+    }
+
+    HorizontalLayout {
+        spacing: 8px;
+        alignment: end;
+
+        PrimaryButton {
+            text: @tr("Cancel");
+            theme: ghost;
+            clicked => cancel();
+        }
+
+        PrimaryButton {
+            text: @tr("Save target");
+            clicked => submit(text-field.text);
+        }
+    }
+}
+
 component BudgetTarget inherits Rectangle{
     in property <Category> category;
     property <Budget> budget: CategoryState.get-budget(category.id, CategoryState.current-month);
@@ -146,38 +175,15 @@ component BudgetTarget inherits Rectangle{
             }
         }
 
-        if form-active: VerticalLayout {
-            spacing: 8px;
-            function submit() {
-                CategoryState.create-budget-target(category.id, text-field.text);
+        if form-active: CreateBudgetTarget {
+            cancel => {
+                form-active = false;
+            }
+            submit(value) => {
+                CategoryState.create-budget-target(category.id, value);
                 target = CategoryState.get-budget-target(category.id);
                 has-target = CategoryState.has-budget-target(category.id);
                 form-active = false;
-            }
-
-            text-field := TextField {
-                label: @tr("Every month I want to assign:");
-                input-type: decimal;
-                init => self.focus();
-                accepted => submit();
-            }
-
-            HorizontalLayout {
-                spacing: 8px;
-                alignment: end;
-
-                PrimaryButton {
-                    text: @tr("Cancel");
-                    theme: ghost;
-                    clicked => {
-                        form-active = false;
-                    }
-                }
-
-                PrimaryButton {
-                    text: @tr("Save target");
-                    clicked => submit();
-                }
             }
         }
     }
