@@ -22,6 +22,7 @@ struct AutoUpdateController {
     updater: Rc<AutoUpdater<'static>>,
     current_version: Version,
     update_dir: PathBuf,
+    manifest_url: String,
 }
 
 impl AutoUpdateController {
@@ -35,8 +36,10 @@ impl AutoUpdateController {
         let controller = Self {
             updater: Rc::new(updater.as_weak().unwrap()),
             update_dir,
-            // current_version: Version::parse(env!("CARGO_PKG_VERSION"))?,
-            current_version: Version::new(0, 1, 0),
+            current_version: Version::parse(env!("CARGO_PKG_VERSION"))?,
+            manifest_url: String::from(
+                "https://raw.githubusercontent.com/snubwoody/mukwa/refs/heads/main/release-manifest.json",
+            ),
         };
 
         updater.on_update_and_restart({
@@ -51,6 +54,10 @@ impl AutoUpdateController {
         let _ = slint::spawn_local({
             let controller = controller.clone();
             async move {
+                if cfg!(debug_assertions) {
+                    return;
+                }
+
                 // Give the app some time to set up the state and callbacks
                 smol::Timer::after(Duration::from_secs(10)).await;
                 if let Err(err) = controller
@@ -67,20 +74,19 @@ impl AutoUpdateController {
     }
 
     async fn poll(&self) -> crate::Result<()> {
-        // TODO: return if the auto update status is ready
-        // TODO: continuously poll
+        loop {
+            if let Some(release) = self.check_for_update().await? {
+                info!("Found new update, version {}", release.version);
+                let path = self.download_update(release).await?;
+                debug!(path=?path,"Successfully downloaded new update");
+                self.updater.set_update_state(AutoUpdaterState::Ready);
+            } else {
+                self.updater.set_update_state(AutoUpdaterState::Idle);
+                info!("No update found");
+            }
 
-        if let Some(release) = self.check_for_update().await? {
-            info!("Found new update, version {}", release.version);
-            let path = self.download_update(release).await?;
-            debug!(path=?path,"Successfully downloaded new update");
-            self.updater.set_update_state(AutoUpdaterState::Ready);
-        } else {
-            self.updater.set_update_state(AutoUpdaterState::Idle);
-            info!("No update found");
+            smol::Timer::after(Duration::from_hours(1)).await;
         }
-
-        Ok(())
     }
 
     fn install_update(&self) -> crate::Result<()> {
@@ -137,9 +143,7 @@ impl AutoUpdateController {
 
     async fn check_for_update(&self) -> crate::Result<Option<Release>> {
         info!("Checking for update...");
-        // TODO: maybe poll for updates, since the app might be long running
-        let url = "https://raw.githubusercontent.com/snubwoody/mukwa/refs/heads/main/release-manifest.json";
-        let response = ureq::get(url).call()?;
+        let response = ureq::get(&self.manifest_url).call()?;
         let reader = response.into_body().into_reader();
         let mut manifest: Manifest = serde_json::from_reader(reader)?;
 
