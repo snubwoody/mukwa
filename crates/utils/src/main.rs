@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use clap::{Parser, Subcommand};
+use mukwa_core::auto_update::Manifest;
 use mukwa_core::migrator::Migrator;
 use rusqlite::Connection;
 use std::collections::HashSet;
@@ -23,6 +24,10 @@ struct Cli {
 #[derive(Subcommand)]
 enum Command {
     GenerateIcons,
+    Manifest {
+        #[command(subcommand)]
+        command: ManifestCommand,
+    },
     Migrate {
         #[command(subcommand)]
         command: MigrateCommand,
@@ -43,6 +48,12 @@ enum MigrateCommand {
     Up,
     /// Revert the most recently applied migration
     Rollback,
+}
+
+#[derive(Subcommand)]
+enum ManifestCommand {
+    /// Create a release manifest
+    Create,
 }
 
 fn run() -> mukwa_core::Result<()> {
@@ -71,6 +82,14 @@ fn run() -> mukwa_core::Result<()> {
             }
         },
         Command::GenerateIcons => generate_icons()?,
+        Command::Manifest { command } => match command {
+            ManifestCommand::Create => {
+                let manifest = Manifest::create()?;
+                let path = std::path::Path::new("release-manifest.json");
+                std::fs::write(path, &serde_json::to_string_pretty(&manifest)?)?;
+                info!("Created release manifest at {}", path.display());
+            }
+        },
     }
     Ok(())
 }
