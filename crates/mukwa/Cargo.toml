@@ -27,4 +27,6 @@ features = ["internal"]
 
 [build-dependencies]
 slint-build = { git = "https://github.com/snubwoody/slint.git", branch = "mukwa" }
+
+[target.'cfg(target_os = "windows")'.build-dependencies]
 winresource = "0.1.31"
