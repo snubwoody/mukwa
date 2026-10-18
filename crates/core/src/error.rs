@@ -128,8 +128,12 @@ from_error! {
     toml::de::Error,
     rusqlite::Error,
     std::str::Utf8Error,
+    std::string::FromUtf8Error,
     std::string::FromUtf16Error,
     slint::PlatformError,
     slint::ModelError,
-    std::fmt::Error
+    std::fmt::Error,
+    ureq::Error,
+    semver::Error,
+    serde_json::Error
 }
