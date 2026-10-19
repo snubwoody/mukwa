@@ -2,8 +2,19 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 import { Colors } from "../../colors.slint";
-import { Category, CategoryState, State, Budget, Api } from "../../globals.slint";
-import { PrimaryButton, TextField, ProgressBar, IconButton } from "../../widgets.slint";
+import {
+    Category,
+    CategoryState,
+    State,
+    Budget,
+    Api,
+} from "../../globals.slint";
+import {
+    PrimaryButton,
+    TextField,
+    ProgressBar,
+    IconButton,
+} from "../../widgets.slint";
 import { Settings } from "../../settings.slint";
 import { Icons } from "../../icons.slint";
 
@@ -72,7 +83,7 @@ component CreateBudgetTarget inherits VerticalLayout {
     }
 }
 
-component BudgetTarget inherits Rectangle{
+component BudgetTarget inherits Rectangle {
     in property <Category> category;
     property <Budget> budget: CategoryState.get-budget(category.id, CategoryState.current-month);
     // TODO: use enum
@@ -130,7 +141,6 @@ component BudgetTarget inherits Rectangle{
                     if difference <= 0 {
                         return "You've reached your target.";
                     }
-
                     return "Assigned " + State.format-money(budget.amount, Settings.currency-code) + " of " + State.format-money(target,Settings.currency-code);
                 };
                 color: Colors.textBody;
@@ -167,7 +177,7 @@ component BudgetTarget inherits Rectangle{
             }
         }
 
-        if is-editing: EditBudgetTarget{
+        if is-editing: EditBudgetTarget {
             cancel => {
                 is-editing = false;
             }
