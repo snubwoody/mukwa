@@ -17,6 +17,7 @@ image.workspace = true
 slint.workspace = true
 ureq.workspace = true
 serde_json.workspace = true
+csv.workspace = true
 semver.workspace = true
 
 [target.'cfg(unix)'.dependencies]

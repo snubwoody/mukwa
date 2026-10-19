@@ -135,5 +135,6 @@ from_error! {
     std::fmt::Error,
     ureq::Error,
     semver::Error,
-    serde_json::Error
+    serde_json::Error,
+    csv::Error
 }

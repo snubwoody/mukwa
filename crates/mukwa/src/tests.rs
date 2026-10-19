@@ -17,6 +17,7 @@ use slint::{Model, SharedString, ToSharedString};
 use tempfile::tempdir;
 
 mod analytics_page;
+mod transaction_page;
 
 fn setup() -> crate::Result<(MainWindow, Service)> {
     i_slint_backend_testing::init_no_event_loop();
