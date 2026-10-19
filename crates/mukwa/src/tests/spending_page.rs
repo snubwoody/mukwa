@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use i_slint_backend_testing::ElementHandle;
+use i_slint_backend_testing::{ElementHandle, ElementRoot};
 use mukwa_core::{Money, fmt::CurrencyFormatter, service::Service};
 use slint::{
     ComponentHandle, Model, SharedString, ToSharedString,
@@ -475,20 +475,28 @@ fn category_shown_in_sidebar() -> Result<()> {
     let title = sidebar
         .query_descendants()
         .match_type_name("Text")
-        .match_predicate(|element| element.accessible_label() == Some(SharedString::from("Rent")))
+        .match_accessible_label("Rent")
         .find_first();
     assert!(title.is_some());
 
-    let category_items: Vec<_> =
-        ElementHandle::find_by_element_type_name(&app, "CategoryItem").collect();
-    category_items[1].mock_single_click(PointerEventButton::Left);
+    let root = app.root_element();
+    root.query_descendants()
+        .match_type_name("CategoryItem")
+        .match_predicate(|element| {
+            element
+                .query_descendants()
+                .match_accessible_label("Groceries")
+                .find_first()
+                .is_some()
+        })
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
 
     let title = sidebar
         .query_descendants()
         .match_type_name("Text")
-        .match_predicate(|element| {
-            element.accessible_label() == Some(SharedString::from("Groceries"))
-        })
+        .match_accessible_label("Groceries")
         .find_first();
     assert!(title.is_some());
     Ok(())
