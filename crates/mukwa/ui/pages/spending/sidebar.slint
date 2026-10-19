@@ -96,7 +96,7 @@ component BudgetTarget inherits Rectangle{
                 font-weight: FontWeight.semi-bold;
             }
 
-            Text {
+            if has-target: Text {
                 text: State.format-money(target, Settings.currency-code);
                 color: Colors.textBody;
                 font-weight: FontWeight.semi-bold;
