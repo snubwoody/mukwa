@@ -62,6 +62,18 @@ export struct CreateTransactionOpts {
     note: string,
 }
 
+export enum AutoUpdaterState {
+    idle,
+    checking,
+    downloading,
+    ready,
+}
+
+export global AutoUpdater {
+    in-out property <AutoUpdaterState> update-state: AutoUpdaterState.idle;
+    callback update-and-restart();
+}
+
 export global Api {
     pure callback window-position() -> { x: length, y: length };
     pure callback window-size() -> { width: length, height: length };

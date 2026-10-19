@@ -27,3 +27,12 @@ Type: filesandordirs; Name: "{app}"
 
 [Files]
 Source: "{#ResourceDir}\mukwa.exe"; DestDir: "{app}"; Flags: ignoreversion
+
+[Code]
+function IsUpdate(): Boolean;
+begin
+  Result := ExpandConstant('{param:UPDATE|0}') = '1';
+end;
+
+[Run]
+Filename: "{app}\mukwa.exe"; Flags: nowait; Check: IsUpdate

@@ -7,6 +7,7 @@ use crate::ui::MainWindow;
 
 mod analytics;
 mod api;
+mod auto_update;
 mod calendar;
 mod category;
 mod global;
@@ -30,5 +31,6 @@ pub fn bind_all(
     import_csv::bind(window, state);
     category::bind(window, state)?;
     transaction::bind(window, service)?;
+    auto_update::bind(window)?;
     Ok(())
 }

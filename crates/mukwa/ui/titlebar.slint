@@ -2,15 +2,17 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 import { Colors } from "colors.slint";
+import { PrimaryButton } from "widgets.slint";
+import { AutoUpdater } from "globals.slint";
 
 enum TitleBarButtonTheme { windows, windows-x }
 
 export component TitleBarButton {
     in-out property <TitleBarButtonTheme> theme;
-    in property <length> size: 36px;
+    in property <length> size: 40px;
 
     width: size;
-    height: size;
+    height: 100%;
     accessible-enabled: true;
     accessible-role: button;
 
@@ -59,6 +61,7 @@ export component TitleBar inherits WindowMoveArea {
     callback minimized();
     callback maximized();
     callback closed();
+    height: 40px;
 
     Rectangle {
         background: Colors.neutral25;
@@ -73,6 +76,7 @@ export component TitleBar inherits WindowMoveArea {
     HorizontalLayout {
         padding-left: 12px;
         cross-axis-alignment: center;
+        height: parent.height;
         Text {
             text: "Mukwa";
             font-weight: FontWeight.semi-bold;
@@ -80,32 +84,55 @@ export component TitleBar inherits WindowMoveArea {
         }
 
         HorizontalLayout {
-            TitleBarButton {
-                theme: windows;
-                accessible-label: @tr("Minimize window");
-                clicked => minimized();
-                Image {
-                    source: @image-url("assets/fluent_subtract.svg");
+            spacing: 12px;
+            alignment: end;
+            height: 100%;
+
+            HorizontalLayout {
+                padding: 12px;
+                alignment: end;
+                height: 100%;
+                if AutoUpdater.update-state == ready: PrimaryButton {
+                    text: @tr("Update & Restart");
+                    size: small;
+                    clicked => AutoUpdater.update-and-restart();
+                }
+
+                if AutoUpdater.update-state == downloading: Text {
+                    text: @tr("Downloading update...");
+                    color: Colors.textBody;
                 }
             }
 
-            TitleBarButton {
-                theme: windows;
-                clicked => maximized();
-                accessible-label: @tr("Maximize window");
-                Image {
-                    width: 16px;
-                    height: 16px;
-                    source: root.window-maximized ? @image-url("assets/fluent_square_multiple.svg") : @image-url("assets/fluent_square.svg");
+            HorizontalLayout {
+                height: 100%;
+                TitleBarButton {
+                    theme: windows;
+                    accessible-label: @tr("Minimize window");
+                    clicked => minimized();
+                    Image {
+                        source: @image-url("assets/fluent_subtract.svg");
+                    }
                 }
-            }
 
-            TitleBarButton {
-                theme: windows-x;
-                clicked => closed();
-                accessible-label: @tr("Close window");
-                Image {
-                    source: @image-url("assets/fluent_dismiss.svg");
+                TitleBarButton {
+                    theme: windows;
+                    clicked => maximized();
+                    accessible-label: @tr("Maximize window");
+                    Image {
+                        width: 16px;
+                        height: 16px;
+                        source: root.window-maximized ? @image-url("assets/fluent_square_multiple.svg") : @image-url("assets/fluent_square.svg");
+                    }
+                }
+
+                TitleBarButton {
+                    theme: windows-x;
+                    clicked => closed();
+                    accessible-label: @tr("Close window");
+                    Image {
+                        source: @image-url("assets/fluent_dismiss.svg");
+                    }
                 }
             }
         }

@@ -28,6 +28,7 @@ export {
     CategoryGroup,
     AccountType,
     CategoryState,
+    AutoUpdater,
     TransactionState,
 } from "globals.slint";
 export { Settings } from "settings.slint";
@@ -357,7 +358,7 @@ export component MainWindow inherits Window {
             }
         }
 
-        Rectangle {
+        if Platform.os == windows: Rectangle {
             background: Colors.neutral100;
             height: 1px;
         }

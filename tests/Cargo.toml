@@ -4,12 +4,14 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-slint.workspace = true
 smol = "2.0.2"
 tracing.workspace = true
+
+[dev-dependencies]
+slint.workspace = true
 tracing-subscriber.workspace = true
 
-[dependencies.i-slint-backend-testing]
+[dev-dependencies.i-slint-backend-testing]
 git = "https://github.com/snubwoody/slint.git"
 branch = "mukwa"
 features = ["internal"]
