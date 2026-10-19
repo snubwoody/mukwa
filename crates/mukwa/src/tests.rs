@@ -16,8 +16,8 @@ use slint::platform::PointerEventButton;
 use slint::{Model, SharedString, ToSharedString};
 use tempfile::tempdir;
 
-mod spending_page;
 mod analytics_page;
+mod spending_page;
 
 fn setup() -> crate::Result<(MainWindow, Service)> {
     i_slint_backend_testing::init_no_event_loop();

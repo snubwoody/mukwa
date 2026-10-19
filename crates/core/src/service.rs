@@ -648,8 +648,7 @@ impl Service {
         let connection = self.connection();
         let sql = "SELECT amount from budget_targets WHERE category_id = ?";
         let amount = connection.query_one(sql, [category_id.to_string()], |row| {
-            row.get::<_, i64>(0)
-                .map(|amount| Money::from_scaled(amount))
+            row.get::<_, i64>(0).map(Money::from_scaled)
         })?;
         Ok(amount)
     }

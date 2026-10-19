@@ -396,14 +396,14 @@ fn load_budgets(state: &CategoryState, service: &Service) -> crate::Result<()> {
 
 fn edit_budget_target(service: &Service, category_id: &str, amount: &str) -> crate::Result<()> {
     let category_id = Uuid::parse_str(category_id)?;
-    let amount = Money::from_str(&amount)?;
+    let amount = Money::from_str(amount)?;
     service.update_budget_target(category_id, amount)?;
     Ok(())
 }
 
 fn create_budget_target(service: &Service, category_id: &str, amount: &str) -> crate::Result<()> {
     let category_id = Uuid::parse_str(category_id)?;
-    let amount = Money::from_str(&amount)?;
+    let amount = Money::from_str(amount)?;
     service.create_budget_target(category_id, amount)?;
     Ok(())
 }
@@ -416,7 +416,7 @@ fn delete_budget_target(service: &Service, category_id: &str) -> crate::Result<(
 
 fn get_budget_target(service: &Service, category_id: &str) -> crate::Result<Money> {
     let category_id = Uuid::parse_str(category_id)?;
-    Ok(service.get_budget_target(category_id)?)
+    service.get_budget_target(category_id)
 }
 
 fn has_budget_target(service: &Service, category_id: &str) -> crate::Result<bool> {

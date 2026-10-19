@@ -334,7 +334,7 @@ fn budget_target_helper_text() -> Result<()> {
     assert!(
         sidebar
             .query_descendants()
-            .match_accessible_label(format!("You've reached your target.",))
+            .match_accessible_label("You've reached your target.".to_string())
             .find_first()
             .is_some()
     );
