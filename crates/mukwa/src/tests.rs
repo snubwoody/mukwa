@@ -1079,3 +1079,53 @@ fn cancel_new_transaction_row() -> Result<()> {
     assert!(new_transaction_row.is_none());
     Ok(())
 }
+
+#[cfg(not(target_os = "windows"))]
+#[test]
+fn title_bar_hidden() -> Result<()> {
+    let (app, _) = setup()?;
+
+    assert!(
+        ElementHandle::find_by_element_type_name(&app, "TitleBar")
+            .next()
+            .is_none()
+    );
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+#[test]
+fn title_bar_shows_update_state() -> Result<()> {
+    let (app, _) = setup()?;
+
+    let title_bar = ElementHandle::find_by_element_type_name(&app, "TitleBar")
+        .next()
+        .unwrap();
+    assert!(
+        title_bar
+            .query_descendants()
+            .match_accessible_label("Downloading update...")
+            .find_first()
+            .is_none()
+    );
+
+    let updater: crate::ui::AutoUpdater = app.global();
+    updater.set_update_state(crate::ui::AutoUpdaterState::Downloading);
+    assert!(
+        title_bar
+            .query_descendants()
+            .match_accessible_label("Downloading update...")
+            .find_first()
+            .is_some()
+    );
+
+    updater.set_update_state(crate::ui::AutoUpdaterState::Ready);
+    assert!(
+        title_bar
+            .query_descendants()
+            .match_accessible_label("Update & Restart")
+            .find_first()
+            .is_some()
+    );
+    Ok(())
+}
