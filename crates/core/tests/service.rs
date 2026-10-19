@@ -1113,3 +1113,75 @@ fn delete_account_deletes_associated_transactions() -> mukwa_core::Result<()> {
     assert!(transactions.is_empty());
     Ok(())
 }
+
+#[test]
+fn create_budget_target() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let result = service.create_budget_target(Uuid::nil(), Money::new(240));
+    assert!(result.is_err());
+
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
+    service.create_budget_target(category.id, Money::new(100))?;
+    service
+        .connection()
+        .query_one("SELECT * FROM budget_targets", (), |row| {
+            let category_id = row.get::<_, String>("category_id")?;
+            let amount = row.get::<_, i64>("amount")?;
+            assert_eq!(category_id, category.id.to_string());
+            assert_eq!(amount, Money::new(100).inner());
+            Ok(())
+        })?;
+    Ok(())
+}
+
+#[test]
+fn one_target_per_category() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
+    service.create_budget_target(category.id, Money::new(100))?;
+    let result = service.create_budget_target(category.id, Money::new(200));
+    assert!(result.is_err());
+    let target = service.get_budget_target(category.id)?;
+    assert_eq!(target, Money::new(100));
+    Ok(())
+}
+
+#[test]
+fn update_budget_target() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
+    service.create_budget_target(category.id, Money::new(100))?;
+
+    let target = service.get_budget_target(category.id)?;
+    assert_eq!(target, Money::new(100));
+
+    service.update_budget_target(category.id, Money::new(20))?;
+    let target = service.get_budget_target(category.id)?;
+    assert_eq!(target, Money::new(20));
+    Ok(())
+}
+
+#[test]
+fn delete_budget_target() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
+    service.create_budget_target(category.id, Money::new(100))?;
+
+    let target = service
+        .connection()
+        .query_one("SELECT * FROM budget_targets", (), |_| Ok(()))
+        .optional()?;
+    assert!(target.is_some());
+    service.delete_budget_target(category.id)?;
+
+    let target = service
+        .connection()
+        .query_one("SELECT * FROM budget_targets", (), |_| Ok(()))
+        .optional()?;
+    assert!(target.is_none());
+    Ok(())
+}

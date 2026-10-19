@@ -79,6 +79,8 @@ export global Api {
     pure callback window-size() -> { width: length, height: length };
     pure callback parse-date(string) -> Date;
     pure callback money-to-float(string) -> float;
+    pure callback money-to-int(string) -> int;
+    pure callback int-to-money(int) -> string;
     pure callback today() -> string;
     pure callback format-money-without-symbol(value: string) -> string;
     callback set-maximized(bool) -> bool;
@@ -120,6 +122,11 @@ export global CategoryState {
     callback create-category-group(title: string);
     callback load-state();
 
+    pure callback has-budget-target(category-id: string) -> bool;
+    pure callback get-budget-target(category-id: string) -> string;
+    pure callback create-budget-target(category-id: string, amount: string);
+    pure callback edit-budget-target(category-id: string, amount: string);
+    pure callback delete-budget-target(category-id: string);
     pure callback category-to-transfer(id: string) -> data-transfer;
     pure callback transfer-to-category(data-transfer) -> string;
     pure callback get-category(id: string) -> Category;
