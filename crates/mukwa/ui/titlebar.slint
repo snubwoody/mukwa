@@ -88,10 +88,20 @@ export component TitleBar inherits WindowMoveArea {
             alignment: end;
             height: 100%;
 
-            if AutoUpdater.update-state == ready: PrimaryButton {
-                text: @tr("Update");
-                size: small;
-                clicked => AutoUpdater.update-and-restart();
+            HorizontalLayout {
+                padding: 12px;
+                alignment: end;
+                height: 100%;
+                if AutoUpdater.update-state == ready: PrimaryButton {
+                    text: @tr("Update & Restart");
+                    size: small;
+                    clicked => AutoUpdater.update-and-restart();
+                }
+
+                if AutoUpdater.update-state == downloading: Text {
+                    text: @tr("Downloading update...");
+                    color: Colors.textBody;
+                }
             }
 
             HorizontalLayout {
