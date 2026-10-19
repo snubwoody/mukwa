@@ -54,7 +54,7 @@ impl AutoUpdateController {
         let _ = slint::spawn_local({
             let controller = controller.clone();
             async move {
-                if cfg!(debug_assertions) {
+                if cfg!(debug_assertions) || cfg!(not(target_os = "windows")) {
                     return;
                 }
 
@@ -75,6 +75,10 @@ impl AutoUpdateController {
 
     async fn poll(&self) -> crate::Result<()> {
         loop {
+            if self.updater.get_update_state() == AutoUpdaterState::Ready {
+                return Ok(());
+            }
+
             if let Some(release) = self.check_for_update().await? {
                 info!("Found new update, version {}", release.version);
                 let path = self.download_update(release).await?;
@@ -163,7 +167,7 @@ impl AutoUpdateController {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(windows, test))]
 mod test {
     use super::*;
     use httpmock::Method::GET;
