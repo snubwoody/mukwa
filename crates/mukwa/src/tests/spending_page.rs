@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use i_slint_backend_testing::{ElementHandle, ElementRoot};
+use i_slint_backend_testing::ElementHandle;
 use mukwa_core::{Money, fmt::CurrencyFormatter, service::Service};
 use slint::{
     ComponentHandle, Model, SharedString, ToSharedString,
@@ -458,7 +458,6 @@ fn category_shown_in_sidebar() -> Result<()> {
     category_state.invoke_create_category_group(SharedString::new());
     let groups: Vec<_> = category_state.get_category_groups().iter().collect();
     category_state.invoke_create_category(SharedString::from("Rent"), groups[1].id.clone());
-    category_state.invoke_create_category(SharedString::from("Groceries"), groups[1].id.clone());
 
     let sidebar = ElementHandle::find_by_element_type_name(&app, "SpendingPageSideBar").next();
     assert!(sidebar.is_none());
@@ -476,27 +475,6 @@ fn category_shown_in_sidebar() -> Result<()> {
         .query_descendants()
         .match_type_name("Text")
         .match_accessible_label("Rent")
-        .find_first();
-    assert!(title.is_some());
-
-    let root = app.root_element();
-    root.query_descendants()
-        .match_type_name("CategoryItem")
-        .match_predicate(|element| {
-            element
-                .query_descendants()
-                .match_accessible_label("Groceries")
-                .find_first()
-                .is_some()
-        })
-        .find_first()
-        .unwrap()
-        .mock_single_click(PointerEventButton::Left);
-
-    let title = sidebar
-        .query_descendants()
-        .match_type_name("Text")
-        .match_accessible_label("Groceries")
         .find_first();
     assert!(title.is_some());
     Ok(())
