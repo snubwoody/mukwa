@@ -7,6 +7,8 @@ export component ProgressBar {
     in-out property <float> progress;
     in property <color> track-color: Colors.neutral50;
     in property <color> thumb-color: green;
+    accessible-role: progress-indicator;
+    accessible-value: progress;
 
     Rectangle {
         width: 100%;

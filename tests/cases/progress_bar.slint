@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+import { ProgressBar } from "widgets/progress-bar.slint";
+
+export component TestCase inherits Rectangle {
+    ProgressBar {
+        progress: 0.7;
+    }
+}
+
+/*
+use i_slint_backend_testing::{ElementRoot,AccessibleRole};
+use slint::ToSharedString;
+
+let instance = TestCase::new().unwrap();
+let progress_bar = instance
+    .root_element()
+    .query_descendants()
+    .match_type_name("ProgressBar")
+    .find_first()
+    .unwrap();
+assert_eq!(progress_bar.accessible_role(),Some(AccessibleRole::ProgressIndicator));
+assert_eq!(progress_bar.accessible_value(),Some("0.7".to_shared_string()));
+*/
