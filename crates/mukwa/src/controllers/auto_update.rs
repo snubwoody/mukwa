@@ -109,9 +109,6 @@ impl AutoUpdateController {
     }
 
     async fn download_update(&self, release: Release) -> crate::Result<PathBuf> {
-        #[cfg(not(target_os = "windows"))]
-        return Err(Error::new("Platform does not support auto updating"));
-
         #[cfg(target_arch = "x86_64")]
         let platform = Platform::WindowsX64;
         #[cfg(target_arch = "aarch64")]
