@@ -46,6 +46,21 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.3.0" date="2026-10-20">
+          <url type="details">https://github.com/snubwoody/mukwa/blob/main/CHANGELOG.md#030---2026-10-20</url>
+          <description>
+              <ul>
+                  <li>Added budget targets. Budget targets help you plan the amount of money you want to spend each month.</li>
+                  <li>Mukwa now automatically updates itself on Windows.</li>
+                  <li>Fixed the account balance not updating when creating or editing transactions.</li>
+                  <li>Fixed an issue where the account combobox was not working when creating transactions.</li>
+                  <li>Fixed the broken combobox in the create account dialog.</li>
+                  <li>Fixed the sidebar account balances not updating when creating or editing transactions.</li>
+                  <li>Fixed the buggy text in the payee column when creating a new transaction.</li>
+                  <li>Fixed a bug on the analytics page where the total spent was not updating when filtering categories.</li>
+              </ul>
+          </description>
+        </release>
         <release version="0.2.4" date="2026-10-10">
           <url type="details">https://github.com/snubwoody/mukwa/blob/main/CHANGELOG.md#024---2026-10-10</url>
           <description>
