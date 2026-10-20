@@ -6,8 +6,9 @@ use mukwa_core::auto_update::{Manifest, Platform, Release};
 use mukwa_core::error::ErrorExt;
 use mukwa_core::{Error, log_dir};
 use semver::Version;
+use sha2::{Digest, Sha256};
 use slint::{ComponentHandle, Global};
-use std::io::Read;
+use std::fs;
 use std::process::Command;
 use std::time::Duration;
 use std::{path::PathBuf, rc::Rc};
@@ -65,9 +66,8 @@ impl AutoUpdateController {
 
                 // Give the app some time to set up the state and callbacks
                 smol::Timer::after(Duration::from_secs(10)).await;
-
                 loop {
-                    controller
+                    let _ = controller
                         .poll()
                         .await
                         .context("Failed to poll for updates")
@@ -80,26 +80,69 @@ impl AutoUpdateController {
         Ok(controller)
     }
 
+    /// Checks if the new update is already downloaded
+    async fn is_downloaded(&self, release: &Release) -> crate::Result<bool> {
+        let path = self.update_dir.join("Mukwa-Update.exe");
+        if !fs::exists(&path)? {
+            return Ok(false);
+        }
+
+        let digest = smol::unblock({
+            let path = path.clone();
+            move || {
+                let bytes = fs::read(path).unwrap_or_default();
+                let digest: String = Sha256::digest(&bytes)
+                    .iter()
+                    .map(|b| format!("{:02x}", b))
+                    .collect();
+                digest
+            }
+        })
+        .await;
+
+        #[cfg(target_arch = "x86_64")]
+        let platform = Platform::WindowsX64;
+        #[cfg(target_arch = "aarch64")]
+        let platform = Platform::WindowsArm64;
+
+        let artifact = release
+            .artifacts
+            .get(&platform)
+            .ok_or(Error::new("Release artifact not found"))?;
+
+        if artifact.digest != digest {
+            fs::remove_file(&path)?;
+            return Ok(false);
+        }
+        Ok(true)
+    }
+
     async fn poll(&self) -> crate::Result<()> {
         if self.updater.get_update_state() == AutoUpdaterState::Ready {
             return Ok(());
         }
 
-        if let Some(release) = self.check_for_update().await? {
-            info!("Found new update, version {}", release.version);
-            let path = self.download_update(release).await?;
-            debug!(path=?path,"Successfully downloaded new update");
-            self.updater.set_update_state(AutoUpdaterState::Ready);
-        } else {
-            self.updater.set_update_state(AutoUpdaterState::Idle);
-            info!("No update found");
+        match self.check_for_update().await? {
+            Some(release) => {
+                if self.is_downloaded(&release).await? {
+                    self.updater.set_update_state(AutoUpdaterState::Ready);
+                    return Ok(());
+                }
+                info!("Found new update, version {}", release.version);
+                let path = self.download_update(release).await?;
+                debug!(path=?path,"Successfully downloaded new update");
+                self.updater.set_update_state(AutoUpdaterState::Ready);
+            }
+            None => {
+                self.updater.set_update_state(AutoUpdaterState::Idle);
+                info!("No update found");
+            }
         }
 
         Ok(())
     }
 
     fn install_update(&self) -> crate::Result<()> {
-        // FIXME: store the update path?
         let path = self.update_dir.join("Mukwa-Update.exe");
         let absolute_path = path.canonicalize()?;
         let log_path = log_dir().join("inno-setup.log");
@@ -175,8 +218,71 @@ mod test {
     use httpmock::Method::GET;
     use httpmock::MockServer;
     use mukwa_core::auto_update::Artifact;
+    use sha2::{Digest, Sha256};
     use std::fs;
     use tempfile::tempdir;
+
+    #[test]
+    fn update_already_downloaded() -> crate::Result<()> {
+        let temp = tempdir()?;
+        let data = vec![20; 20];
+        fs::write(temp.path().join("Mukwa-Update.exe"), &data)?;
+        let digest: String = Sha256::digest(&data)
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
+
+        let mut release = Release {
+            version: Version::new(0, 0, 0),
+            published_at: Default::default(),
+            artifacts: Default::default(),
+            prerelease: false,
+        };
+        let artifact = Artifact {
+            download_url: String::new(),
+            digest,
+        };
+        release.artifacts.insert(Platform::WindowsX64, artifact);
+
+        i_slint_backend_testing::init_no_event_loop();
+        let app = MainWindow::new()?;
+        let mut controller = AutoUpdateController::bind(&app)?;
+        controller.update_dir = temp.path().to_owned();
+        smol::block_on(async {
+            assert!(controller.is_downloaded(&release).await.unwrap());
+        });
+        Ok(())
+    }
+
+    #[test]
+    fn invalid_update_downloaded() -> crate::Result<()> {
+        let temp = tempdir()?;
+        let data = vec![20; 20];
+        let path = temp.path().join("Mukwa-Update.exe");
+        fs::write(&path, &data)?;
+
+        let mut release = Release {
+            version: Version::new(0, 0, 0),
+            published_at: Default::default(),
+            artifacts: Default::default(),
+            prerelease: false,
+        };
+        let artifact = Artifact {
+            download_url: String::new(),
+            digest: String::new(),
+        };
+        release.artifacts.insert(Platform::WindowsX64, artifact);
+
+        i_slint_backend_testing::init_no_event_loop();
+        let app = MainWindow::new()?;
+        let mut controller = AutoUpdateController::bind(&app)?;
+        controller.update_dir = temp.path().to_owned();
+        smol::block_on(async {
+            assert!(!controller.is_downloaded(&release).await.unwrap());
+        });
+        assert!(!fs::exists(&path)?);
+        Ok(())
+    }
 
     #[test]
     fn download_update() -> crate::Result<()> {

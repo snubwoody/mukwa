@@ -24,6 +24,7 @@ serde_json.workspace = true
 semver.workspace = true
 dirs.workspace = true
 smol = "2.0.2"
+sha2 = "0.11.1"
 
 [dev-dependencies]
 httpmock = "0.8.3"
