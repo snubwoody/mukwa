@@ -7,6 +7,7 @@ use mukwa_core::error::ErrorExt;
 use mukwa_core::{Error, log_dir};
 use semver::Version;
 use slint::{ComponentHandle, Global};
+use std::io::Read;
 use std::process::Command;
 use std::time::Duration;
 use std::{path::PathBuf, rc::Rc};
@@ -133,13 +134,13 @@ impl AutoUpdateController {
         }
         let dest = self.update_dir.join("Mukwa-Update.exe");
         smol::fs::create_dir_all(&self.update_dir).await?;
-        // TODO: use smol::fs instead
         smol::unblock({
             let dest = dest.clone();
             move || {
-                let mut file = std::fs::File::create(dest)?;
+                let file = std::fs::File::create(dest)?;
+                let mut writer = std::io::BufWriter::new(file);
                 let mut reader = response.into_body().into_reader();
-                std::io::copy(&mut reader, &mut file)
+                std::io::copy(&mut reader, &mut writer)
             }
         })
         .await?;
