@@ -27,10 +27,14 @@ struct AutoUpdateController {
 
 impl AutoUpdateController {
     fn bind(app: &MainWindow) -> crate::Result<Self> {
-        let update_dir = dirs::data_local_dir()
-            .unwrap()
-            .join("Mukwa")
-            .join("updates");
+        let update_dir = if cfg!(debug_assertions) {
+            PathBuf::from(".mukwa/updates")
+        } else {
+            dirs::data_local_dir()
+                .unwrap()
+                .join("Mukwa")
+                .join("updates")
+        };
 
         let updater: AutoUpdater = app.global();
         let controller = Self {
@@ -60,12 +64,14 @@ impl AutoUpdateController {
 
                 // Give the app some time to set up the state and callbacks
                 smol::Timer::after(Duration::from_secs(10)).await;
-                if let Err(err) = controller
-                    .poll()
-                    .await
-                    .context("Failed to poll for updates")
-                {
-                    warn!("{}", err.report());
+
+                loop {
+                    controller
+                        .poll()
+                        .await
+                        .context("Failed to poll for updates")
+                        .inspect_err(|err| warn!("{}", err.report()));
+                    smol::Timer::after(Duration::from_hours(1)).await;
                 }
             }
         });
@@ -74,23 +80,21 @@ impl AutoUpdateController {
     }
 
     async fn poll(&self) -> crate::Result<()> {
-        loop {
-            if self.updater.get_update_state() == AutoUpdaterState::Ready {
-                return Ok(());
-            }
-
-            if let Some(release) = self.check_for_update().await? {
-                info!("Found new update, version {}", release.version);
-                let path = self.download_update(release).await?;
-                debug!(path=?path,"Successfully downloaded new update");
-                self.updater.set_update_state(AutoUpdaterState::Ready);
-            } else {
-                self.updater.set_update_state(AutoUpdaterState::Idle);
-                info!("No update found");
-            }
-
-            smol::Timer::after(Duration::from_hours(1)).await;
+        if self.updater.get_update_state() == AutoUpdaterState::Ready {
+            return Ok(());
         }
+
+        if let Some(release) = self.check_for_update().await? {
+            info!("Found new update, version {}", release.version);
+            let path = self.download_update(release).await?;
+            debug!(path=?path,"Successfully downloaded new update");
+            self.updater.set_update_state(AutoUpdaterState::Ready);
+        } else {
+            self.updater.set_update_state(AutoUpdaterState::Idle);
+            info!("No update found");
+        }
+
+        Ok(())
     }
 
     fn install_update(&self) -> crate::Result<()> {
