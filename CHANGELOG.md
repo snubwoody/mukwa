@@ -1,10 +1,10 @@
-## (unreleased)
+## 0.3.0 - 2026-10-20
 
-- Added budget targets.
+- Added budget targets. Budget targets help you plan the amount of money you want to spend each month.
+- Mukwa now automatically updates itself on Windows.
 
 ### Bug fixes
 
-- Added helper text for creating accounts.
 - Fixed the account balance not updating when creating or editing transactions.
 - Fixed an issue where the account combobox was not working when creating transactions.
 - Fixed the broken combobox in the create account dialog.
