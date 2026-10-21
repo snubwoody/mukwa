@@ -164,20 +164,46 @@ impl AnalyticsController {
             return Ok(ModelRc::new(VecModel::from(vec![slice])));
         }
 
+        let no_category = Uuid::now_v7();
         let mut analytics: HashMap<Uuid, Analytic> = HashMap::new();
         for transaction in transactions {
             if transaction.date.year() != date.year() || transaction.date.month() != date.month() {
                 continue;
             }
 
-            if let Some(category_id) = transaction.category_id {
-                if filtered_categories.contains(&category_id.to_shared_string()) {
-                    continue;
+            match transaction.category_id {
+                Some(category_id) => {
+                    if filtered_categories.contains(&category_id.to_shared_string()) {
+                        continue;
+                    }
+                    match analytics.get(&category_id) {
+                        Some(value) => {
+                            analytics.insert(
+                                category_id,
+                                Analytic {
+                                    total: transaction.amount + value.total,
+                                    category: value.category.clone(),
+                                },
+                            );
+                        }
+                        None => {
+                            let category = categories
+                                .iter()
+                                .find(|c| c.id == category_id)
+                                .cloned()
+                                .unwrap_or_default();
+                            let analytic = Analytic {
+                                category,
+                                total: transaction.amount,
+                            };
+                            analytics.insert(category_id, analytic);
+                        }
+                    }
                 }
-                match analytics.get(&category_id) {
+                None => match analytics.get(&no_category) {
                     Some(value) => {
                         analytics.insert(
-                            category_id,
+                            no_category,
                             Analytic {
                                 total: transaction.amount + value.total,
                                 category: value.category.clone(),
@@ -185,18 +211,19 @@ impl AnalyticsController {
                         );
                     }
                     None => {
-                        let category = categories
-                            .iter()
-                            .find(|c| c.id == category_id)
-                            .cloned()
-                            .unwrap_or_default();
+                        let category = Category {
+                            id: Uuid::nil(),
+                            title: "No category".to_string(),
+                            group_id: Uuid::nil(),
+                            account_id: None,
+                        };
                         let analytic = Analytic {
                             category,
                             total: transaction.amount,
                         };
-                        analytics.insert(category_id, analytic);
+                        analytics.insert(no_category, analytic);
                     }
-                }
+                },
             }
         }
 
@@ -348,6 +375,44 @@ mod test {
         assert_eq!(groceries_slice.amount, Money::new(25).to_shared_string());
         assert_eq!(groceries_slice.label, SharedString::from("Groceries"));
         assert_eq!(groceries_slice.ratio, 0.25);
+        Ok(())
+    }
+
+    #[test]
+    fn transaction_has_no_category() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let app = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let group = service.create_category_group("")?;
+        let entertainment = service.create_category("Entertainment", group.id)?;
+        let controller = AnalyticsController::bind(&app, &service);
+
+        service.create_expense().amount(Money::new(25)).submit()?;
+        service.create_expense().amount(Money::new(75)).submit()?;
+        service
+            .create_expense()
+            .category(entertainment.id)
+            .amount(Money::new(75))
+            .submit()?;
+
+        let slices: Vec<_> = controller
+            .draw_pie_chart(500.0, 500.0, ui::Date::default())?
+            .iter()
+            .collect();
+        assert_eq!(slices.len(), 2);
+
+        let no_category_slice = &slices[0];
+        let entertainment_slice = &slices[1];
+        assert_eq!(
+            entertainment_slice.amount,
+            Money::new(75).to_shared_string()
+        );
+        assert_eq!(
+            entertainment_slice.label,
+            SharedString::from("Entertainment")
+        );
+        assert_eq!(no_category_slice.amount, Money::new(100).to_shared_string());
+        assert_eq!(no_category_slice.label, SharedString::from("No category"));
         Ok(())
     }
 
