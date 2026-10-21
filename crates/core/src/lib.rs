@@ -13,8 +13,12 @@ pub use error::{Error, Result};
 pub use money::{Currency, Money};
 use rusqlite::Connection;
 use std::path::PathBuf;
+use uuid::Uuid;
 
-use crate::migrator::Migrator;
+use crate::{
+    migrator::Migrator,
+    service::{Account, Category, Transaction},
+};
 
 /// Opens an in memory sqlite database for testing.
 pub fn create_test_db() -> Connection {
@@ -61,4 +65,23 @@ pub fn log_dir() -> PathBuf {
     } else {
         dirs::state_dir().unwrap().join("Mukwa/logs")
     }
+}
+
+// TODO: could be a trait?
+pub enum Op {
+    CreateTransaction(Uuid),
+    DeleteTransaction(Transaction),
+    CreateCategory(Uuid),
+    DeleteCategory(Category),
+    RenameCategory { id: Uuid, old: String, new: String },
+    RenameCategoryGroup { id: Uuid, old: String, new: String },
+    RenameAccount { id: Uuid, old: String, new: String },
+    CreateCategoryGroup(Uuid),
+    CreateAccount(Uuid),
+    DeleteAccount(Account),
+    EditTransaction { old: Transaction, new: Transaction },
+}
+
+pub struct OpLog {
+    operations: Vec<Op>,
 }
