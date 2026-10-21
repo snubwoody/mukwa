@@ -154,6 +154,42 @@ component CategoryFilter {
     }
 }
 
+component CategoryItem inherits VerticalLayout {
+    in property <PieChartSlice> slice;
+    spacing: 8px;
+
+    HorizontalLayout {
+        alignment: space-between;
+        cross-axis-alignment: center;
+        label := Text {
+            text: slice.label;
+            color: Colors.textBody;
+        }
+
+        amount := Text {
+            text: State.format-money(slice.amount, Settings.currency-code);
+            color: Colors.textBody;
+        }
+    }
+
+    HorizontalLayout {
+        spacing: 8px;
+        width: 100%;
+        cross-axis-alignment: center;
+        Rectangle {
+            width: parent.width * max(slice.ratio,0.08) - percent.preferred-width;
+            height: 20px;
+            border-radius: 4px;
+            background: slice.fill;
+        }
+
+        percent := Text {
+            text: slice.ratio >= 0.01 ? (slice.ratio * 100).round() + "%" : "<1%";
+            color: Colors.textMuted;
+        }
+    }
+}
+
 component SideBar inherits VerticalLayout {
     in property <[PieChartSlice]> pie-chart-slices;
     alignment: start;
@@ -188,38 +224,8 @@ component SideBar inherits VerticalLayout {
         padding-top: 16px;
         padding-bottom: 16px;
         spacing: 16px;
-        for slice in pie-chart-slices: VerticalLayout {
-            spacing: 8px;
-            HorizontalLayout {
-                alignment: space-between;
-                cross-axis-alignment: center;
-                Text {
-                    text: slice.label;
-                    color: Colors.textBody;
-                }
-
-                Text {
-                    text: State.format-money(slice.amount, Settings.currency-code);
-                    color: Colors.textBody;
-                }
-            }
-
-            HorizontalLayout {
-                spacing: 8px;
-                width: 100%;
-                cross-axis-alignment: center;
-                Rectangle {
-                    width: parent.width * max(slice.ratio,0.08) - percent.preferred-width;
-                    height: 20px;
-                    border-radius: 4px;
-                    background: slice.fill;
-                }
-
-                percent := Text {
-                    text: slice.ratio >= 0.01 ? (slice.ratio * 100).round() + "%" : "<1%";
-                    color: Colors.textMuted;
-                }
-            }
+        for slice in pie-chart-slices: CategoryItem {
+            slice: slice;
         }
     }
 }
