@@ -3,7 +3,7 @@
 
 import { Colors } from "../colors.slint";
 import { FontSize } from "../theme.slint";
-import { State, Api, CategoryState } from "../globals.slint";
+import { State, Api, CategoryState, TransactionState } from "../globals.slint";
 import { Settings } from "../settings.slint";
 import { IconButton, Button, PrimaryButton } from "../widgets.slint";
 import { Date, CalendarState } from "../widgets/calendar.slint";
@@ -181,7 +181,7 @@ component SideBar inherits VerticalLayout {
         background: Colors.borderNeutral;
     }
 
-    VerticalLayout {
+    if TransactionState.transactions.length > 0: VerticalLayout {
         width: 350px;
         padding-left: 20px;
         padding-right: 20px;
