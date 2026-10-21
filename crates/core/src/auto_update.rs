@@ -4,7 +4,7 @@
 use jiff::Timestamp;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct Manifest {
@@ -39,7 +39,7 @@ impl Manifest {
             let mut release_info = Release {
                 version: Version::parse(tag_name)?,
                 published_at: release.published_at,
-                artifacts: HashMap::new(),
+                artifacts: BTreeMap::new(),
                 prerelease: release.prerelease,
             };
 
@@ -102,7 +102,7 @@ pub enum Platform {
 pub struct Release {
     pub version: Version,
     pub published_at: Timestamp,
-    pub artifacts: HashMap<Platform, Artifact>,
+    pub artifacts: BTreeMap<Platform, Artifact>,
     pub prerelease: bool,
 }
 
@@ -111,7 +111,7 @@ impl Default for Release {
         Release {
             version: Version::new(0, 0, 0),
             published_at: Timestamp::default(),
-            artifacts: HashMap::new(),
+            artifacts: BTreeMap::new(),
             prerelease: false,
         }
     }
