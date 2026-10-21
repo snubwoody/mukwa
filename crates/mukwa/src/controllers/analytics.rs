@@ -139,8 +139,32 @@ impl AnalyticsController {
         }
         let date = Date::try_from(date).unwrap_or(Zoned::now().date());
         let transactions = self.service.fetch_transactions()?;
-        let mut analytics: HashMap<Uuid, Analytic> = HashMap::new();
+        if transactions.is_empty() {
+            let radius = width.min(height) / 2.0;
+            let chart = PieChart::new(width / 2.0, height / 2.0, vec![1.0], radius)
+                .with_colors(vec![tiny_skia::Color::from_rgba8(230, 230, 230, 255)])
+                .with_label_line_length(0.0)
+                .with_labels(vec![])
+                .with_hole_radius(radius - 100.0);
 
+            let segment = &chart.segments()[0];
+            let (label_x, label_y) = segment.label_position();
+            let color = segment.color().to_color_u8();
+            let slice = PieChartSlice {
+                arc_path: segment.arc_svg().to_shared_string(),
+                line_path: segment.label_line_svg().to_shared_string(),
+                fill: slint::Color::from_rgb_u8(color.red(), color.green(), color.blue()),
+                label: segment.label().to_shared_string(),
+                label_x,
+                amount: Money::ZERO.to_shared_string(),
+                label_y,
+                ratio: segment.ratio(),
+            };
+
+            return Ok(ModelRc::new(VecModel::from(vec![slice])));
+        }
+
+        let mut analytics: HashMap<Uuid, Analytic> = HashMap::new();
         for transaction in transactions {
             if transaction.date.year() != date.year() || transaction.date.month() != date.month() {
                 continue;
@@ -324,6 +348,26 @@ mod test {
         assert_eq!(groceries_slice.amount, Money::new(25).to_shared_string());
         assert_eq!(groceries_slice.label, SharedString::from("Groceries"));
         assert_eq!(groceries_slice.ratio, 0.25);
+        Ok(())
+    }
+
+    #[test]
+    fn draw_pie_chart_with_no_transactions() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let app = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let controller = AnalyticsController::bind(&app, &service);
+
+        let slices: Vec<_> = controller
+            .draw_pie_chart(500.0, 500.0, ui::Date::default())?
+            .iter()
+            .collect();
+        assert_eq!(slices.len(), 1);
+
+        let slice = &slices[0];
+        assert_eq!(slice.amount, Money::ZERO.to_shared_string());
+        assert_eq!(slice.ratio, 1.0);
+        assert_eq!(slice.fill, slint::Color::from_rgb_u8(230, 230, 230));
         Ok(())
     }
 
