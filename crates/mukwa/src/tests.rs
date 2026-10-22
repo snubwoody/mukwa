@@ -6,7 +6,7 @@ use std::ops::ControlFlow;
 use crate::ui::{CategoryState, CreateTransactionOpts, Settings, State, TransactionState};
 
 use super::*;
-use i_slint_backend_testing::ElementHandle;
+use i_slint_backend_testing::{ElementHandle, ElementRoot};
 use jiff::civil::date;
 use jiff::{ToSpan, Zoned};
 use mukwa_core::fmt::CurrencyFormatter;
@@ -18,6 +18,7 @@ use tempfile::tempdir;
 
 mod analytics_page;
 mod spending_page;
+mod transaction_page;
 
 fn setup() -> crate::Result<(MainWindow, Service)> {
     i_slint_backend_testing::init_no_event_loop();
@@ -248,9 +249,7 @@ fn create_account_helper_text() -> Result<()> {
     );
 
     page.query_descendants()
-        .match_predicate(|element| {
-            element.accessible_label() == Some("Create account".to_shared_string())
-        })
+        .match_accessible_label("Create account")
         .find_first()
         .unwrap()
         .mock_single_click(PointerEventButton::Left);

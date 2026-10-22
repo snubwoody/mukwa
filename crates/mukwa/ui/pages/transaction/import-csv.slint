@@ -20,6 +20,7 @@ export global ImportCsvState {
     pure callback open-csv() -> data-transfer;
     pure callback csv-combobox-options([[string]]) -> [ComboBoxItem];
 
+    in-out property <bool> has-data: true;
     in-out property <string> account-id;
     in-out property <[[string]]> records;
     in-out property <int> date-column-index;
@@ -40,17 +41,215 @@ export global ImportCsvState {
     }
 }
 
-export component ImportCsvDialog inherits PopupWindow {
-    width: Api.window-size().width * 0.6;
-    height: Api.window-size().height * 0.85;
-    close-policy: close-on-click-outside;
-    in property <data-transfer> data;
+component TransactionTable inherits Table {
+    property <[string]> columns: [@tr("Date"), @tr("Note"), @tr("Outflow"), @tr("Inflow")];
+    property <int> length: 4;
+    TableRow {
+        for column in columns: TableCell {
+            width: parent.width / length;
+            Text {
+                text: column;
+                font-weight: FontWeight.semi-bold;
+                color: Colors.textBody;
+            }
+        }
+    }
+
+    for record in ImportCsvState.records: TableRow {
+        TableCell {
+            width: parent.width / length;
+            Text {
+                text: record[ImportCsvState.date-column-index];
+                color: Colors.textBody;
+            }
+        }
+
+        TableCell {
+            width: parent.width / length;
+            Text {
+                text: record[ImportCsvState.note-column-index];
+                color: Colors.textBody;
+            }
+        }
+
+        TableCell {
+            width: parent.width / length;
+            Text {
+                text: record[ImportCsvState.outflow-column-index];
+                color: Colors.textBody;
+            }
+        }
+
+        TableCell {
+            width: parent.width / length;
+            Text {
+                text: record[ImportCsvState.inflow-column-index];
+                color: Colors.textBody;
+            }
+        }
+    }
+}
+
+component ImportCsv inherits VerticalLayout {
+    in-out property <data-transfer> data;
     in property <string> account-id;
     property <[string]> columns: [@tr("Date"), @tr("Note"), @tr("Outflow"), @tr("Inflow")];
 
     init => {
+        if ImportCsvState.has-data {
+            return;
+        }
+        data = ImportCsvState.open-csv();
         ImportCsvState.read-csv(data);
         ImportCsvState.account-id = account-id;
+        // ImportCsvState.has-data = true;
+    }
+
+    padding: 36px;
+    spacing: 20px;
+
+    HorizontalLayout {
+        cross-axis-alignment: center;
+        alignment: space-between;
+
+        Text {
+            text: @tr("Import transactions");
+            font-size: FontSize.body-lg;
+            font-weight: FontWeight.semi-bold;
+            color: Colors.textHeading;
+        }
+
+        IconButton {
+            icon: Icons.x;
+            theme: ghost;
+            accessible-label: @tr("Close");
+            // clicked => root.close();
+        }
+    }
+
+    // TODO: add none option
+    HorizontalLayout {
+        spacing: 16px;
+        cross-axis-alignment: start;
+        preferred-height: date-combobox.preferred-height;
+        date-combobox := ComboBox {
+            label: @tr("Date");
+            current-value: ImportCsvState.records[0][ImportCsvState.date-column-index];
+            options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
+            changed(value) => {
+                ImportCsvState.date-column-index = self.selected-index // TODO: use max here and test it?
+            }
+        }
+
+        ComboBox {
+            label: @tr("Note");
+            current-value: ImportCsvState.records[0][ImportCsvState.note-column-index];
+            options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
+            changed(value) => {
+                ImportCsvState.note-column-index = self.selected-index
+            }
+        }
+
+        ComboBox {
+            label: @tr("Outflow");
+            current-value: ImportCsvState.records[0][ImportCsvState.outflow-column-index];
+            options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
+            changed(value) => {
+                ImportCsvState.outflow-column-index = self.selected-index
+            }
+        }
+
+        ComboBox {
+            label: @tr("Inflow");
+            current-value: ImportCsvState.records[0][ImportCsvState.inflow-column-index];
+            options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
+            changed(value) => {
+                ImportCsvState.inflow-column-index = self.selected-index
+            }
+        }
+    }
+
+    TransactionTable { }
+
+    VerticalLayout {
+        alignment: start;
+        cross-axis-alignment: start;
+        spacing: 8px;
+
+        Text {
+            text: @tr("Options");
+            color: Colors.textHeading;
+            font-weight: FontWeight.medium;
+        }
+
+        ComboBox {
+            label: @tr("Date format");
+            options: [
+                { text: "DD/MM/YYYY (31/12/2025)", value: "%d/%m/%Y" },
+                { text: "MM/DD/YYYY (12/31/2025)", value: "%m/%d/%Y" },
+                { text: "MM/DD/YY (12/31/25)", value: "%m/%d/%y" },
+                { text: "DD/MM/YY (31/12/25)", value: "%d/%m/%y" },
+                { text: "DD-MM-YYYY (31-12-2025)", value: "%d-%m-%Y" },
+                { text: "YYYY-MM-DD (2025-12-31)", value: "%Y-%m-%d" },
+                { text: "YYYY.MM.DD (2025.12.31)", value: "%Y.%m.%d" },
+            ];
+            changed(value) => {
+                ImportCsvState.date-format = value;
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            cross-axis-alignment: center;
+            Checkbox {
+                checked <=> ImportCsvState.merge-existing-transactions;
+            }
+
+            Text {
+                text: @tr("Merge existing transactions");
+                color: Colors.textBody;
+            }
+        }
+    }
+
+    HorizontalLayout {
+        alignment: end;
+
+        PrimaryButton {
+            text: @tr("Cancel");
+            theme: ghost;
+            clicked => {
+            }
+        }
+
+        PrimaryButton {
+            text: @tr("Import");
+            clicked => {
+                ImportCsvState.import-transactions();
+                TransactionState.load-transactions();
+                // root.close();
+                ImportCsvState.has-data = false;
+            }
+        }
+    }
+}
+
+export component ImportCsvDialog inherits PopupWindow {
+    width: Api.window-size().width * 0.6;
+    height: Api.window-size().height * 0.85;
+    close-policy: close-on-click-outside;
+    in-out property <data-transfer> data;
+    in property <string> account-id;
+    property <[string]> columns: [@tr("Date"), @tr("Note"), @tr("Outflow"), @tr("Inflow")];
+
+    init => {
+        if ImportCsvState.has-data {
+            return;
+        }
+        data = ImportCsvState.open-csv();
+        ImportCsvState.read-csv(data);
+        ImportCsvState.account-id = account-id;
+        // ImportCsvState.has-data = true;
     }
 
     Rectangle {
@@ -60,178 +259,7 @@ export component ImportCsvDialog inherits PopupWindow {
         border-radius: 24px;
     }
 
-    VerticalLayout {
-        padding: 36px;
-        spacing: 20px;
-
-        HorizontalLayout {
-            cross-axis-alignment: center;
-            alignment: space-between;
-
-            Text {
-                text: @tr("Import transactions");
-                font-size: FontSize.body-lg;
-                font-weight: FontWeight.semi-bold;
-                color: Colors.textHeading;
-            }
-
-            IconButton {
-                icon: Icons.x;
-                theme: ghost;
-                clicked => root.close();
-            }
-        }
-
-        // TODO: add none option
-        HorizontalLayout {
-            spacing: 16px;
-            cross-axis-alignment: start;
-            preferred-height: date-combobox.preferred-height;
-            date-combobox := ComboBox {
-                label: @tr("Date");
-                current-value: ImportCsvState.records[0][ImportCsvState.date-column-index];
-                options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
-                changed(value) => {
-                    ImportCsvState.date-column-index = self.selected-index // TODO: use max here and test it?
-                }
-            }
-
-            ComboBox {
-                label: @tr("Note");
-                current-value: ImportCsvState.records[0][ImportCsvState.note-column-index];
-                options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
-                changed(value) => {
-                    ImportCsvState.note-column-index = self.selected-index
-                }
-            }
-
-            ComboBox {
-                label: @tr("Outflow");
-                current-value: ImportCsvState.records[0][ImportCsvState.outflow-column-index];
-                options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
-                changed(value) => {
-                    ImportCsvState.outflow-column-index = self.selected-index
-                }
-            }
-
-            ComboBox {
-                label: @tr("Inflow");
-                current-value: ImportCsvState.records[0][ImportCsvState.inflow-column-index];
-                options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
-                changed(value) => {
-                    ImportCsvState.inflow-column-index = self.selected-index
-                }
-            }
-        }
-
-        Table {
-            property <int> length: 4;
-            TableRow {
-                for column in columns: TableCell {
-                    width: parent.width / length;
-                    Text {
-                        text: column;
-                        font-weight: FontWeight.semi-bold;
-                        color: Colors.textBody;
-                    }
-                }
-            }
-
-            for record in ImportCsvState.records: TableRow {
-                TableCell {
-                    width: parent.width / length;
-                    Text {
-                        text: record[ImportCsvState.date-column-index];
-                        color: Colors.textBody;
-                    }
-                }
-
-                TableCell {
-                    width: parent.width / length;
-                    Text {
-                        text: record[ImportCsvState.note-column-index];
-                        color: Colors.textBody;
-                    }
-                }
-
-                TableCell {
-                    width: parent.width / length;
-                    Text {
-                        text: record[ImportCsvState.outflow-column-index];
-                        color: Colors.textBody;
-                    }
-                }
-
-                TableCell {
-                    width: parent.width / length;
-                    Text {
-                        text: record[ImportCsvState.inflow-column-index];
-                        color: Colors.textBody;
-                    }
-                }
-            }
-        }
-
-        VerticalLayout {
-            alignment: start;
-            cross-axis-alignment: start;
-            spacing: 8px;
-
-            Text {
-                text: @tr("Options");
-                color: Colors.textHeading;
-                font-weight: FontWeight.medium;
-            }
-
-            ComboBox {
-                label: @tr("Date format");
-                options: [
-                    { text: "DD/MM/YYYY (31/12/2025)", value: "%d/%m/%Y" },
-                    { text: "MM/DD/YYYY (12/31/2025)", value: "%m/%d/%Y" },
-                    { text: "MM/DD/YY (12/31/25)", value: "%m/%d/%y" },
-                    { text: "DD/MM/YY (31/12/25)", value: "%d/%m/%y" },
-                    { text: "DD-MM-YYYY (31-12-2025)", value: "%d-%m-%Y" },
-                    { text: "YYYY-MM-DD (2025-12-31)", value: "%Y-%m-%d" },
-                    { text: "YYYY.MM.DD (2025.12.31)", value: "%Y.%m.%d" },
-                ];
-                changed(value) => {
-                    ImportCsvState.date-format = value;
-                }
-            }
-
-            HorizontalLayout {
-                spacing: 8px;
-                cross-axis-alignment: center;
-                Checkbox {
-                    checked <=> ImportCsvState.merge-existing-transactions;
-                }
-
-                Text {
-                    text: @tr("Merge existing transactions");
-                    color: Colors.textBody;
-                }
-            }
-        }
-
-        HorizontalLayout {
-            alignment: end;
-
-            PrimaryButton {
-                text: @tr("Cancel");
-                theme: ghost;
-                clicked => {
-                    root.close();
-                }
-            }
-
-            PrimaryButton {
-                text: @tr("Import");
-                clicked => {
-                    ImportCsvState.import-transactions();
-                    TransactionState.load-transactions();
-                    root.close();
-                }
-            }
-        }
+    ImportCsv {
+        account-id: account-id;
     }
 }
