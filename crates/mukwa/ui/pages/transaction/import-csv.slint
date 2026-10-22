@@ -3,7 +3,7 @@
 
 import { Colors } from "../../colors.slint";
 import { Table, TableRow, TableCell } from "../../widgets/tableview.slint";
-import { Api } from "../../globals.slint";
+import { Api, TransactionState } from "../../globals.slint";
 import {
     ComboBox,
     PrimaryButton,
@@ -92,7 +92,7 @@ export component ImportCsvDialog inherits PopupWindow {
                 current-value: ImportCsvState.records[0][ImportCsvState.date-column-index];
                 options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
-                    ImportCsvState.date-column-index = self.current-index // TODO: use max here and test it?
+                    ImportCsvState.date-column-index = self.selected-index // TODO: use max here and test it?
                 }
             }
 
@@ -101,7 +101,7 @@ export component ImportCsvDialog inherits PopupWindow {
                 current-value: ImportCsvState.records[0][ImportCsvState.note-column-index];
                 options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
-                    ImportCsvState.note-column-index = self.current-index
+                    ImportCsvState.note-column-index = self.selected-index
                 }
             }
 
@@ -110,7 +110,7 @@ export component ImportCsvDialog inherits PopupWindow {
                 current-value: ImportCsvState.records[0][ImportCsvState.outflow-column-index];
                 options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
-                    ImportCsvState.outflow-column-index = self.current-index
+                    ImportCsvState.outflow-column-index = self.selected-index
                 }
             }
 
@@ -119,7 +119,7 @@ export component ImportCsvDialog inherits PopupWindow {
                 current-value: ImportCsvState.records[0][ImportCsvState.inflow-column-index];
                 options: ImportCsvState.csv-combobox-options(ImportCsvState.records);
                 changed(value) => {
-                    ImportCsvState.inflow-column-index = self.current-index
+                    ImportCsvState.inflow-column-index = self.selected-index
                 }
             }
         }
@@ -228,6 +228,7 @@ export component ImportCsvDialog inherits PopupWindow {
                 text: @tr("Import");
                 clicked => {
                     ImportCsvState.import-transactions();
+                    TransactionState.load-transactions();
                     root.close();
                 }
             }

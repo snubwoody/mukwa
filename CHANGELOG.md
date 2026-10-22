@@ -1,3 +1,7 @@
+## (unreleased)
+
+- Fixed the app crashing when trying to import transactions from csv files.
+ 
 ## 0.3.0 - 2026-10-20
 
 - Added budget targets. Budget targets help you plan the amount of money you want to spend each month.
