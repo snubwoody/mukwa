@@ -231,6 +231,19 @@ pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
         }
     });
 
+    transaction_state.on_load_transactions({
+        let transaction_state = transaction_state.as_weak();
+        let service = service.clone();
+        move || {
+            let transaction_state = transaction_state.unwrap();
+            if let Err(err) = load_transactions(&transaction_state, &service)
+                .context("Failed to load transactions")
+            {
+                warn!("{}", err.report())
+            }
+        }
+    });
+
     Ok(())
 }
 

@@ -105,6 +105,7 @@ export global TransactionState {
     callback set-transaction-inflow(id: string, amount: string);
     callback create-transaction(CreateTransactionOpts);
     callback delete-selected-transactions();
+    callback load-transactions();
 
     pure callback is-transaction-unconfirmed(id: string) -> bool;
     pure callback total-balance() -> string;
