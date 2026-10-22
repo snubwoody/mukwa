@@ -6,6 +6,7 @@ pub mod error;
 pub mod fmt;
 pub mod migrator;
 mod money;
+pub mod ofx;
 pub mod plot;
 pub mod service;
 
