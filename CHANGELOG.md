@@ -1,5 +1,6 @@
 ## 0.3.1 - 2026-10-22
 
+- Fixed transactions without categories not being shown in analytics.
 - Fixed the app crashing when trying to import transactions from a csv file.
  
 ## 0.3.0 - 2026-10-20

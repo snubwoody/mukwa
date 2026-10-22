@@ -46,6 +46,15 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.3.1" date="2026-10-22">
+          <url type="details">https://github.com/snubwoody/mukwa/blob/main/CHANGELOG.md#031---2026-10-22</url>
+          <description>
+              <ul>
+                  <li>Fixed transactions without categories not being shown in analytics.</li>
+                  <li>Fixed the app crashing when trying to import transactions from a csv file.</li>
+              </ul>
+          </description>
+        </release>
         <release version="0.3.0" date="2026-10-20">
           <url type="details">https://github.com/snubwoody/mukwa/blob/main/CHANGELOG.md#030---2026-10-20</url>
           <description>
