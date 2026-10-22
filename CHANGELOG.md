@@ -1,6 +1,6 @@
-## (unreleased)
+## 0.3.1 - 2026-10-22
 
-- Fixed the app crashing when trying to import transactions from csv files.
+- Fixed the app crashing when trying to import transactions from a csv file.
  
 ## 0.3.0 - 2026-10-20
 
