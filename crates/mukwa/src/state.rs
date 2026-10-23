@@ -3,7 +3,7 @@
 
 use crate::ui;
 use mukwa_core::Money;
-use mukwa_core::service::{AccountType, Service};
+use mukwa_core::service::{AccountType, Service, TransactionKind};
 use slint::{ToSharedString, VecModel};
 use std::rc::Rc;
 use std::str::FromStr;
@@ -71,6 +71,7 @@ impl AppState {
                         .account(account.id)
                         .amount(starting_balance)
                         .note("Starting balance")
+                        .kind(TransactionKind::StartingBalance)
                         .submit()?;
                 }
                 AccountType::Credit => {
@@ -79,6 +80,7 @@ impl AppState {
                         .account(account.id)
                         .note("Starting balance")
                         .amount(starting_balance)
+                        .kind(TransactionKind::StartingBalance)
                         .submit()?;
                 }
             }

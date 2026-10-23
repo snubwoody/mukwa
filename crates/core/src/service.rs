@@ -245,6 +245,7 @@ pub struct TransactionBuilder<T> {
     category_id: Option<Uuid>,
     note: Option<String>,
     marker: PhantomData<T>,
+    kind: TransactionKind
 }
 
 impl<T> TransactionBuilder<T> {
@@ -258,6 +259,7 @@ impl<T> TransactionBuilder<T> {
             note: None,
             date: Zoned::now().date(),
             marker: PhantomData,
+            kind: TransactionKind::Regular
         }
     }
 }
@@ -288,6 +290,12 @@ impl TransactionBuilder<Income> {
         self
     }
 
+    /// Sets the transaction kind
+    pub fn kind(mut self, kind: TransactionKind) -> Self {
+        self.kind = kind;
+        self
+    }
+
     /// Submits the query.
     pub fn submit(self) -> crate::Result<Transaction> {
         let account_id = match self.receiver_id {
@@ -302,8 +310,8 @@ impl TransactionBuilder<Income> {
         };
 
         let connection = self.service.connection();
-        let sql = "INSERT INTO transactions(id,transaction_date,receiver_id,amount,note) \
-            VALUES(?1,?2,?3,?4,?5) \
+        let sql = "INSERT INTO transactions(id,transaction_date,receiver_id,amount,note,kind) \
+            VALUES(?1,?2,?3,?4,?5,?6) \
             RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
         let params = params![
@@ -312,6 +320,7 @@ impl TransactionBuilder<Income> {
             account_id.to_string(),
             self.amount.inner(),
             self.note,
+            self.kind as i64
         ];
         let mut rows = stmt.query_and_then(params, |row| Transaction::try_from(row))?;
         let transaction = rows.next().unwrap()?;
@@ -330,6 +339,12 @@ impl TransactionBuilder<Expense> {
         self
     }
 
+    /// Sets the transaction kind
+    pub fn kind(mut self, kind: TransactionKind) -> Self {
+        self.kind = kind;
+        self
+    }
+
     /// Submits the query.
     pub fn submit(self) -> crate::Result<Transaction> {
         let account_id = match self.sender_id {
@@ -344,8 +359,8 @@ impl TransactionBuilder<Expense> {
         };
 
         let connection = self.service.connection();
-        let sql = "INSERT INTO transactions(id,transaction_date,sender_id,category_id,amount,note) \
-            VALUES(?1,?2,?3,?4,?5,?6) \
+        let sql = "INSERT INTO transactions(id,transaction_date,sender_id,category_id,amount,note,kind) \
+            VALUES(?1,?2,?3,?4,?5,?6,?7) \
             RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
         let params = params![
@@ -355,6 +370,7 @@ impl TransactionBuilder<Expense> {
             self.category_id.map(|c| c.to_string()),
             self.amount.inner(),
             self.note,
+            self.kind as i64
         ];
         let mut rows = stmt.query_and_then(params, |row| Transaction::try_from(row))?;
         let transaction = rows.next().unwrap()?;
