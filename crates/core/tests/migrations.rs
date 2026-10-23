@@ -3,7 +3,7 @@
 
 // Tests to make sure the migrations don't break the user's database.
 
-use mukwa_core::service::{AccountType, Service};
+use mukwa_core::service::{AccountType, Service, TransactionKind};
 use mukwa_core::{Result, migrator::Migrator};
 use rusqlite::Connection;
 use uuid::Uuid;
@@ -52,5 +52,17 @@ fn add_credit_payments_meta_group() -> Result<()> {
 
     assert_eq!(group.title, "Credit payments");
     assert!(group.is_meta);
+    Ok(())
+}
+
+#[test]
+fn transactions_default_to_regular() -> Result<()> {
+    let mut connection = Connection::open_in_memory()?;
+    let mut migrator = Migrator::new();
+    migrator.load_embedded()?;
+    migrator.migrate(&mut connection)?;
+    let service = Service::new(connection);
+    let transaction = service.create_expense().submit()?;
+    assert_eq!(transaction.kind,TransactionKind::Regular);
     Ok(())
 }

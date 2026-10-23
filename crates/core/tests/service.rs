@@ -390,7 +390,7 @@ fn total_spent_credit_payments() -> Result<()> {
 }
 
 #[test]
-fn total_spent_in_group() -> mukwa_core::Result<()> {
+fn total_spent_in_group() -> Result<()> {
     let service = Service::open_in_memory()?;
     service.create_account("", AccountType::Cash)?;
 
