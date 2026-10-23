@@ -9,7 +9,7 @@ use jiff::civil::Date;
 use mukwa_core::Money;
 use mukwa_core::error::ErrorExt;
 use mukwa_core::plot::PieChart;
-use mukwa_core::service::{Category, Service, TransactionType};
+use mukwa_core::service::{Category, Service, TransactionKind, TransactionType};
 use slint::{ComponentHandle, Global, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -88,7 +88,7 @@ impl AnalyticsController {
             .service
             .fetch_transactions()?
             .iter()
-            .filter(|t| t.transaction_type() == TransactionType::Expense)
+            .filter(|t| t.transaction_type() == TransactionType::Expense && t.kind == TransactionKind::Regular)
             .filter(|t| t.date.year() == date.year() && t.date.month() == date.month())
             .filter(|t| {
                 !filtered_categories.contains(&t.category_id.unwrap_or_default().to_shared_string())
@@ -293,7 +293,7 @@ impl AnalyticsController {
 mod test {
     use super::*;
     use crate::ui::MainWindow;
-    use mukwa_core::service::Service;
+    use mukwa_core::service::{AccountType, Service, TransactionKind};
 
     #[test]
     fn filter_category_adds_category() -> crate::Result<()> {
@@ -413,6 +413,23 @@ mod test {
         );
         assert_eq!(no_category_slice.amount, Money::new(100).to_shared_string());
         assert_eq!(no_category_slice.label, SharedString::from("No category"));
+        Ok(())
+    }
+
+    #[test]
+    fn total_spent_excludes_starting_balance() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let app = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        service.create_account("",AccountType::Cash)?;
+        service.create_expense().kind(TransactionKind::StartingBalance).amount(Money::new(500)).submit()?;
+        service.create_expense().amount(Money::new(25)).submit()?;
+        AnalyticsController::bind(&app, &service);
+
+        let analytics: AnalyticsApi = app.global();
+        analytics.set_current_date(Zoned::now().date().into());
+        let total_spent = analytics.invoke_total_spent();
+        assert_eq!(total_spent,Money::new(25).to_shared_string());
         Ok(())
     }
 
