@@ -11,16 +11,22 @@ pub struct PieSegment {
     // The center position
     x: f32,
     y: f32,
+    index: usize,
+    /// The total number of labels
+    label_length: usize,
     ratio: f32,
     color: Color,
     start_angle: f32,
     hole_radius: f32,
+    /// The radius of the pie chart
     radius: f32,
     label_line_length: f32,
     label: String,
 }
 
 impl PieSegment {
+    const APPROX_FONT_SIZE: f32 = 16.0;
+
     /// Draws the pie chart segment onto the pixmap.
     pub fn draw(&self, pixmap: &mut Pixmap) {
         let path = self.arc_path();
@@ -56,33 +62,48 @@ impl PieSegment {
         self.ratio
     }
 
+    fn left_aligned(&self) -> bool {
+        self.start_angle < PI
+    }
+
     fn label_line_path(&self) -> Path {
         let end_theta = 2.0 * PI * self.ratio;
         let mid_angle = self.start_angle + end_theta * 0.5;
-
         let start = theta_to_ordinal_coord(self.radius, mid_angle, (self.x, self.y));
-        let end = theta_to_ordinal_coord(
-            self.radius + self.label_line_length,
-            mid_angle,
-            (self.x, self.y),
-        );
+        let end_pos = self.label_position();
 
         let mut pb = PathBuilder::new();
         pb.move_to(start.0, start.1);
-        pb.line_to(end.0, end.1);
+        if self.left_aligned() {
+            pb.line_to(
+                end_pos.0 + self.label_line_length + 10.0,
+                end_pos.1 + Self::APPROX_FONT_SIZE * 0.5,
+            );
+            pb.line_to(
+                end_pos.0 + self.label_line_length + 1.0,
+                end_pos.1 + Self::APPROX_FONT_SIZE * 0.5,
+            );
+        } else {
+            pb.line_to(end_pos.0 - 10.0, end_pos.1 + Self::APPROX_FONT_SIZE * 0.5);
+            pb.line_to(end_pos.0 - 1.0, end_pos.1 + Self::APPROX_FONT_SIZE * 0.5);
+        }
         pb.finish().unwrap()
     }
 
     pub fn label_position(&self) -> (f32, f32) {
-        let end_theta = 2.0 * PI * self.ratio;
-        let mid_angle = self.start_angle + end_theta * 0.5;
-        let approx_font_size = 16.0;
-
-        theta_to_ordinal_coord(
-            self.radius + self.label_line_length + approx_font_size,
-            mid_angle,
-            (self.x, self.y),
-        )
+        // TODO: test overwhelmingly one sided
+        let (x, y) = if self.left_aligned() {
+            // TODO: make sure things are left alligned
+            let x = 0.0 - self.label_line_length - 50.0;
+            let y = Self::APPROX_FONT_SIZE * self.index as f32;
+            (x, y)
+        } else {
+            let y = self.radius * 2.0
+                - Self::APPROX_FONT_SIZE * (self.label_length - 1 - self.index) as f32;
+            let x = self.radius * 2.0 + self.label_line_length + Self::APPROX_FONT_SIZE;
+            (x, y)
+        };
+        return (x, y);
     }
 
     fn segment_to_svg(&self, segment: &PathSegment) -> String {
@@ -238,6 +259,8 @@ impl PieChart {
             let segment = PieSegment {
                 x: self.x,
                 y: self.y,
+                index,
+                label_length: self.series.len(),
                 hole_radius: self.hole_radius,
                 ratio,
                 color: self.colors[index % self.colors.len()],
