@@ -63,7 +63,7 @@ fn transactions_default_to_regular() -> Result<()> {
     let service = Service::new(connection);
     service.create_account("",AccountType::Cash)?;
     let transaction = service.create_expense().submit()?;
-    assert_eq!(transaction.kind,TransactionKind::Regular);
+    assert_eq!(transaction.kind, TransactionKind::Regular);
     Ok(())
 }
 
@@ -78,12 +78,15 @@ fn mark_starting_balance_transactions() -> Result<()> {
     let service = Service::new(Connection::open(temp.path())?);
     service.create_account("",AccountType::Cash)?;
     let transaction1 = service.create_expense().note("Starting balance").submit()?;
-    let transaction2 = service.create_expense().note("Not Starting balance").submit()?;
+    let transaction2 = service
+        .create_expense()
+        .note("Not Starting balance")
+        .submit()?;
     migrator.migrate(&mut connection)?;
 
     let transaction1 = service.get_transaction(transaction1.id)?;
     let transaction2 = service.get_transaction(transaction2.id)?;
-    assert_eq!(transaction1.kind,TransactionKind::StartingBalance);
-    assert_eq!(transaction2.kind,TransactionKind::Regular);
+    assert_eq!(transaction1.kind, TransactionKind::StartingBalance);
+    assert_eq!(transaction2.kind, TransactionKind::Regular);
     Ok(())
 }

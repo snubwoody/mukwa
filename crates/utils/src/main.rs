@@ -3,6 +3,7 @@
 
 use clap::{Parser, Subcommand};
 use mukwa_core::auto_update::Manifest;
+use mukwa_core::error::ErrorExt;
 use mukwa_core::migrator::Migrator;
 use rusqlite::Connection;
 use std::collections::HashSet;
@@ -14,7 +15,6 @@ use tracing::{info, warn};
 use usvg::Node;
 use usvg::tiny_skia_path::{PathSegment, PathSegmentsIter};
 use zip::ZipArchive;
-use mukwa_core::error::ErrorExt;
 
 #[derive(Parser)]
 struct Cli {
@@ -72,7 +72,9 @@ fn run() -> mukwa_core::Result<()> {
             MigrateCommand::Up => {
                 let mut connection = Connection::open(path)?;
                 let mut migrator = Migrator::new();
-                migrator.load_from_dir(&migrations_dir).context("Failed to load from migrations")?;
+                migrator
+                    .load_from_dir(&migrations_dir)
+                    .context("Failed to load from migrations")?;
                 migrator.migrate(&mut connection)?;
             }
             MigrateCommand::Rollback => {

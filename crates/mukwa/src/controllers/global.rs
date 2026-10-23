@@ -194,25 +194,33 @@ pub fn bind(window: &MainWindow, state: &AppState) {
 
 #[cfg(test)]
 mod test {
-    use mukwa_core::service::{Service, TransactionKind};
-    use crate::ui::{AccountType, State};
     use super::*;
+    use crate::ui::{AccountType, State};
+    use mukwa_core::service::{Service, TransactionKind};
 
     #[test]
-    fn starting_balance_transaction_kind() -> crate::Result<()>{
+    fn starting_balance_transaction_kind() -> crate::Result<()> {
         let app = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let state = AppState::new(service.clone())?;
 
-        bind(&app,&state);
+        bind(&app, &state);
         let state: State = app.global();
-        state.invoke_create_account("".to_shared_string(),AccountType::Cash,"500".to_shared_string());
-        state.invoke_create_account("".to_shared_string(),AccountType::Credit,"500".to_shared_string());
+        state.invoke_create_account(
+            "".to_shared_string(),
+            AccountType::Cash,
+            "500".to_shared_string(),
+        );
+        state.invoke_create_account(
+            "".to_shared_string(),
+            AccountType::Credit,
+            "500".to_shared_string(),
+        );
         let transactions = service.fetch_transactions()?;
         let t1 = &transactions[0];
         let t2 = &transactions[1];
-        assert_eq!(t1.kind,TransactionKind::StartingBalance);
-        assert_eq!(t2.kind,TransactionKind::StartingBalance);
+        assert_eq!(t1.kind, TransactionKind::StartingBalance);
+        assert_eq!(t2.kind, TransactionKind::StartingBalance);
         Ok(())
     }
 }

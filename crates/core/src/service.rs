@@ -84,13 +84,12 @@ pub enum TransactionType {
     Transfer,
 }
 
-#[derive(PartialOrd, PartialEq, Debug, Clone, Copy, Eq, Ord,Default)]
+#[derive(PartialOrd, PartialEq, Debug, Clone, Copy, Eq, Ord, Default)]
 pub enum TransactionKind {
     #[default]
     Regular = 0,
-    StartingBalance = 1
+    StartingBalance = 1,
 }
-
 
 impl TryFrom<i64> for TransactionKind {
     type Error = Error;
@@ -98,7 +97,9 @@ impl TryFrom<i64> for TransactionKind {
     fn try_from(v: i64) -> Result<Self, Self::Error> {
         match v {
             x if x == TransactionKind::Regular as i64 => Ok(TransactionKind::Regular),
-            x if x == TransactionKind::StartingBalance as i64 => Ok(TransactionKind::StartingBalance),
+            x if x == TransactionKind::StartingBalance as i64 => {
+                Ok(TransactionKind::StartingBalance)
+            }
             _ => Err(Error::new(&format!("Unknown transaction kind: {v}"))),
         }
     }
@@ -115,7 +116,7 @@ pub struct Transaction {
     pub date: Date,
     pub note: Option<String>,
     pub amount: Money,
-    pub kind: TransactionKind
+    pub kind: TransactionKind,
 }
 
 impl Transaction {
@@ -179,7 +180,7 @@ impl<'a> TryFrom<&Row<'a>> for Transaction {
         let note: Option<String> = value.get("note")?;
         let transaction_date: String = value.get("transaction_date")?;
         let amount: i64 = value.get("amount")?;
-        let kind: TransactionKind = value.get::<_,i64>("kind")?.try_into()?;
+        let kind: TransactionKind = value.get::<_, i64>("kind")?.try_into()?;
 
         let category_id = match category_id {
             Some(id) => Some(Uuid::parse_str(&id)?),
@@ -204,7 +205,7 @@ impl<'a> TryFrom<&Row<'a>> for Transaction {
             sender_id,
             receiver_id,
             category_id,
-            kind
+            kind,
         };
 
         Ok(transaction)
@@ -245,7 +246,7 @@ pub struct TransactionBuilder<T> {
     category_id: Option<Uuid>,
     note: Option<String>,
     marker: PhantomData<T>,
-    kind: TransactionKind
+    kind: TransactionKind,
 }
 
 impl<T> TransactionBuilder<T> {
@@ -259,7 +260,7 @@ impl<T> TransactionBuilder<T> {
             note: None,
             date: Zoned::now().date(),
             marker: PhantomData,
-            kind: TransactionKind::Regular
+            kind: TransactionKind::Regular,
         }
     }
 }
