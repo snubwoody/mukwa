@@ -61,7 +61,7 @@ fn transactions_default_to_regular() -> Result<()> {
     migrator.load_embedded()?;
     migrator.migrate(&mut connection)?;
     let service = Service::new(connection);
-    service.create_account("",AccountType::Cash)?;
+    service.create_account("", AccountType::Cash)?;
     let transaction = service.create_expense().submit()?;
     assert_eq!(transaction.kind, TransactionKind::Regular);
     Ok(())
@@ -76,7 +76,7 @@ fn mark_starting_balance_transactions() -> Result<()> {
     migrator.load_embedded()?;
     migrator.migrate_until(&mut connection, 20261023100557)?;
     let service = Service::new(Connection::open(temp.path())?);
-    service.create_account("",AccountType::Cash)?;
+    service.create_account("", AccountType::Cash)?;
     let transaction1 = service.create_expense().note("Starting balance").submit()?;
     let transaction2 = service
         .create_expense()

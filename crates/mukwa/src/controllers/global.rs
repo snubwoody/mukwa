@@ -200,6 +200,7 @@ mod test {
 
     #[test]
     fn starting_balance_transaction_kind() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
         let app = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let state = AppState::new(service.clone())?;
