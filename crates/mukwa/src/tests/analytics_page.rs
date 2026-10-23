@@ -5,7 +5,7 @@ use i_slint_backend_testing::ElementHandle;
 use jiff::{ToSpan, Zoned, civil::date};
 use mukwa_core::{Currency, Money, fmt::CurrencyFormatter, service::AccountType};
 use slint::{ComponentHandle, Model, SharedString, ToSharedString, platform::PointerEventButton};
-
+use mukwa_core::service::TransactionKind;
 use crate::ui::{AnalyticsApi, CategoryState, CreateTransactionOpts, Settings, TransactionState};
 
 use super::Result;
@@ -137,6 +137,42 @@ fn month_switch() -> Result<()> {
 }
 
 #[test]
+fn total_spent_excludes_starting_balance() -> Result<()> {
+    let (app, service) = super::setup()?;
+    let settings: Settings = app.global();
+    settings.set_currency_code("USD".to_shared_string());
+    service.create_account("", AccountType::Cash)?;
+    service.create_expense().kind(TransactionKind::StartingBalance).amount(Money::new(250)).submit()?;
+    service.create_expense().amount(Money::new(100)).submit()?;
+
+    ElementHandle::find_by_accessible_label(&app, "Analytics")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let pie_chart = ElementHandle::find_by_element_type_name(&app, "PieChart")
+        .next()
+        .unwrap();
+
+    let outer_total_spent = pie_chart
+        .query_descendants()
+        .match_id("PieChart::total-spent")
+        .find_first()
+        .unwrap();
+    let inner_total_spent = pie_chart
+        .query_descendants()
+        .match_id("PieChart::inner-total-spent")
+        .find_first()
+        .unwrap();
+    let mut formatter = CurrencyFormatter::new();
+    formatter.set_currency(Currency::USD);
+
+    assert!(outer_total_spent.query_descendants().match_accessible_label(formatter.format_money(Money::new(100))?).find_first().is_some());
+    assert!(inner_total_spent.query_descendants().match_accessible_label(formatter.format_money(Money::new(100))?).find_first().is_some());
+    Ok(())
+}
+
+#[test]
 fn total_spent_updates_with_category_filter() -> Result<()> {
     let (app, service) = super::setup()?;
     let category_state: CategoryState = app.global();
@@ -197,7 +233,7 @@ fn total_spent_updates_with_category_filter() -> Result<()> {
         .unwrap()
         .mock_single_click(PointerEventButton::Left);
 
-    let amount = formater.format_money(Money::new(10)).unwrap();
+    let amount = formater.format_money(Money::new(10))?;
     let text_elements = pie_chart
         .query_descendants()
         .match_type_name("Text")
