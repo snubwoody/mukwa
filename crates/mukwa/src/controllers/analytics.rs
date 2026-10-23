@@ -171,6 +171,10 @@ impl AnalyticsController {
                 continue;
             }
 
+            if transaction.transaction_type() != TransactionType::Expense  || transaction.kind == TransactionKind::StartingBalance {
+                continue;
+            }
+
             match transaction.category_id {
                 Some(category_id) => {
                     if filtered_categories.contains(&category_id.to_shared_string()) {
@@ -486,6 +490,72 @@ mod test {
         assert_eq!(groceries_slice.amount, Money::new(25).to_shared_string());
         assert_eq!(groceries_slice.label, SharedString::from("Groceries"));
         assert_eq!(groceries_slice.ratio, 1.0);
+        Ok(())
+    }
+
+    #[test]
+    fn draw_pie_chart_excludes_incomes_and_transfers() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let app = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let group = service.create_category_group("")?;
+        let account1 = service.create_account("",AccountType::Cash)?;
+        let account2 = service.create_account("",AccountType::Cash)?;
+        let entertainment = service.create_category("Entertainment", group.id)?;
+        let controller = AnalyticsController::bind(&app, &service);
+
+        service
+            .create_expense()
+            .category(entertainment.id)
+            .amount(Money::new(75))
+            .submit()?;
+
+        service.create_income().amount(Money::new(50)).submit()?;
+        service.create_transfer().accounts(account1.id,account2.id).amount(Money::new(400)).submit()?;
+
+        let slices: Vec<_> = controller
+            .draw_pie_chart(500.0, 500.0, ui::Date::default())?
+            .iter()
+            .collect();
+        assert_eq!(slices.len(), 1);
+
+        let slice = &slices[0];
+        assert_eq!(slice.amount, Money::new(75).to_shared_string());
+        assert_eq!(slice.label, SharedString::from("Entertainment"));
+        Ok(())
+    }
+
+    #[test]
+    fn draw_pie_chart_excludes_starting_balance() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let app = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let group = service.create_category_group("")?;
+        let groceries = service.create_category("Groceries", group.id)?;
+        let entertainment = service.create_category("Entertainment", group.id)?;
+        let controller = AnalyticsController::bind(&app, &service);
+
+        service
+            .create_expense()
+            .kind(TransactionKind::StartingBalance)
+            .category(groceries.id)
+            .amount(Money::new(25))
+            .submit()?;
+        service
+            .create_expense()
+            .category(entertainment.id)
+            .amount(Money::new(75))
+            .submit()?;
+
+        let slices: Vec<_> = controller
+            .draw_pie_chart(500.0, 500.0, ui::Date::default())?
+            .iter()
+            .collect();
+        assert_eq!(slices.len(), 1);
+
+        let slice = &slices[0];
+        assert_eq!(slice.amount, Money::new(75).to_shared_string());
+        assert_eq!(slice.label, SharedString::from("Entertainment"));
         Ok(())
     }
 
