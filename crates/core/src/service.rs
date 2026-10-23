@@ -667,7 +667,7 @@ impl Service {
             let is_same_month = transaction.date.month() == month.month()
                 && transaction.date.year() == month.year();
 
-            if !is_same_month {
+            if !is_same_month || transaction.kind == TransactionKind::StartingBalance{
                 continue;
             }
 
