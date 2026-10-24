@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use divan::Bencher;
+use mukwa_core::Money;
 use mukwa_core::migrator::Migrator;
 use mukwa_core::service::{AccountType, Service};
 use rusqlite::Connection;
@@ -29,6 +30,30 @@ fn create_account<const N: usize>(bencher: Bencher) {
                 service
                     .create_account("My account", AccountType::Cash)
                     .unwrap();
+            }
+        });
+}
+
+#[divan::bench(consts = [1,10,50,100,1000,10000])]
+fn total_spent<const N: usize>(bencher: Bencher) {
+    bencher
+        .with_inputs(move || {
+            let temp = tempdir().unwrap();
+            let path = temp.path().join("data.sqlite");
+            let mut connection = Connection::open(path).unwrap();
+            let mut migrator = Migrator::new();
+            migrator.load_embedded().unwrap();
+            migrator.migrate(&mut connection).unwrap();
+            let service = Service::new(connection);
+            service.create_account("", AccountType::Cash).unwrap();
+            for _ in 0..N {
+                service.create_expense().amount(Money::new(500));
+            }
+            (service, temp)
+        })
+        .bench_refs(|(service, _temp)| {
+            for _ in 0..N {
+                service.calculate_total_spent().get().unwrap();
             }
         });
 }

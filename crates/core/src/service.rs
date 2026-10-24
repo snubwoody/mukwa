@@ -5,7 +5,7 @@ use crate::{Error, Money, create_test_db};
 use jiff::Zoned;
 use jiff::civil::Date;
 use rusqlite::{Connection, Row, params};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 use std::path::Path;
 use std::rc::Rc;
@@ -1310,12 +1310,380 @@ impl Service {
         }
         Ok(())
     }
+
+    pub fn calculate_total_spent(&self) -> TotalSpent {
+        TotalSpent {
+            service: self.clone(),
+            date_filter: None,
+            exclude_categories: None,
+            include_categories: None
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+pub enum DateFilter {
+    On(Date),
+    Before(Date),
+    After(Date),
+    OnOrBefore(Date),
+    OnOrAfter(Date),
+    // TODO: this could be the same as below
+    IsSameMonth(Date),
+    /// Filters dates between `start` and `end`.
+    Between {
+        start: Date,
+        end: Date,
+        inclusive: bool,
+    },
+}
+
+impl DateFilter {
+    /// Returns `true` if the transaction matches the filter, `false` if not.
+    fn filter_transaction(&self, transaction: &Transaction) -> bool {
+        match self {
+            DateFilter::On(date) => transaction.date == *date,
+            DateFilter::After(date) => transaction.date > *date,
+            DateFilter::Before(date) => transaction.date < *date,
+            DateFilter::OnOrAfter(date) => transaction.date >= *date,
+            DateFilter::OnOrBefore(date) => transaction.date <= *date,
+            DateFilter::Between {
+                start,
+                end,
+                inclusive,
+            } if !inclusive => transaction.date > *start && transaction.date < *end,
+            DateFilter::Between {
+                start,
+                end,
+                inclusive,
+            } if *inclusive => transaction.date >= *start && transaction.date <= *end,
+            _ => todo!(),
+        }
+    }
+}
+
+/// Calculates the total spent for specific parameters
+pub struct TotalSpent {
+    service: Service,
+    date_filter: Option<DateFilter>,
+    include_categories: Option<HashSet<Uuid>>,
+    exclude_categories: Option<HashSet<Uuid>>
+}
+
+impl TotalSpent {
+    /// Only include transactions on `date`.
+    pub fn on(mut self, date: Date) -> Self {
+        self.date_filter = Some(DateFilter::On(date));
+        self
+    }
+
+    /// Only include transactions before `date`.
+    pub fn before(mut self, date: Date) -> Self {
+        self.date_filter = Some(DateFilter::Before(date));
+        self
+    }
+
+    /// Only include transactions before `date`.
+    pub fn between(mut self, start: Date, end: Date) -> Self {
+        self.date_filter = Some(DateFilter::Between {
+            start,
+            end,
+            inclusive: false,
+        });
+        self
+    }
+
+    /// Only include transactions on or before `date`.
+    pub fn on_or_before(mut self, date: Date) -> Self {
+        self.date_filter = Some(DateFilter::OnOrBefore(date));
+        self
+    }
+
+    /// Only include transactions on or after `date`.
+    pub fn on_or_after(mut self, date: Date) -> Self {
+        self.date_filter = Some(DateFilter::OnOrAfter(date));
+        self
+    }
+
+    /// Only include transactions after `date`.
+    pub fn after(mut self, date: Date) -> Self {
+        self.date_filter = Some(DateFilter::After(date));
+        self
+    }
+
+    /// Only includes transactions with the specified categories.
+    pub fn include_categories<I: IntoIterator<Item = Uuid>>(mut self, categories: I) -> Self {
+        let categories: HashSet<Uuid> = categories.into_iter().collect();
+        self.include_categories = Some(categories);
+        self
+    }
+
+    /// Excludes transactions with the specified categories.
+    pub fn exclude_categories<I: IntoIterator<Item = Uuid>>(mut self, categories: I) -> Self {
+        let categories: HashSet<Uuid> = categories.into_iter().collect();
+        self.exclude_categories = Some(categories);
+        self
+    }
+
+    pub fn get(self) -> crate::Result<Money> {
+        let transactions = self
+            .service
+            .fetch_transactions()?
+            .into_iter()
+            .filter(|t| t.transaction_type() == TransactionType::Expense);
+
+        let mut total = Money::ZERO;
+        for transaction in transactions {
+            if let Some(date_filter) = self.date_filter {
+                if !date_filter.filter_transaction(&transaction) {
+                    continue;
+                }
+            }
+
+            if let Some(excluded_categories) = &self.exclude_categories && let Some(category_id) = transaction.category_id{
+                if excluded_categories.contains(&category_id){
+                    continue;
+                }
+            }
+
+            if let Some(included_categories) = &self.include_categories && let Some(category_id) = transaction.category_id{
+                if !included_categories.contains(&category_id){
+                    continue;
+                }
+            }
+
+            if transaction.kind != TransactionKind::Regular {
+                continue;
+            }
+
+            total += transaction.amount;
+        }
+        Ok(total)
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use jiff::civil::date;
+
+    #[test]
+    fn total_spent_exclude_categories() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let group = service.create_category_group("")?;
+        let c1 = service.create_category("",group.id)?;
+        let c2 = service.create_category("",group.id)?;
+        service.create_expense().category(c1.id).amount(Money::new(250)).submit()?;
+        service.create_expense().category(c2.id).amount(Money::new(50)).submit()?;
+        let total = service.calculate_total_spent().exclude_categories([c2.id]).get()?;
+        assert_eq!(total, Money::new(250));
+        Ok(())
+    }
+
+    #[test]
+    fn total_spent_include_categories() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let group = service.create_category_group("")?;
+        let c1 = service.create_category("",group.id)?;
+        let c2 = service.create_category("",group.id)?;
+        service.create_expense().category(c1.id).amount(Money::new(250)).submit()?;
+        service.create_expense().category(c2.id).amount(Money::new(50)).submit()?;
+        let total = service.calculate_total_spent().include_categories([c2.id]).get()?;
+        assert_eq!(total, Money::new(25));
+        Ok(())
+    }
+
+    #[test]
+    fn total_spent_on_date() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        service.create_expense().amount(Money::new(250)).submit()?;
+        service
+            .create_expense()
+            .date(date(2020, 1, 1))
+            .amount(Money::new(75))
+            .submit()?;
+        service
+            .create_expense()
+            .date(date(2020, 1, 2))
+            .amount(Money::new(750))
+            .submit()?;
+        let total = service.calculate_total_spent().on(date(2020, 1, 1)).get()?;
+        assert_eq!(total, Money::new(75));
+        Ok(())
+    }
+
+    #[test]
+    fn total_spent_before_date() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        service.create_expense().amount(Money::new(250)).submit()?;
+        service
+            .create_expense()
+            .date(date(2020, 1, 1))
+            .amount(Money::new(750))
+            .submit()?;
+        service
+            .create_expense()
+            .date(date(2019, 12, 31))
+            .amount(Money::new(25))
+            .submit()?;
+        service
+            .create_expense()
+            .date(date(1900, 10, 1))
+            .amount(Money::new(75))
+            .submit()?;
+        let total = service
+            .calculate_total_spent()
+            .before(date(2020, 1, 1))
+            .get()?;
+        assert_eq!(total, Money::new(100));
+        Ok(())
+    }
+
+    #[test]
+    fn total_spent_after_date() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        service
+            .create_expense()
+            .date(date(2020, 1, 1))
+            .amount(Money::new(750))
+            .submit()?;
+        service
+            .create_expense()
+            .date(date(2020, 1, 2))
+            .amount(Money::new(25))
+            .submit()?;
+        service
+            .create_expense()
+            .date(date(2100, 10, 1))
+            .amount(Money::new(75))
+            .submit()?;
+        let total = service
+            .calculate_total_spent()
+            .after(date(2020, 1, 1))
+            .get()?;
+        assert_eq!(total, Money::new(100));
+        Ok(())
+    }
+
+    #[test]
+    fn total_spent_on_or_before_date() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        service
+            .create_expense()
+            .date(date(2020, 1, 1))
+            .amount(Money::new(75))
+            .submit()?;
+        service
+            .create_expense()
+            .date(date(2020, 1, 2))
+            .amount(Money::new(750))
+            .submit()?;
+        service
+            .create_expense()
+            .date(date(2019, 12, 31))
+            .amount(Money::new(25))
+            .submit()?;
+        let total = service
+            .calculate_total_spent()
+            .on_or_before(date(2020, 1, 1))
+            .get()?;
+        assert_eq!(total, Money::new(100));
+        Ok(())
+    }
+
+    #[test]
+    fn total_spent_between_dates() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        service
+            .create_expense()
+            .date(date(2028, 10, 1))
+            .amount(Money::new(750))
+            .submit()?;
+        service
+            .create_expense()
+            .date(date(2028, 10, 2))
+            .amount(Money::new(75))
+            .submit()?;
+        service
+            .create_expense()
+            .date(date(2028, 10, 29))
+            .amount(Money::new(25))
+            .submit()?;
+        service
+            .create_expense()
+            .date(date(2028, 10, 30))
+            .amount(Money::new(750))
+            .submit()?;
+        let total = service
+            .calculate_total_spent()
+            .between(date(2028, 10, 1), date(2028, 10, 30))
+            .get()?;
+        assert_eq!(total, Money::new(100));
+        let total = service
+            .calculate_total_spent()
+            .between(date(2028, 10, 30), date(2028, 10, 1))
+            .get()?;
+        assert_eq!(total, Money::new(0));
+        Ok(())
+    }
+
+    #[test]
+    fn total_spent_on_or_after_date() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        service
+            .create_expense()
+            .date(date(2020, 1, 1))
+            .amount(Money::new(75))
+            .submit()?;
+        service
+            .create_expense()
+            .date(date(2020, 1, 2))
+            .amount(Money::new(25))
+            .submit()?;
+        service
+            .create_expense()
+            .date(date(2019, 12, 31))
+            .amount(Money::new(750))
+            .submit()?;
+        let total = service
+            .calculate_total_spent()
+            .on_or_after(date(2020, 1, 1))
+            .get()?;
+        assert_eq!(total, Money::new(100));
+        Ok(())
+    }
+
+    #[test]
+    fn total_spent_excludes_incomes_and_transfers() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        let account1 = service.create_account("", AccountType::Cash)?;
+        let account2 = service.create_account("", AccountType::Cash)?;
+        service.create_expense().amount(Money::new(50)).submit()?;
+        service.create_income().amount(Money::new(75)).submit()?;
+        service
+            .create_transfer()
+            .accounts(account1.id, account2.id)
+            .amount(Money::new(25))
+            .submit()?;
+        let total = service.calculate_total_spent().get()?;
+        assert_eq!(total, Money::new(50));
+        Ok(())
+    }
+
+    #[test]
+    fn total_spent_excludes_starting_balance() -> crate::Result<()> {
+        let service = Service::open_in_memory()?;
+        service.create_account("", AccountType::Cash)?;
+        service
+            .create_expense()
+            .kind(TransactionKind::StartingBalance)
+            .amount(Money::new(75))
+            .submit()?;
+        service.create_expense().amount(Money::new(25)).submit()?;
+        let total = service.calculate_total_spent().get()?;
+        assert_eq!(total, Money::new(25));
+        Ok(())
+    }
 
     #[test]
     fn total_assignable() -> crate::Result<()> {
