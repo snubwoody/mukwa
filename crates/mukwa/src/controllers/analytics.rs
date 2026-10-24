@@ -88,7 +88,10 @@ impl AnalyticsController {
             .service
             .fetch_transactions()?
             .iter()
-            .filter(|t| t.transaction_type() == TransactionType::Expense && t.kind == TransactionKind::Regular)
+            .filter(|t| {
+                t.transaction_type() == TransactionType::Expense
+                    && t.kind == TransactionKind::Regular
+            })
             .filter(|t| t.date.year() == date.year() && t.date.month() == date.month())
             .filter(|t| {
                 !filtered_categories.contains(&t.category_id.unwrap_or_default().to_shared_string())
@@ -171,7 +174,9 @@ impl AnalyticsController {
                 continue;
             }
 
-            if transaction.transaction_type() != TransactionType::Expense  || transaction.kind == TransactionKind::StartingBalance {
+            if transaction.transaction_type() != TransactionType::Expense
+                || transaction.kind == TransactionKind::StartingBalance
+            {
                 continue;
             }
 
@@ -425,15 +430,19 @@ mod test {
         i_slint_backend_testing::init_no_event_loop();
         let app = MainWindow::new()?;
         let service = Service::open_in_memory()?;
-        service.create_account("",AccountType::Cash)?;
-        service.create_expense().kind(TransactionKind::StartingBalance).amount(Money::new(500)).submit()?;
+        service.create_account("", AccountType::Cash)?;
+        service
+            .create_expense()
+            .kind(TransactionKind::StartingBalance)
+            .amount(Money::new(500))
+            .submit()?;
         service.create_expense().amount(Money::new(25)).submit()?;
         AnalyticsController::bind(&app, &service);
 
         let analytics: AnalyticsApi = app.global();
         analytics.set_current_date(Zoned::now().date().into());
         let total_spent = analytics.invoke_total_spent();
-        assert_eq!(total_spent,Money::new(25).to_shared_string());
+        assert_eq!(total_spent, Money::new(25).to_shared_string());
         Ok(())
     }
 
@@ -499,8 +508,8 @@ mod test {
         let app = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let group = service.create_category_group("")?;
-        let account1 = service.create_account("",AccountType::Cash)?;
-        let account2 = service.create_account("",AccountType::Cash)?;
+        let account1 = service.create_account("", AccountType::Cash)?;
+        let account2 = service.create_account("", AccountType::Cash)?;
         let entertainment = service.create_category("Entertainment", group.id)?;
         let controller = AnalyticsController::bind(&app, &service);
 
@@ -511,7 +520,11 @@ mod test {
             .submit()?;
 
         service.create_income().amount(Money::new(50)).submit()?;
-        service.create_transfer().accounts(account1.id,account2.id).amount(Money::new(400)).submit()?;
+        service
+            .create_transfer()
+            .accounts(account1.id, account2.id)
+            .amount(Money::new(400))
+            .submit()?;
 
         let slices: Vec<_> = controller
             .draw_pie_chart(500.0, 500.0, ui::Date::default())?

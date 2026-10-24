@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+use crate::ui::{AnalyticsApi, CategoryState, CreateTransactionOpts, Settings, TransactionState};
 use i_slint_backend_testing::ElementHandle;
 use jiff::{ToSpan, Zoned, civil::date};
+use mukwa_core::service::TransactionKind;
 use mukwa_core::{Currency, Money, fmt::CurrencyFormatter, service::AccountType};
 use slint::{ComponentHandle, Model, SharedString, ToSharedString, platform::PointerEventButton};
-use mukwa_core::service::TransactionKind;
-use crate::ui::{AnalyticsApi, CategoryState, CreateTransactionOpts, Settings, TransactionState};
 
 use super::Result;
 
@@ -142,7 +142,11 @@ fn total_spent_excludes_starting_balance() -> Result<()> {
     let settings: Settings = app.global();
     settings.set_currency_code("USD".to_shared_string());
     service.create_account("", AccountType::Cash)?;
-    service.create_expense().kind(TransactionKind::StartingBalance).amount(Money::new(250)).submit()?;
+    service
+        .create_expense()
+        .kind(TransactionKind::StartingBalance)
+        .amount(Money::new(250))
+        .submit()?;
     service.create_expense().amount(Money::new(100)).submit()?;
 
     ElementHandle::find_by_accessible_label(&app, "Analytics")
@@ -167,8 +171,20 @@ fn total_spent_excludes_starting_balance() -> Result<()> {
     let mut formatter = CurrencyFormatter::new();
     formatter.set_currency(Currency::USD);
 
-    assert!(outer_total_spent.query_descendants().match_accessible_label(formatter.format_money(Money::new(100))?).find_first().is_some());
-    assert!(inner_total_spent.query_descendants().match_accessible_label(formatter.format_money(Money::new(100))?).find_first().is_some());
+    assert!(
+        outer_total_spent
+            .query_descendants()
+            .match_accessible_label(formatter.format_money(Money::new(100))?)
+            .find_first()
+            .is_some()
+    );
+    assert!(
+        inner_total_spent
+            .query_descendants()
+            .match_accessible_label(formatter.format_money(Money::new(100))?)
+            .find_first()
+            .is_some()
+    );
     Ok(())
 }
 
