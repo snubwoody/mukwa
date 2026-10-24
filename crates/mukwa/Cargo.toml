@@ -16,7 +16,6 @@ toml.workspace = true
 uuid.workspace = true
 rusqlite.workspace = true
 fontdb.workspace = true
-tempfile.workspace = true
 native-dialog = "0.9.7"
 csv = "1.4.0"
 ureq.workspace = true
@@ -28,6 +27,7 @@ sha2 = "0.11.1"
 
 [dev-dependencies]
 httpmock = "0.8.3"
+tempfile.workspace = true
 
 [dev-dependencies.i-slint-backend-testing]
 git = "https://github.com/snubwoody/slint.git"
