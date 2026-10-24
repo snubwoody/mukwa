@@ -3,6 +3,7 @@
 
 use clap::{Parser, Subcommand};
 use mukwa_core::auto_update::Manifest;
+use mukwa_core::error::ErrorExt;
 use mukwa_core::migrator::Migrator;
 use rusqlite::Connection;
 use std::collections::HashSet;
@@ -71,7 +72,9 @@ fn run() -> mukwa_core::Result<()> {
             MigrateCommand::Up => {
                 let mut connection = Connection::open(path)?;
                 let mut migrator = Migrator::new();
-                migrator.load_from_dir(&migrations_dir)?;
+                migrator
+                    .load_from_dir(&migrations_dir)
+                    .context("Failed to load from migrations")?;
                 migrator.migrate(&mut connection)?;
             }
             MigrateCommand::Rollback => {
@@ -86,7 +89,7 @@ fn run() -> mukwa_core::Result<()> {
             ManifestCommand::Create => {
                 let manifest = Manifest::create()?;
                 let path = std::path::Path::new("release-manifest.json");
-                std::fs::write(path, &serde_json::to_string_pretty(&manifest)?)?;
+                fs::write(path, &serde_json::to_string_pretty(&manifest)?)?;
                 info!("Created release manifest at {}", path.display());
             }
         },

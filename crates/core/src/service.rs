@@ -84,6 +84,27 @@ pub enum TransactionType {
     Transfer,
 }
 
+#[derive(PartialOrd, PartialEq, Debug, Clone, Copy, Eq, Ord, Default)]
+pub enum TransactionKind {
+    #[default]
+    Regular = 0,
+    StartingBalance = 1,
+}
+
+impl TryFrom<i64> for TransactionKind {
+    type Error = Error;
+
+    fn try_from(v: i64) -> Result<Self, Self::Error> {
+        match v {
+            x if x == TransactionKind::Regular as i64 => Ok(TransactionKind::Regular),
+            x if x == TransactionKind::StartingBalance as i64 => {
+                Ok(TransactionKind::StartingBalance)
+            }
+            _ => Err(Error::new(&format!("Unknown transaction kind: {v}"))),
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Debug, Default, Clone)]
 pub struct Transaction {
     pub id: Uuid,
@@ -95,6 +116,7 @@ pub struct Transaction {
     pub date: Date,
     pub note: Option<String>,
     pub amount: Money,
+    pub kind: TransactionKind,
 }
 
 impl Transaction {
@@ -158,6 +180,7 @@ impl<'a> TryFrom<&Row<'a>> for Transaction {
         let note: Option<String> = value.get("note")?;
         let transaction_date: String = value.get("transaction_date")?;
         let amount: i64 = value.get("amount")?;
+        let kind: TransactionKind = value.get::<_, i64>("kind")?.try_into()?;
 
         let category_id = match category_id {
             Some(id) => Some(Uuid::parse_str(&id)?),
@@ -182,6 +205,7 @@ impl<'a> TryFrom<&Row<'a>> for Transaction {
             sender_id,
             receiver_id,
             category_id,
+            kind,
         };
 
         Ok(transaction)
@@ -222,6 +246,7 @@ pub struct TransactionBuilder<T> {
     category_id: Option<Uuid>,
     note: Option<String>,
     marker: PhantomData<T>,
+    kind: TransactionKind,
 }
 
 impl<T> TransactionBuilder<T> {
@@ -235,6 +260,7 @@ impl<T> TransactionBuilder<T> {
             note: None,
             date: Zoned::now().date(),
             marker: PhantomData,
+            kind: TransactionKind::Regular,
         }
     }
 }
@@ -265,6 +291,12 @@ impl TransactionBuilder<Income> {
         self
     }
 
+    /// Sets the transaction kind
+    pub fn kind(mut self, kind: TransactionKind) -> Self {
+        self.kind = kind;
+        self
+    }
+
     /// Submits the query.
     pub fn submit(self) -> crate::Result<Transaction> {
         let account_id = match self.receiver_id {
@@ -279,8 +311,8 @@ impl TransactionBuilder<Income> {
         };
 
         let connection = self.service.connection();
-        let sql = "INSERT INTO transactions(id,transaction_date,receiver_id,amount,note) \
-            VALUES(?1,?2,?3,?4,?5) \
+        let sql = "INSERT INTO transactions(id,transaction_date,receiver_id,amount,note,kind) \
+            VALUES(?1,?2,?3,?4,?5,?6) \
             RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
         let params = params![
@@ -289,6 +321,7 @@ impl TransactionBuilder<Income> {
             account_id.to_string(),
             self.amount.inner(),
             self.note,
+            self.kind as i64
         ];
         let mut rows = stmt.query_and_then(params, |row| Transaction::try_from(row))?;
         let transaction = rows.next().unwrap()?;
@@ -307,6 +340,12 @@ impl TransactionBuilder<Expense> {
         self
     }
 
+    /// Sets the transaction kind
+    pub fn kind(mut self, kind: TransactionKind) -> Self {
+        self.kind = kind;
+        self
+    }
+
     /// Submits the query.
     pub fn submit(self) -> crate::Result<Transaction> {
         let account_id = match self.sender_id {
@@ -321,8 +360,8 @@ impl TransactionBuilder<Expense> {
         };
 
         let connection = self.service.connection();
-        let sql = "INSERT INTO transactions(id,transaction_date,sender_id,category_id,amount,note) \
-            VALUES(?1,?2,?3,?4,?5,?6) \
+        let sql = "INSERT INTO transactions(id,transaction_date,sender_id,category_id,amount,note,kind) \
+            VALUES(?1,?2,?3,?4,?5,?6,?7) \
             RETURNING *";
         let mut stmt = connection.prepare_cached(sql)?;
         let params = params![
@@ -332,6 +371,7 @@ impl TransactionBuilder<Expense> {
             self.category_id.map(|c| c.to_string()),
             self.amount.inner(),
             self.note,
+            self.kind as i64
         ];
         let mut rows = stmt.query_and_then(params, |row| Transaction::try_from(row))?;
         let transaction = rows.next().unwrap()?;
@@ -627,7 +667,7 @@ impl Service {
             let is_same_month = transaction.date.month() == month.month()
                 && transaction.date.year() == month.year();
 
-            if !is_same_month {
+            if !is_same_month || transaction.kind == TransactionKind::StartingBalance {
                 continue;
             }
 
@@ -672,7 +712,7 @@ impl Service {
         let connection = self.connection();
 
         let sql = "SELECT \
-            t.id,t.amount,t.transaction_date,t.sender_id,t.receiver_id,t.category_id,t.note \
+            t.id,t.amount,t.transaction_date,t.sender_id,t.receiver_id,t.category_id,t.note,t.kind \
             FROM transactions t \
             LEFT JOIN categories c ON t.category_id = c.id \
             WHERE c.group_id = ?";
