@@ -12,6 +12,7 @@ use slint::{ComponentHandle, Global, Model, ModelRc, SharedString, ToSharedStrin
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::str::FromStr;
+use std::time::Instant;
 use tracing::warn;
 use uuid::Uuid;
 
@@ -378,17 +379,34 @@ impl TransactionController {
         // TODO: button for clearing the search
         let categories = self.service.fetch_categories()?;
         let accounts = self.service.fetch_accounts()?;
-        let category_map: HashMap<SharedString,String> = categories.into_iter().map(|category|(category.id.to_shared_string(),category.title)).collect();
-        let account_map: HashMap<SharedString,String> = accounts.into_iter().map(|category|(category.id.to_shared_string(),category.name)).collect();
+        let category_map: HashMap<SharedString, String> = categories
+            .into_iter()
+            .map(|category| (category.id.to_shared_string(), category.title))
+            .collect();
+        let account_map: HashMap<SharedString, String> = accounts
+            .into_iter()
+            .map(|category| (category.id.to_shared_string(), category.name))
+            .collect();
+
         let mut matched_transactions = vec![];
         for transaction in self.transaction_state.get_all_transactions().iter() {
             if transaction.amount.contains(&query)
                 || transaction.note.contains(&query)
                 || transaction.date.contains(&query)
-                || category_map.get(&transaction.category_id).unwrap_or(&String::new()).contains(&query)
-                || account_map.get(&transaction.account_id).unwrap_or(&String::new()).contains(&query)
-                || account_map.get(&transaction.payee_id).unwrap_or(&String::new()).contains(&query)
+                || category_map
+                    .get(&transaction.category_id)
+                    .unwrap_or(&String::new())
+                    .contains(&query)
+                || account_map
+                    .get(&transaction.account_id)
+                    .unwrap_or(&String::new())
+                    .contains(&query)
+                || account_map
+                    .get(&transaction.payee_id)
+                    .unwrap_or(&String::new())
+                    .contains(&query)
             {
+                dbg!(&transaction);
                 matched_transactions.push(transaction);
             }
         }
@@ -484,6 +502,55 @@ mod test {
     use slint::{Model, SharedString, ToSharedString};
 
     use crate::ui::CreateTransactionOpts;
+
+    fn setup(f: impl FnOnce(&Service)) -> crate::Result<TransactionController> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        f(&service);
+        let controller = TransactionController::bind(&window, &service)?;
+        Ok(controller)
+    }
+
+    // TODO: test empty string
+    #[test]
+    fn search_matches_by_amount() -> crate::Result<()> {
+        let controller = setup(|service| {
+            let amounts = [3000.0, 300.0, 150.0, 1050.0, 555.0, 0.5, 90.97];
+            for amount in amounts {
+                service
+                    .create_expense()
+                    .date(date(9999, 9, 9)) // Should not contain 1s
+                    .amount(Money::from_f64(amount))
+                    .submit()
+                    .unwrap();
+            }
+        })?;
+
+        let state = controller.transaction_state.clone();
+        let test_search = |query: &str, len: usize| {
+            state.invoke_search(query.to_shared_string());
+            assert_eq!(
+                state.get_transactions().iter().len(),
+                len,
+                "Query: '{}' failed",
+                query
+            );
+        };
+
+        test_search("150", 1);
+        test_search("15", 1);
+        test_search("5", 4);
+        test_search("300", 2);
+        test_search("3", 2);
+        test_search("1", 2);
+        test_search("3000", 1);
+        test_search("1050", 1);
+        test_search(".9", 1);
+        test_search("0.5", 1);
+        test_search("0", 7);
+        Ok(())
+    }
 
     #[test]
     fn bind_loads_transactions_from_service() -> crate::Result<()> {
