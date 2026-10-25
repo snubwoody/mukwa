@@ -388,22 +388,26 @@ impl TransactionController {
             .map(|category| (category.id.to_shared_string(), category.name))
             .collect();
 
+        let query = query.to_ascii_lowercase();
         let mut matched_transactions = vec![];
         for transaction in self.transaction_state.get_all_transactions().iter() {
             if transaction.amount.contains(&query)
-                || transaction.note.contains(&query)
+                || transaction.note.to_ascii_lowercase().contains(&query)
                 || transaction.date.contains(&query)
                 || category_map
                     .get(&transaction.category_id)
                     .unwrap_or(&String::new())
+                    .to_ascii_lowercase()
                     .contains(&query)
                 || account_map
                     .get(&transaction.account_id)
                     .unwrap_or(&String::new())
+                    .to_ascii_lowercase()
                     .contains(&query)
                 || account_map
                     .get(&transaction.payee_id)
                     .unwrap_or(&String::new())
+                    .to_ascii_lowercase()
                     .contains(&query)
             {
                 dbg!(&transaction);
@@ -549,6 +553,79 @@ mod test {
         test_search(".9", 1);
         test_search("0.5", 1);
         test_search("0", 7);
+        Ok(())
+    }
+
+    #[test]
+    fn search_matches_by_note() -> crate::Result<()> {
+        let controller = setup(|service| {
+            let notes = ["PAYMENT", "Youtube Premium", "Burger King"];
+            for note in notes {
+                service.create_expense().note(note).submit().unwrap();
+            }
+        })?;
+
+        let state = controller.transaction_state.clone();
+        let test_search = |query: &str, len: usize| {
+            state.invoke_search(query.to_shared_string());
+            assert_eq!(
+                state.get_transactions().iter().len(),
+                len,
+                "Query: '{}' failed",
+                query
+            );
+        };
+
+        test_search("PAY", 1);
+        test_search("P", 2);
+        test_search("Y", 2);
+        test_search("you", 1);
+        test_search("premium", 1);
+        test_search("p", 2);
+        test_search("r", 2);
+        test_search("e", 3);
+        test_search("ki", 1);
+        Ok(())
+    }
+
+    #[test]
+    fn search_matches_by_account() -> crate::Result<()> {
+        let controller = setup(|service| {
+            let credit = service
+                .create_account("Credit card", AccountType::Credit)
+                .unwrap();
+            let savings = service
+                .create_account("Savings account", AccountType::Cash)
+                .unwrap();
+            service
+                .create_expense()
+                .account(credit.id)
+                .submit()
+                .unwrap();
+            service
+                .create_expense()
+                .account(savings.id)
+                .submit()
+                .unwrap();
+        })?;
+
+        let state = controller.transaction_state.clone();
+        let test_search = |query: &str, len: usize| {
+            state.invoke_search(query.to_shared_string());
+            assert_eq!(
+                state.get_transactions().iter().len(),
+                len,
+                "Query: '{}' failed",
+                query
+            );
+        };
+
+        test_search("i", 2);
+        test_search("Credit", 1);
+        test_search("car", 1);
+        test_search("s", 1);
+        test_search("a", 2);
+        test_search("A", 2);
         Ok(())
     }
 
