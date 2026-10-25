@@ -15,457 +15,426 @@ use std::str::FromStr;
 use tracing::warn;
 use uuid::Uuid;
 
-pub fn bind(window: &MainWindow, service: Service) -> crate::Result<()> {
-    let transaction_state: TransactionState = window.global();
-    let global_state: State = window.global();
-    let mut transactions = service.fetch_transactions()?;
-    transactions.sort_by(|a, b| a.date.cmp(&b.date).reverse());
-    let transactions_list: Vec<ui::Transaction> = transactions.iter().map(|t| t.into()).collect();
+pub fn bind(app: &MainWindow, service: Service) -> crate::Result<()> {
+    TransactionController::bind(app, &service)?;
+    Ok(())
+}
 
-    transaction_state.set_transactions(ModelRc::new(VecModel::from(transactions_list)));
-    transaction_state.set_selected_transactions(ModelRc::new(VecModel::default()));
+#[derive(Clone)]
+struct TransactionController {
+    transaction_state: Rc<TransactionState<'static>>,
+    service: Service,
+}
 
-    transaction_state.on_select_transaction({
-        let transaction_state = transaction_state.as_weak();
-        move |id| {
-            let transaction_state = transaction_state.unwrap();
-            if transaction_state
-                .get_selected_transactions()
-                .iter()
-                .find(|transaction_id| *transaction_id == id)
-                .is_some()
-            {
-                let selected_transactions: VecModel<_> = transaction_state
+impl TransactionController {
+    pub fn bind(app: &MainWindow, service: &Service) -> crate::Result<Self> {
+        let transaction_state: TransactionState = app.global();
+        let global_state: State = app.global();
+
+        let controller = Self {
+            transaction_state: Rc::new(transaction_state.as_weak().unwrap()),
+            service: service.clone(),
+        };
+
+        let mut transactions = service.fetch_transactions()?;
+        transactions.sort_by(|a, b| a.date.cmp(&b.date).reverse());
+        let transactions_list: Vec<ui::Transaction> =
+            transactions.iter().map(|t| t.into()).collect();
+
+        transaction_state.set_transactions(ModelRc::new(VecModel::from(transactions_list)));
+        transaction_state.set_selected_transactions(ModelRc::new(VecModel::default()));
+
+        transaction_state.on_select_transaction({
+            let transaction_state = transaction_state.as_weak();
+            move |id| {
+                let transaction_state = transaction_state.unwrap();
+                if transaction_state
                     .get_selected_transactions()
                     .iter()
-                    .filter(|transaction_id| *transaction_id != id)
-                    .collect();
-                transaction_state.set_selected_transactions(ModelRc::new(selected_transactions));
-                return;
-            }
-            if let Err(err) = transaction_state.get_selected_transactions().push_row(id) {
-                warn!("Failed to select transaction: {err}");
-            }
-        }
-    });
-
-    transaction_state.on_delete_selected_transactions({
-        let transaction_state = transaction_state.as_weak();
-        let service = service.clone();
-        let global_state = global_state.as_weak();
-        move || {
-            if let Err(err) = delete_selected_transactions(&transaction_state.unwrap(), &service) {
-                warn!("Failed to delete transactions: {err}");
-            }
-            global_state.unwrap().invoke_load_accounts();
-        }
-    });
-
-    transaction_state.on_delete_transaction({
-        let transaction_state = transaction_state.as_weak();
-        let service = service.clone();
-        let global_state = global_state.as_weak();
-        move |id| {
-            if let Err(err) = delete_transaction(&id, &transaction_state.unwrap(), &service) {
-                warn!("Failed to delete transaction: {err}");
-            }
-            global_state.unwrap().invoke_load_accounts();
-        }
-    });
-
-    transaction_state.on_confirm_transaction({
-        let transaction_state = transaction_state.as_weak();
-        let service = service.clone();
-        move |id| {
-            if let Err(err) = confirm_transaction(&id, &transaction_state.unwrap(), &service) {
-                warn!("Failed to confirm transaction: {err}");
-            }
-        }
-    });
-
-    transaction_state.on_set_transaction_category({
-        let transaction_state = transaction_state.as_weak();
-        let service = service.clone();
-        move |id, category_id| {
-            if let Err(err) =
-                set_transaction_category(&id, &category_id, &transaction_state.unwrap(), &service)
-            {
-                warn!(
-                    "{}",
-                    Error::with_source("Failed to set transaction category", err).report()
-                );
-            }
-        }
-    });
-
-    transaction_state.on_set_transaction_date({
-        let transaction_state = transaction_state.as_weak();
-        let service = service.clone();
-        move |id, date| {
-            if let Err(err) =
-                set_transaction_date(&id, &date, &transaction_state.unwrap(), &service)
-            {
-                warn!("Failed to set transaction date: {err}");
-            }
-        }
-    });
-
-    transaction_state.on_set_transaction_outflow({
-        let transaction_state = transaction_state.as_weak();
-        let service = service.clone();
-        let global_state = global_state.as_weak();
-        move |id, amount| {
-            if let Err(err) =
-                set_transaction_outflow(&id, &amount, &transaction_state.unwrap(), &service)
-            {
-                warn!("Failed to set transaction outflow: {err}");
-            }
-            global_state.unwrap().invoke_load_accounts();
-        }
-    });
-
-    transaction_state.on_set_transaction_inflow({
-        let transaction_state = transaction_state.as_weak();
-        let service = service.clone();
-        let global_state = global_state.as_weak();
-        move |id, amount| {
-            if let Err(err) =
-                set_transaction_inflow(&id, &amount, &transaction_state.unwrap(), &service)
-            {
-                warn!("Failed to set transaction inflow: {err}");
-            }
-            global_state.unwrap().invoke_load_accounts();
-        }
-    });
-
-    transaction_state.on_set_transaction_account({
-        let transaction_state = transaction_state.as_weak();
-        let service = service.clone();
-        move |id, account_id| {
-            if let Err(err) =
-                set_transaction_account(&id, &account_id, &transaction_state.unwrap(), &service)
-            {
-                warn!("Failed to set transaction account: {err}");
-            }
-        }
-    });
-
-    transaction_state.on_set_transaction_payee({
-        let transaction_state = transaction_state.as_weak();
-        let service = service.clone();
-        move |id, account_id| {
-            if let Err(err) =
-                set_transaction_payee(&id, &account_id, &transaction_state.unwrap(), &service)
-            {
-                warn!("Failed to set transaction payee: {err}");
-            }
-        }
-    });
-
-    transaction_state.on_set_transaction_note({
-        let transaction_state = transaction_state.as_weak();
-        let service = service.clone();
-        move |id, note| {
-            if let Err(err) =
-                set_transaction_note(&id, &note, &transaction_state.unwrap(), &service)
-            {
-                warn!("Failed to set transaction note: {err}");
-            }
-        }
-    });
-
-    transaction_state.on_create_transaction({
-        let transaction_state = transaction_state.as_weak();
-        let global_state = global_state.as_weak();
-        let service = service.clone();
-        move |opts| {
-            if let Err(err) = create_transaction(opts, &transaction_state.unwrap(), &service) {
-                warn!("Failed to create transaction: {err}")
-            }
-            global_state.unwrap().invoke_load_accounts();
-        }
-    });
-
-    transaction_state.on_is_transaction_unconfirmed({
-        let service = service.clone();
-        move |id| {
-            // Special case for the new transaction row
-            if id == "placeholder-transaction" {
-                return false;
-            }
-
-            match is_transaction_unconfirmed(&id, &service) {
-                Ok(value) => value,
-                Err(err) => {
-                    warn!(
-                        "{}",
-                        Error::with_source("Failed to check if transaction is unconfirmed", err)
-                            .report()
-                    );
-                    false
+                    .find(|transaction_id| *transaction_id == id)
+                    .is_some()
+                {
+                    let selected_transactions: VecModel<_> = transaction_state
+                        .get_selected_transactions()
+                        .iter()
+                        .filter(|transaction_id| *transaction_id != id)
+                        .collect();
+                    transaction_state
+                        .set_selected_transactions(ModelRc::new(selected_transactions));
+                    return;
+                }
+                if let Err(err) = transaction_state.get_selected_transactions().push_row(id) {
+                    warn!("Failed to select transaction: {err}");
                 }
             }
-        }
-    });
+        });
 
-    transaction_state.on_duplicate_transaction({
-        let transaction_state = transaction_state.as_weak();
-        let service = service.clone();
-        move |id| {
-            if let Err(err) = duplicate_transaction(&id, &transaction_state.unwrap(), &service) {
-                warn!("Failed to duplicate transaction: {err}");
+        transaction_state.on_delete_selected_transactions({
+            let global_state = global_state.as_weak();
+            let controller = controller.clone();
+            move || {
+                if let Err(err) = controller.delete_selected_transactions() {
+                    warn!("Failed to delete transactions: {err}");
+                }
+                global_state.unwrap().invoke_load_accounts();
             }
-        }
-    });
+        });
 
-    transaction_state.on_total_balance({
-        let transaction_state = transaction_state.as_weak();
-        move || {
-            let transaction_state = transaction_state.unwrap();
-            let mut total = Money::ZERO;
-            for transaction in transaction_state.get_transactions().iter() {
-                total -= Money::from_str(transaction.outflow.as_str()).unwrap_or_default();
-                total += Money::from_str(transaction.inflow.as_str()).unwrap_or_default();
+        transaction_state.on_delete_transaction({
+            let controller = controller.clone();
+            let global_state = global_state.as_weak();
+            move |id| {
+                if let Err(err) = controller.delete_transaction(&id) {
+                    warn!("Failed to delete transaction: {err}");
+                }
+                global_state.unwrap().invoke_load_accounts();
             }
-            total.to_shared_string()
-        }
-    });
+        });
 
-    transaction_state.on_load_transactions({
-        let transaction_state = transaction_state.as_weak();
-        let service = service.clone();
-        move || {
-            let transaction_state = transaction_state.unwrap();
-            if let Err(err) = load_transactions(&transaction_state, &service)
-                .context("Failed to load transactions")
-            {
-                warn!("{}", err.report())
+        transaction_state.on_confirm_transaction({
+            let controller = controller.clone();
+            move |id| {
+                if let Err(err) = controller.confirm_transaction(&id) {
+                    warn!("Failed to confirm transaction: {err}");
+                }
             }
-        }
-    });
+        });
 
-    Ok(())
-}
+        transaction_state.on_set_transaction_category({
+            let controller = controller.clone();
+            move |id, category_id| {
+                if let Err(err) = controller.set_transaction_category(&id, &category_id) {
+                    warn!(
+                        "{}",
+                        Error::with_source("Failed to set transaction category", err).report()
+                    );
+                }
+            }
+        });
 
-fn confirm_transaction(id: &str, state: &TransactionState, service: &Service) -> crate::Result<()> {
-    let id = Uuid::parse_str(id)?;
-    service.confirm_transaction(id)?;
-    load_transactions(state, service)?;
-    Ok(())
-}
+        transaction_state.on_set_transaction_date({
+            let controller = controller.clone();
+            move |id, date| {
+                if let Err(err) = controller.set_transaction_date(&id, &date) {
+                    warn!("Failed to set transaction date: {err}");
+                }
+            }
+        });
 
-fn is_transaction_unconfirmed(id: &str, service: &Service) -> crate::Result<bool> {
-    let unconfirmed_transactions: HashSet<Uuid> = service
-        .fetch_unconfirmed_transactions()?
-        .iter()
-        .copied()
-        .collect();
-    let id = Uuid::parse_str(id)?;
-    Ok(unconfirmed_transactions.contains(&id))
-}
+        transaction_state.on_set_transaction_outflow({
+            let global_state = global_state.as_weak();
+            let controller = controller.clone();
+            move |id, amount| {
+                if let Err(err) = controller.set_transaction_outflow(&id, &amount) {
+                    warn!("Failed to set transaction outflow: {err}");
+                }
+                global_state.unwrap().invoke_load_accounts();
+            }
+        });
 
-fn delete_transaction(id: &str, state: &TransactionState, service: &Service) -> crate::Result<()> {
-    let id = Uuid::parse_str(id)?;
-    service.delete_transaction(id)?;
-    load_transactions(state, service)?;
-    Ok(())
-}
+        transaction_state.on_set_transaction_inflow({
+            let global_state = global_state.as_weak();
+            let controller = controller.clone();
+            move |id, amount| {
+                if let Err(err) = controller.set_transaction_inflow(&id, &amount) {
+                    warn!("Failed to set transaction inflow: {err}");
+                }
+                global_state.unwrap().invoke_load_accounts();
+            }
+        });
 
-fn delete_selected_transactions(state: &TransactionState, service: &Service) -> crate::Result<()> {
-    if state.get_all_transactions_selected() {
-        for id in state
-            .get_transactions()
+        transaction_state.on_set_transaction_account({
+            let controller = controller.clone();
+            move |id, account_id| {
+                if let Err(err) = controller.set_transaction_account(&id, &account_id) {
+                    warn!("Failed to set transaction account: {err}");
+                }
+            }
+        });
+
+        transaction_state.on_set_transaction_payee({
+            let controller = controller.clone();
+            move |id, account_id| {
+                if let Err(err) = controller.set_transaction_payee(&id, &account_id) {
+                    warn!("Failed to set transaction payee: {err}");
+                }
+            }
+        });
+
+        transaction_state.on_set_transaction_note({
+            let controller = controller.clone();
+            move |id, note| {
+                if let Err(err) = controller.set_transaction_note(&id, &note) {
+                    warn!("Failed to set transaction note: {err}");
+                }
+            }
+        });
+
+        transaction_state.on_create_transaction({
+            let global_state = global_state.as_weak();
+            let controller = controller.clone();
+            move |opts| {
+                if let Err(err) = controller
+                    .create_transaction(opts)
+                    .context("Failed to create transaction")
+                {
+                    warn!("{}", err.report())
+                }
+                global_state.unwrap().invoke_load_accounts();
+            }
+        });
+
+        transaction_state.on_is_transaction_unconfirmed({
+            let controller = controller.clone();
+            move |id| {
+                // Special case for the new transaction row
+                if id == "placeholder-transaction" {
+                    return false;
+                }
+
+                match controller.is_transaction_unconfirmed(&id) {
+                    Ok(value) => value,
+                    Err(err) => {
+                        warn!(
+                            "{}",
+                            Error::with_source(
+                                "Failed to check if transaction is unconfirmed",
+                                err
+                            )
+                            .report()
+                        );
+                        false
+                    }
+                }
+            }
+        });
+
+        transaction_state.on_duplicate_transaction({
+            let controller = controller.clone();
+            move |id| {
+                if let Err(err) = controller
+                    .duplicate_transaction(&id)
+                    .context("Failed to duplicate transaction")
+                {
+                    warn!("{}", err.report());
+                }
+            }
+        });
+
+        transaction_state.on_total_balance({
+            let transaction_state = transaction_state.as_weak();
+            move || {
+                let transaction_state = transaction_state.unwrap();
+                let mut total = Money::ZERO;
+                for transaction in transaction_state.get_transactions().iter() {
+                    total -= Money::from_str(transaction.outflow.as_str()).unwrap_or_default();
+                    total += Money::from_str(transaction.inflow.as_str()).unwrap_or_default();
+                }
+                total.to_shared_string()
+            }
+        });
+
+        transaction_state.on_load_transactions({
+            let controller = controller.clone();
+            move || {
+                if let Err(err) = controller
+                    .load_transactions()
+                    .context("Failed to load transactions")
+                {
+                    warn!("{}", err.report())
+                }
+            }
+        });
+
+        Ok(controller)
+    }
+
+    fn confirm_transaction(&self, id: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        self.service.confirm_transaction(id)?;
+        self.load_transactions()?;
+        Ok(())
+    }
+
+    fn is_transaction_unconfirmed(&self, id: &str) -> crate::Result<bool> {
+        let unconfirmed_transactions: HashSet<Uuid> = self
+            .service
+            .fetch_unconfirmed_transactions()?
             .iter()
-            .map(|transaction| transaction.id)
-        {
+            .copied()
+            .collect();
+        let id = Uuid::parse_str(id)?;
+        Ok(unconfirmed_transactions.contains(&id))
+    }
+
+    fn delete_transaction(&self, id: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        self.service.delete_transaction(id)?;
+        self.load_transactions()?;
+        Ok(())
+    }
+
+    fn delete_selected_transactions(&self) -> crate::Result<()> {
+        let state = &self.transaction_state;
+        let service = &self.service;
+        if state.get_all_transactions_selected() {
+            for id in state
+                .get_transactions()
+                .iter()
+                .map(|transaction| transaction.id)
+            {
+                let id = Uuid::parse_str(&id)?;
+                service.delete_transaction(id)?;
+            }
+        }
+
+        for id in state.get_selected_transactions().iter() {
             let id = Uuid::parse_str(&id)?;
             service.delete_transaction(id)?;
         }
+        self.load_transactions()?;
+        state.set_all_transactions_selected(false);
+        state.set_selected_transactions(ModelRc::new(VecModel::default()));
+        Ok(())
     }
 
-    for id in state.get_selected_transactions().iter() {
-        let id = Uuid::parse_str(&id)?;
-        service.delete_transaction(id)?;
-    }
-    load_transactions(state, service)?;
-    state.set_all_transactions_selected(false);
-    state.set_selected_transactions(ModelRc::new(VecModel::default()));
-    Ok(())
-}
-
-fn create_transaction(
-    opts: ui::CreateTransactionOpts,
-    state: &TransactionState,
-    service: &Service,
-) -> crate::Result<()> {
-    let date = if opts.date.is_empty() {
-        Zoned::now().date()
-    } else {
-        Date::strptime("%Y-%m-%d", &opts.date)?
-    };
-
-    let transaction =
-        if !opts.outflow.is_empty() && opts.inflow.is_empty() && opts.payee_id.is_empty() {
-            let amount = Money::from_str(&opts.outflow)?;
-            let mut builder = service.create_expense().amount(amount).date(date);
-
-            if !opts.account_id.is_empty() {
-                builder = builder.account(Uuid::parse_str(&opts.account_id)?);
-            }
-
-            if !opts.category_id.is_empty() {
-                builder = builder.category(Uuid::parse_str(&opts.category_id)?);
-            }
-
-            if !opts.note.is_empty() {
-                builder = builder.note(&opts.note);
-            }
-
-            builder.submit()?
-        } else if !opts.inflow.is_empty() {
-            let amount = Money::from_str(&opts.inflow)?;
-            let mut builder = service.create_income().amount(amount).date(date);
-
-            if !opts.account_id.is_empty() {
-                builder = builder.account(Uuid::parse_str(&opts.account_id)?);
-            }
-
-            if !opts.note.is_empty() {
-                builder = builder.note(&opts.note);
-            }
-
-            builder.submit()?
+    fn create_transaction(&self, opts: ui::CreateTransactionOpts) -> crate::Result<()> {
+        let date = if opts.date.is_empty() {
+            Zoned::now().date()
         } else {
-            let amount = Money::from_str(&opts.outflow)?;
-            let account_id = Uuid::parse_str(&opts.account_id)?;
-            let payee_id = Uuid::parse_str(&opts.payee_id)?;
-            let mut builder = service
-                .create_transfer()
-                .accounts(account_id, payee_id)
-                .amount(amount)
-                .date(date);
-
-            if !opts.note.is_empty() {
-                builder = builder.note(&opts.note);
-            }
-
-            builder.submit()?
+            Date::strptime("%Y-%m-%d", &opts.date)?
         };
 
-    state.get_transactions().insert_row(0, transaction.into())?;
-    Ok(())
-}
+        let service = &self.service;
+        let transaction =
+            if !opts.outflow.is_empty() && opts.inflow.is_empty() && opts.payee_id.is_empty() {
+                let amount = Money::from_str(&opts.outflow)?;
+                let mut builder = service.create_expense().amount(amount).date(date);
 
-fn duplicate_transaction(
-    id: &str,
-    state: &TransactionState,
-    service: &Service,
-) -> crate::Result<()> {
-    let id = Uuid::parse_str(id)?;
-    let transaction = service.duplicate_transaction(id)?;
-    state.get_transactions().push_row(transaction.into())?;
-    Ok(())
-}
+                if !opts.account_id.is_empty() {
+                    builder = builder.account(Uuid::parse_str(&opts.account_id)?);
+                }
 
-fn load_transactions(state: &TransactionState, service: &Service) -> crate::Result<()> {
-    let transactions: Vec<ui::Transaction> = service
-        .fetch_transactions()?
-        .iter()
-        .map(|t| t.into())
-        .collect();
+                if !opts.category_id.is_empty() {
+                    builder = builder.category(Uuid::parse_str(&opts.category_id)?);
+                }
 
-    state.set_transactions(ModelRc::new(Rc::new(VecModel::from(transactions))));
-    Ok(())
-}
+                if !opts.note.is_empty() {
+                    builder = builder.note(&opts.note);
+                }
 
-fn set_transaction_date(
-    id: &str,
-    date: &str,
-    state: &TransactionState,
-    service: &Service,
-) -> crate::Result<()> {
-    let id = Uuid::parse_str(id)?;
-    let date = Date::strptime("%Y-%m-%d", date)?;
-    service.set_transaction_date(id, date)?;
-    load_transactions(state, service)?;
-    Ok(())
-}
+                builder.submit()?
+            } else if !opts.inflow.is_empty() {
+                let amount = Money::from_str(&opts.inflow)?;
+                let mut builder = service.create_income().amount(amount).date(date);
 
-fn set_transaction_note(
-    id: &str,
-    note: &str,
-    state: &TransactionState,
-    service: &Service,
-) -> crate::Result<()> {
-    let id = Uuid::parse_str(id)?;
-    service.set_transaction_note(id, note)?;
-    load_transactions(state, service)?;
-    Ok(())
-}
+                if !opts.account_id.is_empty() {
+                    builder = builder.account(Uuid::parse_str(&opts.account_id)?);
+                }
 
-fn set_transaction_account(
-    id: &str,
-    account_id: &str,
-    state: &TransactionState,
-    service: &Service,
-) -> crate::Result<()> {
-    let id = Uuid::parse_str(id)?;
-    let account_id = Uuid::parse_str(account_id)?;
-    service.set_transaction_account(id, account_id)?;
-    load_transactions(state, service)?;
-    Ok(())
-}
+                if !opts.note.is_empty() {
+                    builder = builder.note(&opts.note);
+                }
 
-fn set_transaction_payee(
-    id: &str,
-    account_id: &str,
-    state: &TransactionState,
-    service: &Service,
-) -> crate::Result<()> {
-    let id = Uuid::parse_str(id)?;
-    let account_id = Uuid::parse_str(account_id)?;
-    service.set_transaction_payee(id, account_id)?;
-    load_transactions(state, service)?;
-    Ok(())
-}
+                builder.submit()?
+            } else {
+                let amount = Money::from_str(&opts.outflow)?;
+                let account_id = Uuid::parse_str(&opts.account_id)?;
+                let payee_id = Uuid::parse_str(&opts.payee_id)?;
+                let mut builder = service
+                    .create_transfer()
+                    .accounts(account_id, payee_id)
+                    .amount(amount)
+                    .date(date);
 
-fn set_transaction_outflow(
-    id: &str,
-    amount: &str,
-    state: &TransactionState,
-    service: &Service,
-) -> crate::Result<()> {
-    let id = Uuid::parse_str(id)?;
-    let amount = Money::from_str(amount)?;
-    service.set_transaction_outflow(id, amount)?;
-    load_transactions(state, service)?;
-    Ok(())
-}
+                if !opts.note.is_empty() {
+                    builder = builder.note(&opts.note);
+                }
 
-fn set_transaction_inflow(
-    id: &str,
-    amount: &str,
-    state: &TransactionState,
-    service: &Service,
-) -> crate::Result<()> {
-    let id = Uuid::parse_str(id)?;
-    let amount = Money::from_str(amount)?;
-    service.set_transaction_inflow(id, amount)?;
-    load_transactions(state, service)?;
-    Ok(())
-}
+                builder.submit()?
+            };
 
-fn set_transaction_category(
-    id: &str,
-    category_id: &str,
-    state: &TransactionState,
-    service: &Service,
-) -> crate::Result<()> {
-    let id = Uuid::parse_str(id).context("Failed to parse transaction id")?;
-    let category_id = Uuid::parse_str(category_id).context("Failed to parse category id")?;
-    service.set_transaction_category(id, category_id)?;
-    load_transactions(state, service)?;
-    Ok(())
+        self.transaction_state
+            .get_transactions()
+            .insert_row(0, transaction.into())?;
+        Ok(())
+    }
+
+    fn duplicate_transaction(&self, id: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let transaction = self.service.duplicate_transaction(id)?;
+        self.transaction_state
+            .get_transactions()
+            .push_row(transaction.into())?;
+        Ok(())
+    }
+
+    fn load_transactions(&self) -> crate::Result<()> {
+        let transactions: Vec<ui::Transaction> = self
+            .service
+            .fetch_transactions()?
+            .iter()
+            .map(|t| t.into())
+            .collect();
+        self.transaction_state
+            .set_transactions(ModelRc::new(Rc::new(VecModel::from(transactions))));
+        Ok(())
+    }
+
+    fn set_transaction_date(&self, id: &str, date: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let date = Date::strptime("%Y-%m-%d", date)?;
+        self.service.set_transaction_date(id, date)?;
+        self.load_transactions()?;
+        Ok(())
+    }
+
+    fn set_transaction_note(&self, id: &str, note: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        self.service.set_transaction_note(id, note)?;
+        self.load_transactions()?;
+        Ok(())
+    }
+
+    fn set_transaction_account(&self, id: &str, account_id: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let account_id = Uuid::parse_str(account_id)?;
+        self.service.set_transaction_account(id, account_id)?;
+        self.load_transactions()?;
+        Ok(())
+    }
+
+    fn set_transaction_payee(&self, id: &str, account_id: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let account_id = Uuid::parse_str(account_id)?;
+        self.service.set_transaction_payee(id, account_id)?;
+        self.load_transactions()?;
+        Ok(())
+    }
+
+    fn set_transaction_outflow(&self, id: &str, amount: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let amount = Money::from_str(amount)?;
+        self.service.set_transaction_outflow(id, amount)?;
+        self.load_transactions()?;
+        Ok(())
+    }
+
+    fn set_transaction_inflow(&self, id: &str, amount: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let amount = Money::from_str(amount)?;
+        self.service.set_transaction_inflow(id, amount)?;
+        self.load_transactions()?;
+        Ok(())
+    }
+
+    fn set_transaction_category(&self, id: &str, category_id: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id).context("Failed to parse transaction id")?;
+        let category_id = Uuid::parse_str(category_id).context("Failed to parse category id")?;
+        self.service.set_transaction_category(id, category_id)?;
+        self.load_transactions()?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -489,7 +458,7 @@ mod test {
             .amount(Money::new(50))
             .date(date(2021, 10, 24))
             .submit()?;
-        bind(&window, service)?;
+        TransactionController::bind(&window, &service)?;
 
         let transaction_state: TransactionState = window.global();
         let transaction = transaction_state.get_transactions().iter().next().unwrap();
@@ -512,7 +481,7 @@ mod test {
             .amount(Money::new(500))
             .date(date(2021, 10, 24))
             .submit()?;
-        bind(&window, service)?;
+        TransactionController::bind(&window, &service)?;
 
         let transaction_state: TransactionState = window.global();
         transaction_state.invoke_delete_transaction(expense2.id.to_shared_string());
@@ -532,7 +501,8 @@ mod test {
         let account = service.create_account("", AccountType::Cash)?;
         let group = service.create_category_group("")?;
         let category = service.create_category("", group.id)?;
-        bind(&window, service)?;
+
+        TransactionController::bind(&window, &service)?;
 
         let opts = CreateTransactionOpts {
             account_id: account.id.to_shared_string(),
@@ -563,7 +533,7 @@ mod test {
         let service = Service::open_in_memory()?;
         let transaction_state: TransactionState = window.global();
         let account = service.create_account("", AccountType::Cash)?;
-        bind(&window, service)?;
+        TransactionController::bind(&window, &service)?;
         let opts = CreateTransactionOpts {
             account_id: account.id.to_shared_string(),
             inflow: "0.00".to_shared_string(),
@@ -590,7 +560,7 @@ mod test {
         let service = Service::open_in_memory()?;
         let transaction_state: TransactionState = window.global();
         let account = service.create_account("", AccountType::Cash)?;
-        bind(&window, service)?;
+        TransactionController::bind(&window, &service)?;
         let opts = CreateTransactionOpts {
             account_id: account.id.to_shared_string(),
             inflow: "0.00".to_shared_string(),
@@ -617,7 +587,7 @@ mod test {
         let service = Service::open_in_memory()?;
         let transaction_state: TransactionState = window.global();
         let account = service.create_account("", AccountType::Cash)?;
-        bind(&window, service)?;
+        TransactionController::bind(&window, &service)?;
         let opts = CreateTransactionOpts {
             outflow: "50.00".to_shared_string(),
             account_id: account.id.to_shared_string(),
@@ -637,7 +607,7 @@ mod test {
         let service = Service::open_in_memory()?;
         let transaction_state: TransactionState = window.global();
         let account = service.create_account("", AccountType::Cash)?;
-        bind(&window, service)?;
+        TransactionController::bind(&window, &service)?;
         let opts = CreateTransactionOpts {
             outflow: "50.00".to_shared_string(),
             account_id: account.id.to_shared_string(),
@@ -661,7 +631,7 @@ mod test {
         let account = service.create_account("", AccountType::Cash)?;
         let group = service.create_category_group("")?;
         let category = service.create_category("", group.id)?;
-        bind(&window, service)?;
+        TransactionController::bind(&window, &service)?;
         let opts = CreateTransactionOpts {
             account_id: account.id.to_shared_string(),
             inflow: "50.00".to_shared_string(),
@@ -685,7 +655,7 @@ mod test {
         let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let transaction_state: TransactionState = window.global();
-        bind(&window, service)?;
+        TransactionController::bind(&window, &service)?;
 
         transaction_state.invoke_select_transaction("1".to_shared_string());
         transaction_state.invoke_select_transaction("2".to_shared_string());
@@ -715,7 +685,7 @@ mod test {
         let t1 = service.create_expense().submit()?;
         let t2 = service.create_expense().submit()?;
         let transaction_state: TransactionState = window.global();
-        bind(&window, service)?;
+        TransactionController::bind(&window, &service)?;
 
         let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
         assert_eq!(transactions.len(), 2);
@@ -742,7 +712,7 @@ mod test {
         let t1 = service.create_expense().submit()?;
         service.create_expense().submit()?;
         let transaction_state: TransactionState = window.global();
-        bind(&window, service)?;
+        TransactionController::bind(&window, &service)?;
 
         let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
         assert_eq!(transactions.len(), 2);
