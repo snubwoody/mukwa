@@ -441,7 +441,9 @@ impl TransactionController {
             .map(|t| t.into())
             .collect();
         self.transaction_state
-            .set_transactions(ModelRc::new(Rc::new(VecModel::from(transactions))));
+            .set_transactions(ModelRc::new(Rc::new(VecModel::from(transactions.clone()))));
+        self.transaction_state
+            .set_all_transactions(ModelRc::new(Rc::new(VecModel::from(transactions))));
         Ok(())
     }
 
