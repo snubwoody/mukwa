@@ -660,6 +660,12 @@ export component TransactionPage inherits VerticalLayout {
                 }
             }
 
+            // TODO: esc to unfocus and unfocus when clicked outside
+            // TODO: add x icon to clear
+            TextField {
+                width: 150px;
+            }
+
             PrimaryButton {
                 text: @tr("New");
                 clicked => {
