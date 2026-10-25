@@ -530,6 +530,9 @@ component TransactionTableHeader inherits TableRow {
 
             Icon {
                 icon: Icons.info;
+                stroke: Colors.textMuted;
+                stroke-width: 1.6px;
+                size: 14px;
             }
 
             Text {
@@ -584,6 +587,49 @@ component TransactionTableHeader inherits TableRow {
         Text {
             text: @tr("Inflow");
             color: Colors.textBody;
+        }
+    }
+}
+
+component Search {
+    property <bool> active;
+    // TODO: esc to unfocus and unfocus when clicked outside
+
+    HorizontalLayout {
+        alignment: end;
+        cross-axis-alignment: center;
+        spacing: 8px;
+
+        IconButton {
+            icon: Icons.search;
+            theme: ghost;
+            accessible-label: @tr("Search");
+            clicked => {
+                active = true;
+            }
+        }
+
+        if active: TextField {
+            width: 0;
+            border-width: 0;
+            init => {
+                self.width = 150px;
+                self.focus();
+            }
+            animate width { duration: 150ms; }
+            edited => {
+                TransactionState.search(self.text);
+            }
+        }
+
+        if active: IconButton {
+            icon: Icons.x;
+            theme: ghost;
+            accessible-label: @tr("Clear");
+            clicked => {
+                active = false;
+                TransactionState.clear-search();
+            }
         }
     }
 }
@@ -660,14 +706,7 @@ export component TransactionPage inherits VerticalLayout {
                 }
             }
 
-            // TODO: esc to unfocus and unfocus when clicked outside
-            // TODO: add x icon to clear
-            TextField {
-                width: 150px;
-                edited => {
-                    TransactionState.search(self.text);
-                }
-            }
+            Search { }
 
             PrimaryButton {
                 text: @tr("New");

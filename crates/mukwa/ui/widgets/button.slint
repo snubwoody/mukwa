@@ -131,7 +131,7 @@ export component IconButton {
         if (button-theme == IconButtonTheme.accent) {
             return white;
         }
-        return Colors.textBody;
+        return Colors.textMuted;
     }
 
     forward-focus: focus-scope;
@@ -150,7 +150,7 @@ export component IconButton {
         Icon {
             icon: root.icon;
             size: FontSize.body;
-            stroke-width: 1.5px;
+            stroke-width: 1.6px;
             stroke: icon-color(theme);
         }
     }

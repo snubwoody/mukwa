@@ -12,7 +12,6 @@ use slint::{ComponentHandle, Global, Model, ModelRc, SharedString, ToSharedStrin
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::str::FromStr;
-use std::time::Instant;
 use tracing::warn;
 use uuid::Uuid;
 
@@ -99,6 +98,15 @@ impl TransactionController {
                 if let Err(err) = controller.search(&query) {
                     warn!("Failed to search transactions: {err}");
                 }
+            }
+        });
+
+        transaction_state.on_clear_search({
+            let controller = controller.clone();
+            move || {
+                controller
+                    .transaction_state
+                    .set_transactions(controller.transaction_state.get_all_transactions());
             }
         });
 
@@ -372,11 +380,9 @@ impl TransactionController {
     }
 
     fn search(&self, query: &str) -> crate::Result<()> {
-        // TODO: maybe split by words
         // TODO: test that it doesnt load transactions
         // TODO: if it's empty then just add all transactions
         // TODO: for some reason / matches zero transactions
-        // TODO: button for clearing the search
         let categories = self.service.fetch_categories()?;
         let accounts = self.service.fetch_accounts()?;
         let category_map: HashMap<SharedString, String> = categories
@@ -410,7 +416,6 @@ impl TransactionController {
                     .to_ascii_lowercase()
                     .contains(&query)
             {
-                dbg!(&transaction);
                 matched_transactions.push(transaction);
             }
         }
