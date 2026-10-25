@@ -664,6 +664,9 @@ export component TransactionPage inherits VerticalLayout {
             // TODO: add x icon to clear
             TextField {
                 width: 150px;
+                edited => {
+                    TransactionState.search(self.text);
+                }
             }
 
             PrimaryButton {

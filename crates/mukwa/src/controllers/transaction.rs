@@ -8,8 +8,8 @@ use jiff::civil::Date;
 use mukwa_core::error::ErrorExt;
 use mukwa_core::service::Service;
 use mukwa_core::{Error, Money};
-use slint::{ComponentHandle, Global, Model, ModelRc, ToSharedString, VecModel};
-use std::collections::HashSet;
+use slint::{ComponentHandle, Global, Model, ModelRc, SharedString, ToSharedString, VecModel};
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::str::FromStr;
 use tracing::warn;
@@ -41,7 +41,8 @@ impl TransactionController {
         let transactions_list: Vec<ui::Transaction> =
             transactions.iter().map(|t| t.into()).collect();
 
-        transaction_state.set_transactions(ModelRc::new(VecModel::from(transactions_list)));
+        transaction_state.set_transactions(ModelRc::new(VecModel::from(transactions_list.clone())));
+        transaction_state.set_all_transactions(ModelRc::new(VecModel::from(transactions_list)));
         transaction_state.set_selected_transactions(ModelRc::new(VecModel::default()));
 
         transaction_state.on_select_transaction({
@@ -88,6 +89,15 @@ impl TransactionController {
                     warn!("Failed to delete transaction: {err}");
                 }
                 global_state.unwrap().invoke_load_accounts();
+            }
+        });
+
+        transaction_state.on_search({
+            let controller = controller.clone();
+            move |query| {
+                if let Err(err) = controller.search(&query) {
+                    warn!("Failed to search transactions: {err}");
+                }
             }
         });
 
@@ -357,6 +367,33 @@ impl TransactionController {
         self.transaction_state
             .get_transactions()
             .insert_row(0, transaction.into())?;
+        Ok(())
+    }
+
+    fn search(&self, query: &str) -> crate::Result<()> {
+        // TODO: maybe split by words
+        // TODO: test that it doesnt load transactions
+        // TODO: if it's empty then just add all transactions
+        // TODO: for some reason / matches zero transactions
+        // TODO: button for clearing the search
+        let categories = self.service.fetch_categories()?;
+        let accounts = self.service.fetch_accounts()?;
+        let category_map: HashMap<SharedString,String> = categories.into_iter().map(|category|(category.id.to_shared_string(),category.title)).collect();
+        let account_map: HashMap<SharedString,String> = accounts.into_iter().map(|category|(category.id.to_shared_string(),category.name)).collect();
+        let mut matched_transactions = vec![];
+        for transaction in self.transaction_state.get_all_transactions().iter() {
+            if transaction.amount.contains(&query)
+                || transaction.note.contains(&query)
+                || transaction.date.contains(&query)
+                || category_map.get(&transaction.category_id).unwrap_or(&String::new()).contains(&query)
+                || account_map.get(&transaction.account_id).unwrap_or(&String::new()).contains(&query)
+                || account_map.get(&transaction.payee_id).unwrap_or(&String::new()).contains(&query)
+            {
+                matched_transactions.push(transaction);
+            }
+        }
+        self.transaction_state
+            .set_transactions(ModelRc::new(VecModel::from(matched_transactions)));
         Ok(())
     }
 
