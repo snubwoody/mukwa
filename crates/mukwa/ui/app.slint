@@ -339,11 +339,11 @@ export component MainWindow inherits Window {
     icon: @image-url("../resources/icons/app-icon.png");
     default-font-family: Settings.font-family;
     default-font-size: FontSize.body;
-    no-frame: Platform.os == windows ? true : false;
+    no-frame: Platform.os == windows || Platform.os == linux ? true : false;
     resize-border-width: root.maximized ? 0px : 4px;
 
     VerticalLayout {
-        if Platform.os == windows: TitleBar {
+        if Platform.os == windows || Platform.os == linux : TitleBar {
             window-maximized: root.maximized;
             minimized => {
                 Api.minimize();

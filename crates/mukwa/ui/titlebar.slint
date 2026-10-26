@@ -6,11 +6,16 @@ import { PrimaryButton } from "widgets.slint";
 import { AutoUpdater } from "globals.slint";
 import { ProgressBar } from "widgets/progress-bar.slint";
 
-enum TitleBarButtonTheme { windows, windows-x }
+enum TitleBarButtonTheme {
+    windows,
+    windows-x,
+    gnome,
+}
 
 export component TitleBarButton {
     in-out property <TitleBarButtonTheme> theme;
     in property <length> size: 40px;
+    in property <length> border-radius: 0;
 
     width: size;
     height: 100%;
@@ -23,6 +28,10 @@ export component TitleBarButton {
     }
 
     function background-color(button-theme: TitleBarButtonTheme) -> color {
+        if (button-theme == TitleBarButtonTheme.gnome) {
+            return Colors.neutral100;
+        }
+
         return transparent;
     }
 
@@ -33,6 +42,9 @@ export component TitleBarButton {
         if (button-theme == TitleBarButtonTheme.windows-x) {
             return #e81120;
         }
+        if (button-theme == TitleBarButtonTheme.gnome) {
+            return Colors.neutral200;
+        }
         return transparent;
     }
 
@@ -42,6 +54,7 @@ export component TitleBarButton {
 
     background := Rectangle {
         background: touch-area.has-hover ? hover-background-color(theme) : background-color(theme);
+        border-radius: border-radius;
         animate background { duration: 250ms; }
     }
 
@@ -115,6 +128,24 @@ export component TitleBar inherits WindowMoveArea {
             }
 
             HorizontalLayout {
+                spacing: 8px;
+                padding-right: 8px;
+                cross-axis-alignment: center;
+
+                TitleBarButton {
+                    width: 20px;
+                    height: 20px;
+                    theme: gnome;
+                    border-radius: 999px;
+                    accessible-label: @tr("Close window");
+                    clicked => closed();
+                    Image {
+                        source: @image-url("assets/adwaita_window_close.svg");
+                    }
+                }
+            }
+
+            if Platform.os == windows: HorizontalLayout {
                 height: 100%;
                 TitleBarButton {
                     theme: windows;
