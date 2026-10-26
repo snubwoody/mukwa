@@ -8,8 +8,8 @@ use jiff::civil::Date;
 use mukwa_core::error::ErrorExt;
 use mukwa_core::service::Service;
 use mukwa_core::{Error, Money};
-use slint::{ComponentHandle, Global, Model, ModelRc, ToSharedString, VecModel};
-use std::collections::HashSet;
+use slint::{ComponentHandle, Global, Model, ModelRc, SharedString, ToSharedString, VecModel};
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::str::FromStr;
 use tracing::warn;
@@ -41,7 +41,8 @@ impl TransactionController {
         let transactions_list: Vec<ui::Transaction> =
             transactions.iter().map(|t| t.into()).collect();
 
-        transaction_state.set_transactions(ModelRc::new(VecModel::from(transactions_list)));
+        transaction_state.set_transactions(ModelRc::new(VecModel::from(transactions_list.clone())));
+        transaction_state.set_all_transactions(ModelRc::new(VecModel::from(transactions_list)));
         transaction_state.set_selected_transactions(ModelRc::new(VecModel::default()));
 
         transaction_state.on_select_transaction({
@@ -88,6 +89,24 @@ impl TransactionController {
                     warn!("Failed to delete transaction: {err}");
                 }
                 global_state.unwrap().invoke_load_accounts();
+            }
+        });
+
+        transaction_state.on_search({
+            let controller = controller.clone();
+            move |query| {
+                if let Err(err) = controller.search(&query) {
+                    warn!("Failed to search transactions: {err}");
+                }
+            }
+        });
+
+        transaction_state.on_clear_search({
+            let controller = controller.clone();
+            move || {
+                controller
+                    .transaction_state
+                    .set_transactions(controller.transaction_state.get_all_transactions());
             }
         });
 
@@ -226,7 +245,7 @@ impl TransactionController {
             move || {
                 let transaction_state = transaction_state.unwrap();
                 let mut total = Money::ZERO;
-                for transaction in transaction_state.get_transactions().iter() {
+                for transaction in transaction_state.get_all_transactions().iter() {
                     total -= Money::from_str(transaction.outflow.as_str()).unwrap_or_default();
                     total += Money::from_str(transaction.inflow.as_str()).unwrap_or_default();
                 }
@@ -360,6 +379,51 @@ impl TransactionController {
         Ok(())
     }
 
+    fn search(&self, query: &str) -> crate::Result<()> {
+        // TODO: test that it doesnt load transactions
+        // TODO: if it's empty then just add all transactions
+        // TODO: for some reason / matches zero transactions
+        let categories = self.service.fetch_categories()?;
+        let accounts = self.service.fetch_accounts()?;
+        let category_map: HashMap<SharedString, String> = categories
+            .into_iter()
+            .map(|category| (category.id.to_shared_string(), category.title))
+            .collect();
+        let account_map: HashMap<SharedString, String> = accounts
+            .into_iter()
+            .map(|category| (category.id.to_shared_string(), category.name))
+            .collect();
+
+        let query = query.to_ascii_lowercase();
+        let mut matched_transactions = vec![];
+        for transaction in self.transaction_state.get_all_transactions().iter() {
+            if transaction.amount.contains(&query)
+                || transaction.note.to_ascii_lowercase().contains(&query)
+                || transaction.date.contains(&query)
+                || category_map
+                    .get(&transaction.category_id)
+                    .unwrap_or(&String::new())
+                    .to_ascii_lowercase()
+                    .contains(&query)
+                || account_map
+                    .get(&transaction.account_id)
+                    .unwrap_or(&String::new())
+                    .to_ascii_lowercase()
+                    .contains(&query)
+                || account_map
+                    .get(&transaction.payee_id)
+                    .unwrap_or(&String::new())
+                    .to_ascii_lowercase()
+                    .contains(&query)
+            {
+                matched_transactions.push(transaction);
+            }
+        }
+        self.transaction_state
+            .set_transactions(ModelRc::new(VecModel::from(matched_transactions)));
+        Ok(())
+    }
+
     fn duplicate_transaction(&self, id: &str) -> crate::Result<()> {
         let id = Uuid::parse_str(id)?;
         let transaction = self.service.duplicate_transaction(id)?;
@@ -377,7 +441,9 @@ impl TransactionController {
             .map(|t| t.into())
             .collect();
         self.transaction_state
-            .set_transactions(ModelRc::new(Rc::new(VecModel::from(transactions))));
+            .set_transactions(ModelRc::new(Rc::new(VecModel::from(transactions.clone()))));
+        self.transaction_state
+            .set_all_transactions(ModelRc::new(Rc::new(VecModel::from(transactions))));
         Ok(())
     }
 
@@ -447,6 +513,128 @@ mod test {
     use slint::{Model, SharedString, ToSharedString};
 
     use crate::ui::CreateTransactionOpts;
+
+    fn setup(f: impl FnOnce(&Service)) -> crate::Result<TransactionController> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        f(&service);
+        let controller = TransactionController::bind(&window, &service)?;
+        Ok(controller)
+    }
+
+    // TODO: test empty string
+    #[test]
+    fn search_matches_by_amount() -> crate::Result<()> {
+        let controller = setup(|service| {
+            let amounts = [3000.0, 300.0, 150.0, 1050.0, 555.0, 0.5, 90.97];
+            for amount in amounts {
+                service
+                    .create_expense()
+                    .date(date(9999, 9, 9)) // Should not contain 1s
+                    .amount(Money::from_f64(amount))
+                    .submit()
+                    .unwrap();
+            }
+        })?;
+
+        let state = controller.transaction_state.clone();
+        let test_search = |query: &str, len: usize| {
+            state.invoke_search(query.to_shared_string());
+            assert_eq!(
+                state.get_transactions().iter().len(),
+                len,
+                "Query: '{}' failed",
+                query
+            );
+        };
+
+        test_search("150", 1);
+        test_search("15", 1);
+        test_search("5", 4);
+        test_search("300", 2);
+        test_search("3", 2);
+        test_search("1", 2);
+        test_search("3000", 1);
+        test_search("1050", 1);
+        test_search(".9", 1);
+        test_search("0.5", 1);
+        test_search("0", 7);
+        Ok(())
+    }
+
+    #[test]
+    fn search_matches_by_note() -> crate::Result<()> {
+        let controller = setup(|service| {
+            let notes = ["PAYMENT", "Youtube Premium", "Burger King"];
+            for note in notes {
+                service.create_expense().note(note).submit().unwrap();
+            }
+        })?;
+
+        let state = controller.transaction_state.clone();
+        let test_search = |query: &str, len: usize| {
+            state.invoke_search(query.to_shared_string());
+            assert_eq!(
+                state.get_transactions().iter().len(),
+                len,
+                "Query: '{}' failed",
+                query
+            );
+        };
+
+        test_search("PAY", 1);
+        test_search("P", 2);
+        test_search("Y", 2);
+        test_search("you", 1);
+        test_search("premium", 1);
+        test_search("p", 2);
+        test_search("r", 2);
+        test_search("e", 3);
+        test_search("ki", 1);
+        Ok(())
+    }
+
+    #[test]
+    fn search_matches_by_account() -> crate::Result<()> {
+        let controller = setup(|service| {
+            let credit = service
+                .create_account("Credit card", AccountType::Credit)
+                .unwrap();
+            let savings = service
+                .create_account("Savings account", AccountType::Cash)
+                .unwrap();
+            service
+                .create_expense()
+                .account(credit.id)
+                .submit()
+                .unwrap();
+            service
+                .create_expense()
+                .account(savings.id)
+                .submit()
+                .unwrap();
+        })?;
+
+        let state = controller.transaction_state.clone();
+        let test_search = |query: &str, len: usize| {
+            state.invoke_search(query.to_shared_string());
+            assert_eq!(
+                state.get_transactions().iter().len(),
+                len,
+                "Query: '{}' failed",
+                query
+            );
+        };
+
+        test_search("i", 2);
+        test_search("Credit", 1);
+        test_search("car", 1);
+        test_search("s", 1);
+        test_search("a", 2);
+        test_search("A", 2);
+        Ok(())
+    }
 
     #[test]
     fn bind_loads_transactions_from_service() -> crate::Result<()> {

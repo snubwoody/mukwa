@@ -6,6 +6,7 @@ import { Colors } from "../colors.slint";
 export component TextField {
     in-out property <string> label;
     in property <string> placeholder-text;
+    in property <length> border-width: 1px;
     in-out property <string> text <=> text-input.text;
     in property <int> font-weight: FontWeight.normal;
     in-out property <InputType> input-type <=> text-input.input-type;
@@ -26,7 +27,7 @@ export component TextField {
         Rectangle {
             background: white;
             border-color: text-input.has-focus ? Colors.accent : Colors.neutral50;
-            border-width: 1px;
+            border-width: border-width;
             border-radius: 4px;
             clip: true;
 

@@ -89,10 +89,13 @@ export global Api {
 }
 
 export global TransactionState {
+    in-out property <[Transaction]> all-transactions;
     in-out property <[Transaction]> transactions;
     in-out property <[string]> selected-transactions;
     in-out property <bool> all-transactions-selected: false;
 
+    callback search(string);
+    callback clear-search();
     callback select-transaction(id: string);
     callback delete-transaction(id: string);
     callback duplicate-transaction(id: string);

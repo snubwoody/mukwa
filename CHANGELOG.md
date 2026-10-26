@@ -1,6 +1,7 @@
 ## (unreleased)
 
 - Windows: Added download progress bar.
+- Added transaction search box.
 
 ## 0.3.1 - 2026-10-22
 
