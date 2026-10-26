@@ -1,8 +1,12 @@
+## (unreleased)
+
+- Windows: Added download progress bar.
+
 ## 0.3.1 - 2026-10-22
 
 - Fixed transactions without categories not being shown in analytics.
 - Fixed the app crashing when trying to import transactions from a csv file.
- 
+
 ## 0.3.0 - 2026-10-20
 
 - Added budget targets. Budget targets help you plan the amount of money you want to spend each month.
@@ -23,13 +27,14 @@
 
 ## 0.2.3 - 2026-10-10
 
-- Fixed an issue where budgets were not being created when changing months on the spending page. 
+- Fixed an issue where budgets were not being created when changing months on the spending page.
 - Added checkboxes for selecting transactions.
     - Added button to delete selected transactions.
 
 ## 0.2.2 - 2026-10-07
 
-- Fixed incorrect left to budget calculation. Transfers to credit accounts are no longer subtracted from the left to budget amount.
+- Fixed incorrect left to budget calculation. Transfers to credit accounts are no longer subtracted from the left to
+  budget amount.
 
 ## 0.2.1 - 2026-10-04
 
@@ -39,13 +44,14 @@
 ### Windows
 
 - Fixed the title bar not maximising when double-clicked.
-- Fixed minimise window button closing the window. 
+- Fixed minimise window button closing the window.
 
 ## 0.2.0 - 2026-09-21
 
 - Added support for importing transactions from CSV files.
 - Added a custom title bar on Windows.
-- Added a "Credit payments" auto category group. Every credit account will get its own category in the "Credit payments" group for tracking payments.
+- Added a "Credit payments" auto category group. Every credit account will get its own category in the "Credit payments"
+  group for tracking payments.
 - The spending page now displays how much money is available to assign.
 
 ## 0.1.2 - 2026-09-04

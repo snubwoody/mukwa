@@ -4,10 +4,10 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-smol = "2.0.2"
 tracing.workspace = true
 
 [dev-dependencies]
+smol = "2.0.2"
 slint.workspace = true
 tracing-subscriber.workspace = true
 
@@ -26,4 +26,4 @@ smol = "2.0.2"
 [build-dependencies.i-slint-compiler]
 git = "https://github.com/snubwoody/slint.git"
 branch = "mukwa"
-features = ["rust","display-diagnostics"]
+features = ["rust", "display-diagnostics"]

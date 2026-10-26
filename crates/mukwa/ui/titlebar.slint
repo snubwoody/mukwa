@@ -4,6 +4,7 @@
 import { Colors } from "colors.slint";
 import { PrimaryButton } from "widgets.slint";
 import { AutoUpdater } from "globals.slint";
+import { ProgressBar } from "widgets/progress-bar.slint";
 
 enum TitleBarButtonTheme { windows, windows-x }
 
@@ -90,8 +91,10 @@ export component TitleBar inherits WindowMoveArea {
 
             HorizontalLayout {
                 padding: 12px;
+                spacing: 12px;
                 alignment: end;
                 height: 100%;
+
                 if AutoUpdater.update-state == ready: PrimaryButton {
                     text: @tr("Update & Restart");
                     size: small;
@@ -99,8 +102,15 @@ export component TitleBar inherits WindowMoveArea {
                 }
 
                 if AutoUpdater.update-state == downloading: Text {
-                    text: @tr("Downloading update...");
+                    text: @tr("Downloading update");
                     color: Colors.textBody;
+                }
+
+                if AutoUpdater.update-state == downloading: ProgressBar {
+                    width: 150px;
+                    thumb-color: Colors.accent;
+                    track-color: Colors.neutral100;
+                    progress: AutoUpdater.download-progress;
                 }
             }
 
