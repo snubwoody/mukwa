@@ -28,6 +28,8 @@ jobs:
           libfontconfig1-dev \
           pkg-config \
           libx11-dev
+      - name: Install mold
+        run: sudo apt install mold clang
       - name: Bundle app
         env:
           ARCHITECTURE: x86_64
@@ -58,6 +60,8 @@ jobs:
           libfontconfig1-dev \
           pkg-config \
           libx11-dev
+      - name: Install mold
+        run: sudo apt install mold clang
       - name: Bundle app
         run: nu scripts/bundle-deb.nu
       - name: Upload artifacts
@@ -86,6 +90,9 @@ jobs:
           libfontconfig1-dev \
           pkg-config \
           libx11-dev
+      - name: Install mold
+        if: ${{runner.os == 'Linux'}}
+        run: sudo apt install mold clang
       - name: Bundle app
         run: nu scripts/bundle-tarball.nu
       - name: Upload artifacts
