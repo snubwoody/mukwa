@@ -1,16 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+use crate::ui::{self, Settings, State, TransactionState};
 use i_slint_backend_testing::{AccessibleRole, ElementHandle, mock_elapsed_time};
-use mukwa_core::{
-    Currency, Money, fmt::CurrencyFormatter, service::{AccountType, Service},
-};
-use slint::{
-    ComponentHandle, Model, SharedString, ToSharedString,
-    platform::{Key, PointerEventButton},
-};
-
-use crate::ui::{self, CategoryState, MainWindow, Settings, State, TransactionState};
+use mukwa_core::{Currency, Money, fmt::CurrencyFormatter, service::AccountType};
+use slint::{ComponentHandle, Model, ToSharedString, platform::PointerEventButton};
 
 use super::Result;
 
@@ -125,8 +119,16 @@ fn total_balance_does_not_update_with_search() -> Result<()> {
     let settings: Settings = app.global();
     settings.set_currency_code("USD".to_shared_string());
     service.create_account("", AccountType::Cash)?;
-    service.create_income().amount(Money::new(25)).note("Burger").submit()?;
-    service.create_income().amount(Money::new(75)).note("Burger king").submit()?;
+    service
+        .create_income()
+        .amount(Money::new(25))
+        .note("Burger")
+        .submit()?;
+    service
+        .create_income()
+        .amount(Money::new(75))
+        .note("Burger king")
+        .submit()?;
     service.create_income().amount(Money::new(200)).submit()?;
     transaction_state.invoke_load_transactions();
 
@@ -146,12 +148,20 @@ fn total_balance_does_not_update_with_search() -> Result<()> {
     let mut formatter = CurrencyFormatter::new();
     formatter.set_currency(Currency::USD);
 
-    let total_spent = ElementHandle::find_by_element_id(&app, "TransactionPage::total-spent").next().unwrap();
+    let total_spent = ElementHandle::find_by_element_id(&app, "TransactionPage::total-spent")
+        .next()
+        .unwrap();
 
     i_slint_backend_testing::send_keyboard_string_sequence(&app, "Burger");
-    assert_eq!(total_spent.accessible_label().unwrap(),formatter.format_money(Money::new(300))?);
+    assert_eq!(
+        total_spent.accessible_label().unwrap(),
+        formatter.format_money(Money::new(300))?
+    );
     i_slint_backend_testing::send_keyboard_string_sequence(&app, " king");
-    assert_eq!(total_spent.accessible_label().unwrap(),formatter.format_money(Money::new(300))?);
+    assert_eq!(
+        total_spent.accessible_label().unwrap(),
+        formatter.format_money(Money::new(300))?
+    );
 
     search
         .query_descendants()
@@ -159,7 +169,10 @@ fn total_balance_does_not_update_with_search() -> Result<()> {
         .find_first()
         .unwrap()
         .mock_single_click(PointerEventButton::Left);
-    assert_eq!(total_spent.accessible_label().unwrap(),formatter.format_money(Money::new(300))?);
+    assert_eq!(
+        total_spent.accessible_label().unwrap(),
+        formatter.format_money(Money::new(300))?
+    );
     Ok(())
 }
 
@@ -171,10 +184,31 @@ fn account_balance_does_not_update_with_search() -> Result<()> {
     let settings: Settings = app.global();
 
     settings.set_currency_code("USD".to_shared_string());
-    state.invoke_create_account("My account".to_shared_string(), ui::AccountType::Cash, "".to_shared_string());
-    service.create_income().amount(Money::new(25)).note("Burger").submit()?;
-    service.create_income().amount(Money::new(75)).note("Burger king").submit()?;
-    service.create_income().amount(Money::new(200)).submit()?;
+    state.invoke_create_account(
+        "My account".to_shared_string(),
+        ui::AccountType::Cash,
+        "".to_shared_string(),
+    );
+    let accounts = service.fetch_accounts()?;
+    let account = &accounts[0];
+    service
+        .create_income()
+        .account(account.id)
+        .amount(Money::new(25))
+        .note("Burger")
+        .submit()?;
+    service
+        .create_income()
+        .account(account.id)
+        .amount(Money::new(75))
+        .note("Burger king")
+        .submit()?;
+    service
+        .create_income()
+        .account(account.id)
+        .amount(Money::new(200))
+        .submit()?;
+    state.invoke_load_accounts();
     transaction_state.invoke_load_transactions();
 
     ElementHandle::find_by_accessible_label(&app, "My account")
@@ -198,12 +232,20 @@ fn account_balance_does_not_update_with_search() -> Result<()> {
     let mut formatter = CurrencyFormatter::new();
     formatter.set_currency(Currency::USD);
 
-    let total_spent = ElementHandle::find_by_element_id(&app, "TransactionPage::total-spent").next().unwrap();
+    let total_spent = ElementHandle::find_by_element_id(&app, "TransactionPage::total-spent")
+        .next()
+        .unwrap();
 
     i_slint_backend_testing::send_keyboard_string_sequence(&app, "Burger");
-    assert_eq!(total_spent.accessible_label().unwrap(),formatter.format_money(Money::new(300))?);
+    assert_eq!(
+        total_spent.accessible_label().unwrap(),
+        formatter.format_money(Money::new(300))?
+    );
     i_slint_backend_testing::send_keyboard_string_sequence(&app, " king");
-    assert_eq!(total_spent.accessible_label().unwrap(),formatter.format_money(Money::new(300))?);
+    assert_eq!(
+        total_spent.accessible_label().unwrap(),
+        formatter.format_money(Money::new(300))?
+    );
 
     search
         .query_descendants()
@@ -211,6 +253,9 @@ fn account_balance_does_not_update_with_search() -> Result<()> {
         .find_first()
         .unwrap()
         .mock_single_click(PointerEventButton::Left);
-    assert_eq!(total_spent.accessible_label().unwrap(),formatter.format_money(Money::new(300))?);
+    assert_eq!(
+        total_spent.accessible_label().unwrap(),
+        formatter.format_money(Money::new(300))?
+    );
     Ok(())
 }
