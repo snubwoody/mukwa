@@ -31,7 +31,6 @@ export component TitleBarButton {
         if (button-theme == TitleBarButtonTheme.gnome) {
             return Colors.neutral100;
         }
-
         return transparent;
     }
 
@@ -70,6 +69,31 @@ export component TitleBarButton {
     }
 }
 
+component UpdatePanel inherits HorizontalLayout {
+    padding: 12px;
+    spacing: 12px;
+    alignment: end;
+    height: 100%;
+
+    if AutoUpdater.update-state == ready: PrimaryButton {
+        text: @tr("Update & Restart");
+        size: small;
+        clicked => AutoUpdater.update-and-restart();
+    }
+
+    if AutoUpdater.update-state == downloading: Text {
+        text: @tr("Downloading update");
+        color: Colors.textBody;
+    }
+
+    if AutoUpdater.update-state == downloading: ProgressBar {
+        width: 150px;
+        thumb-color: Colors.accent;
+        track-color: Colors.neutral100;
+        progress: AutoUpdater.download-progress;
+    }
+}
+
 export component TitleBar inherits WindowMoveArea {
     in property <bool> window-maximized;
     callback minimized();
@@ -102,30 +126,7 @@ export component TitleBar inherits WindowMoveArea {
             alignment: end;
             height: 100%;
 
-            HorizontalLayout {
-                padding: 12px;
-                spacing: 12px;
-                alignment: end;
-                height: 100%;
-
-                if AutoUpdater.update-state == ready: PrimaryButton {
-                    text: @tr("Update & Restart");
-                    size: small;
-                    clicked => AutoUpdater.update-and-restart();
-                }
-
-                if AutoUpdater.update-state == downloading: Text {
-                    text: @tr("Downloading update");
-                    color: Colors.textBody;
-                }
-
-                if AutoUpdater.update-state == downloading: ProgressBar {
-                    width: 150px;
-                    thumb-color: Colors.accent;
-                    track-color: Colors.neutral100;
-                    progress: AutoUpdater.download-progress;
-                }
-            }
+            UpdatePanel { }
 
             HorizontalLayout {
                 spacing: 8px;
