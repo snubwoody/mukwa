@@ -245,7 +245,7 @@ impl TransactionController {
             move || {
                 let transaction_state = transaction_state.unwrap();
                 let mut total = Money::ZERO;
-                for transaction in transaction_state.get_transactions().iter() {
+                for transaction in transaction_state.get_all_transactions().iter() {
                     total -= Money::from_str(transaction.outflow.as_str()).unwrap_or_default();
                     total += Money::from_str(transaction.inflow.as_str()).unwrap_or_default();
                 }
