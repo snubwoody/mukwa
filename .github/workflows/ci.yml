@@ -43,6 +43,9 @@ jobs:
           libfontconfig1-dev \
           pkg-config \
           libx11-dev
+      - name: Install mold
+        if: ${{runner.os == 'Linux'}}
+        run: sudo apt install mold clang
       - run: cargo clippy --all-targets -- -Dwarnings
   test:
     strategy:
@@ -68,6 +71,9 @@ jobs:
           libfontconfig1-dev \
           pkg-config \
           libx11-dev
+      - name: Install mold
+        if: ${{runner.os == 'Linux'}}
+        run: sudo apt install mold clang
       - run: cargo nextest run --locked --no-fail-fast
   doc-test:
     strategy:
@@ -90,4 +96,7 @@ jobs:
           libfontconfig1-dev \
           pkg-config \
           libx11-dev
+      - name: Install mold
+        if: ${{runner.os == 'Linux'}}
+        run: sudo apt install mold clang
       - run: cargo test --doc
