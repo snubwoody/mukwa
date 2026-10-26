@@ -71,6 +71,7 @@ export enum AutoUpdaterState {
 
 export global AutoUpdater {
     in-out property <AutoUpdaterState> update-state: AutoUpdaterState.idle;
+    in-out property <float> download-progress;
     callback update-and-restart();
 }
 

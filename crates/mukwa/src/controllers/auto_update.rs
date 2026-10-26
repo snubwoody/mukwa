@@ -9,9 +9,12 @@ use semver::Version;
 use sha2::{Digest, Sha256};
 use slint::{ComponentHandle, Global};
 use std::fs;
+use std::fs::File;
+use std::io::{BufWriter, Read, Write};
+use std::path::PathBuf;
 use std::process::Command;
+use std::rc::Rc;
 use std::time::Duration;
-use std::{path::PathBuf, rc::Rc};
 use tracing::{debug, info, warn};
 
 pub fn bind(app: &MainWindow) -> crate::Result<()> {
@@ -80,7 +83,7 @@ impl AutoUpdateController {
         Ok(controller)
     }
 
-    /// Checks if the new update is already downloaded
+    /// Checks if the new update is already downloaded.
     async fn is_downloaded(&self, release: &Release) -> crate::Result<bool> {
         let path = self.update_dir.join("Mukwa-Update.exe");
         if !fs::exists(&path)? {
@@ -117,6 +120,7 @@ impl AutoUpdateController {
         Ok(true)
     }
 
+    /// Checks for new updates.
     async fn poll(&self) -> crate::Result<()> {
         if self.updater.get_update_state() == AutoUpdaterState::Ready {
             return Ok(());
@@ -142,6 +146,8 @@ impl AutoUpdateController {
         Ok(())
     }
 
+    /// Exits the app, installs the update and restarts the app. Restarting the app
+    /// is delegated to the installer, so only binaries installed using InnoSetup will be restarted.
     fn install_update(&self) -> crate::Result<()> {
         let path = self.update_dir.join("Mukwa-Update.exe");
         let absolute_path = path.canonicalize()?;
@@ -175,18 +181,49 @@ impl AutoUpdateController {
             // TODO: read response body
             return Err(Error::new("Response error"));
         }
+
         let dest = self.update_dir.join("Mukwa-Update.exe");
         smol::fs::create_dir_all(&self.update_dir).await?;
+
         smol::unblock({
             let dest = dest.clone();
+            let updater = self.updater.as_weak();
             move || {
-                let file = std::fs::File::create(dest)?;
-                let mut writer = std::io::BufWriter::new(file);
-                let mut reader = response.into_body().into_reader();
-                std::io::copy(&mut reader, &mut writer)
+                let body = response.into_body();
+                let content_length = body.content_length().unwrap();
+                let mut reader = body.into_reader();
+                let mut writer = BufWriter::new(File::create(&dest)?);
+                const BUF_SIZE: usize = 8 * 1024;
+                let mut buffer = [0; BUF_SIZE];
+                let mut progress = 0.0;
+
+                loop {
+                    let len = reader.read(&mut buffer)?;
+
+                    if len == 0 {
+                        break;
+                    }
+
+                    writer.write_all(&buffer[..len])?;
+
+                    // Update in >0.5% increments to reduce the number of callbacks
+                    let downloaded = len as f32 / content_length as f32;
+                    progress += downloaded;
+                    if progress > 0.005 || len < BUF_SIZE {
+                        let _ = updater.upgrade_in_event_loop(move |updater| {
+                            dbg!("Updating progress");
+                            updater
+                                .set_download_progress(updater.get_download_progress() + progress)
+                        });
+                        progress = 0.0;
+                    }
+                }
+                writer.flush()?;
+                Ok::<(), Error>(())
             }
         })
         .await?;
+
         Ok(dest)
     }
 
@@ -297,7 +334,7 @@ mod test {
         let mock = server.mock(|when, then| {
             when.method(GET).path("/Mukwa-x86_64-Setup.exe");
 
-            then.status(200).body(vec![20; 20]);
+            then.status(200).body(vec![20; 500 * 1024]);
         });
 
         let mut release = Release {
@@ -332,7 +369,7 @@ mod test {
         mock.assert();
         assert!(fs::exists(&update_path)?);
         let bytes = fs::read(update_path)?;
-        assert_eq!(bytes, vec![20; 20]);
+        assert_eq!(bytes, vec![20; 500 * 1024]);
         assert_eq!(
             controller.updater.get_update_state(),
             AutoUpdaterState::Downloading

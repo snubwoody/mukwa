@@ -131,6 +131,7 @@ from_error! {
     std::string::FromUtf8Error,
     std::string::FromUtf16Error,
     slint::PlatformError,
+    slint::EventLoopError,
     slint::ModelError,
     std::fmt::Error,
     ureq::Error,

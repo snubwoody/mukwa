@@ -1105,22 +1105,37 @@ fn title_bar_shows_update_state() -> Result<()> {
     assert!(
         title_bar
             .query_descendants()
-            .match_accessible_label("Downloading update...")
+            .match_accessible_label("Downloading update")
+            .find_first()
+            .is_none()
+    );
+    assert!(
+        title_bar
+            .query_descendants()
+            .match_type_name("ProgressBar")
             .find_first()
             .is_none()
     );
 
-    let updater: crate::ui::AutoUpdater = app.global();
-    updater.set_update_state(crate::ui::AutoUpdaterState::Downloading);
+    let updater: ui::AutoUpdater = app.global();
+    updater.set_update_state(ui::AutoUpdaterState::Downloading);
     assert!(
         title_bar
             .query_descendants()
-            .match_accessible_label("Downloading update...")
+            .match_accessible_label("Downloading update")
             .find_first()
             .is_some()
     );
 
-    updater.set_update_state(crate::ui::AutoUpdaterState::Ready);
+    updater.set_download_progress(0.8);
+    let progress_bar = title_bar
+        .query_descendants()
+        .match_type_name("ProgressBar")
+        .find_first()
+        .unwrap();
+    assert_eq!(progress_bar.accessible_value().unwrap(), "0.8");
+
+    updater.set_update_state(ui::AutoUpdaterState::Ready);
     assert!(
         title_bar
             .query_descendants()
