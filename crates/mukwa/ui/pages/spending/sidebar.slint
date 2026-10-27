@@ -91,8 +91,13 @@ component BudgetTarget inherits Rectangle {
     property <bool> is-editing: false;
     property <bool> has-target: CategoryState.has-budget-target(category.id);
     property <string> target: CategoryState.get-budget-target(category.id);
-    background: white;
+    //background: white;
     border-radius: 12px;
+
+    changed category => {
+        has-target = CategoryState.has-budget-target(category.id);
+        target = CategoryState.get-budget-target(category.id);
+    }
 
     VerticalLayout {
         spacing: 8px;

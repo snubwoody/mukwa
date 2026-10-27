@@ -560,6 +560,7 @@ export component SpendingPage inherits HorizontalLayout {
 
     if !selected-category-id.is-empty: SpendingPageSideBar {
         width: 300px;
-        category: CategoryState.categories[CategoryState.categories.find-index((value) => value.id == selected-category-id)];
+//        category: CategoryState.get-category(selected-category-id);
+         category: CategoryState.categories[CategoryState.categories.find-index((value) => value.id == selected-category-id)];
     }
 }
