@@ -27,6 +27,7 @@ export global AnalyticsApi {
     pure callback total-spent() -> string;
     pure callback is-category-filtered(string) -> bool;
     in-out property <[string]> filtered-categories;
+    in-out property <bool> has-transactions;
     in-out property <Date> current-date: Api.parse-date(Api.today());
 }
 
@@ -217,7 +218,7 @@ component SideBar inherits VerticalLayout {
         background: Colors.borderNeutral;
     }
 
-    if TransactionState.transactions.length > 0: VerticalLayout {
+    if AnalyticsApi.has-transactions: VerticalLayout {
         width: 350px;
         padding-left: 20px;
         padding-right: 20px;
