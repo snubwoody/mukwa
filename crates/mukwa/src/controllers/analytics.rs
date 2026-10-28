@@ -16,7 +16,7 @@ use std::rc::Rc;
 use tracing::warn;
 use uuid::Uuid;
 
-pub fn bind(window: &ui::MainWindow, state: &AppState) {
+pub fn bind(window: &MainWindow, state: &AppState) {
     AnalyticsController::bind(window, &state.service());
 }
 
@@ -142,7 +142,13 @@ impl AnalyticsController {
         }
         let date = Date::try_from(date).unwrap_or(Zoned::now().date());
         let transactions = self.service.fetch_transactions()?;
-        if transactions.is_empty() {
+        let no_transactions = transactions
+            .iter()
+            .filter(|t| t.date.year() == date.year() && t.date.month() == date.month())
+            .collect::<Vec<_>>()
+            .is_empty();
+        self.analytics_state.set_has_transactions(!no_transactions);
+        if no_transactions {
             let radius = width.min(height) / 2.0;
             let chart = PieChart::new(width / 2.0, height / 2.0, vec![1.0], radius)
                 .with_colors(vec![tiny_skia::Color::from_rgba8(230, 230, 230, 255)])
@@ -157,7 +163,7 @@ impl AnalyticsController {
                 arc_path: segment.arc_svg().to_shared_string(),
                 line_path: segment.label_line_svg().to_shared_string(),
                 fill: slint::Color::from_rgb_u8(color.red(), color.green(), color.blue()),
-                label: segment.label().to_shared_string(),
+                label: "".to_shared_string(),
                 label_x,
                 amount: Money::ZERO.to_shared_string(),
                 label_y,
@@ -302,6 +308,8 @@ impl AnalyticsController {
 mod test {
     use super::*;
     use crate::ui::MainWindow;
+    use jiff::ToSpan;
+    use jiff::civil::date;
     use mukwa_core::service::{AccountType, Service, TransactionKind};
 
     #[test]
@@ -462,6 +470,45 @@ mod test {
         let slice = &slices[0];
         assert_eq!(slice.amount, Money::ZERO.to_shared_string());
         assert_eq!(slice.ratio, 1.0);
+        assert_eq!(slice.fill, slint::Color::from_rgb_u8(230, 230, 230));
+        Ok(())
+    }
+
+    #[test]
+    fn draw_pie_chart_with_no_transactions_in_month() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let app = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let group = service.create_category_group("")?;
+        let c1 = service.create_category("", group.id)?;
+        let c2 = service.create_category("", group.id)?;
+
+        let month = date(2020, 1, 1);
+        service
+            .create_expense()
+            .category(c1.id)
+            .amount(Money::new(50))
+            .date(month - 1.month())
+            .submit()?;
+        service
+            .create_expense()
+            .category(c2.id)
+            .amount(Money::new(50))
+            .date(month + 1.month())
+            .submit()?;
+        let controller = AnalyticsController::bind(&app, &service);
+        controller.analytics_state.set_current_date(month.into());
+
+        let slices: Vec<_> = controller
+            .draw_pie_chart(500.0, 500.0, ui::Date::default())?
+            .iter()
+            .collect();
+        assert_eq!(slices.len(), 1);
+
+        let slice = &slices[0];
+        assert_eq!(slice.amount, Money::ZERO.to_shared_string());
+        assert_eq!(slice.ratio, 1.0);
+        assert!(slice.label.is_empty());
         assert_eq!(slice.fill, slint::Color::from_rgb_u8(230, 230, 230));
         Ok(())
     }

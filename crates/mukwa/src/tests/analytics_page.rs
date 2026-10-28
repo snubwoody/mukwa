@@ -56,6 +56,45 @@ fn sidebar_title() -> Result<()> {
 }
 
 #[test]
+fn sidebar_no_transactions_in_current_month() -> Result<()> {
+    let (app, service) = super::setup()?;
+    service.create_account("", AccountType::Cash)?;
+    let group = service.create_category_group("")?;
+    let c1 = service.create_category("Rent", group.id)?;
+    service
+        .create_expense()
+        .category(c1.id)
+        .date(date(2020, 2, 1))
+        .amount(Money::new(25))
+        .submit()?;
+    service
+        .create_expense()
+        .category(c1.id)
+        .date(date(2019, 12, 31))
+        .amount(Money::new(50))
+        .submit()?;
+
+    let analytics_api: AnalyticsApi = app.global();
+    analytics_api.set_current_date(date(2020, 1, 1).into());
+
+    ElementHandle::find_by_accessible_label(&app, "Analytics")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+    let sidebar = ElementHandle::find_by_element_type_name(&app, "SideBar")
+        .next()
+        .unwrap();
+
+    let category_items = sidebar
+        .query_descendants()
+        .match_type_name("CategoryItem")
+        .find_all();
+
+    assert_eq!(category_items.len(), 0);
+    Ok(())
+}
+
+#[test]
 fn month_switch() -> Result<()> {
     let (app, _) = super::setup()?;
     let analytics: AnalyticsApi = app.global();
