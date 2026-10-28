@@ -29,7 +29,7 @@ pub fn bind_all(
     global::bind(window, state);
     api::bind(window);
     import_csv::bind(window, state);
-    category::bind(window, state)?;
+    category::bind(window, &service)?;
     transaction::bind(window, service)?;
     auto_update::bind(window)?;
     Ok(())
