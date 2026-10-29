@@ -93,6 +93,7 @@ component BudgetTarget inherits Rectangle {
     property <string> target: CategoryState.get-budget-target(category.id);
     //background: white;
     border-radius: 12px;
+    callback assigned();
 
     changed category => {
         has-target = CategoryState.has-budget-target(category.id);
@@ -168,6 +169,7 @@ component BudgetTarget inherits Rectangle {
                     theme: neutral;
                     clicked => {
                         CategoryState.edit-budget(budget.id, CategoryState.get-budget-target(category.id));
+                        assigned();
                     }
                 }
 
@@ -216,6 +218,7 @@ component BudgetTarget inherits Rectangle {
 export component SpendingPageSideBar inherits Rectangle {
     in property <Category> category;
     background: Colors.surface0;
+    callback assigned();
 
     VerticalLayout {
         padding: 20px;
@@ -230,6 +233,7 @@ export component SpendingPageSideBar inherits Rectangle {
 
         BudgetTarget {
             category: category;
+            assigned => assigned();
         }
     }
 }

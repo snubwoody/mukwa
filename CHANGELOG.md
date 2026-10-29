@@ -3,6 +3,7 @@
 - Windows: Added download progress bar.
 - Added transaction search box.
 - Fixed broken sidebar state after creating a budget target.
+- Fixed a bug where the left to budget amount was not updating when clicking the assign button in the sidebar.
 
 ## 0.3.1 - 2026-10-22
 

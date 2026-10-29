@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+use crate::ui::{CategoryState, MainWindow, Settings};
 use i_slint_backend_testing::ElementHandle;
+use mukwa_core::service::AccountType;
 use mukwa_core::{Currency, Money, fmt::CurrencyFormatter, service::Service};
 use slint::{
     ComponentHandle, Model, PhysicalSize, SharedString, ToSharedString,
     platform::{Key, PointerEventButton},
 };
-
-use crate::ui::{CategoryState, MainWindow, Settings};
 
 use super::Result;
 
@@ -549,5 +549,63 @@ fn category_shown_in_sidebar() -> Result<()> {
         .match_accessible_label("Rent")
         .find_first();
     assert!(title.is_some());
+    Ok(())
+}
+
+#[test]
+fn assign_button_reloads_left_to_budget() -> Result<()> {
+    let (app, service) = super::setup()?;
+    let settings: Settings = app.global();
+    settings.set_currency_code("CAD".to_shared_string());
+
+    let account = service.create_account("", AccountType::Cash)?;
+    service
+        .create_income()
+        .amount(Money::new(750))
+        .account(account.id)
+        .submit()?;
+
+    let category_state: CategoryState = app.global();
+    category_state.invoke_create_category_group(SharedString::new());
+    let groups: Vec<_> = category_state.get_category_groups().iter().collect();
+    category_state.invoke_create_category(SharedString::from("Rent"), groups[1].id.clone());
+
+    ElementHandle::find_by_accessible_label(&app, "Spending")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let formatter = CurrencyFormatter::with_currency(Currency::CAD);
+
+    let left_to_budget =
+        ElementHandle::find_by_element_id(&app, "SpendingPageBody::left-to-budget-amount")
+            .next()
+            .unwrap();
+    assert_eq!(
+        left_to_budget.accessible_label().unwrap(),
+        formatter.format_money(Money::new(750))?
+    );
+
+    ElementHandle::find_by_element_type_name(&app, "CategoryItem")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    let sidebar = ElementHandle::find_by_element_type_name(&app, "SpendingPageSideBar")
+        .next()
+        .unwrap();
+
+    create_budget_target(&app, Money::new(500));
+
+    sidebar
+        .query_descendants()
+        .match_accessible_label("Assign")
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+    assert_eq!(
+        left_to_budget.accessible_label().unwrap(),
+        formatter.format_money(Money::new(250))?
+    );
     Ok(())
 }
