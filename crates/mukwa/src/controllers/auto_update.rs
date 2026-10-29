@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use crate::ui::{AutoUpdater, AutoUpdaterState, MainWindow};
-use mukwa_core::auto_update::{Manifest, Platform, Release};
+use mukwa_core::auto_update::{Artifact, Manifest, Platform, Release};
 use mukwa_core::error::ErrorExt;
 use mukwa_core::{Error, log_dir};
 use semver::Version;
@@ -11,7 +11,7 @@ use slint::{ComponentHandle, Global};
 use std::fs;
 use std::fs::File;
 use std::io::{BufWriter, Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::rc::Rc;
 use std::time::Duration;
@@ -83,15 +83,10 @@ impl AutoUpdateController {
         Ok(controller)
     }
 
-    /// Checks if the new update is already downloaded.
-    async fn is_downloaded(&self, release: &Release) -> crate::Result<bool> {
-        let path = self.update_dir.join("Mukwa-Update.exe");
-        if !fs::exists(&path)? {
-            return Ok(false);
-        }
-
+    /// Returns true if the checksum of the file matches the artifact checksum.
+    async fn verify_checksum(&self, path: impl AsRef<Path>, artifact: &Artifact) -> bool {
         let digest = smol::unblock({
-            let path = path.clone();
+            let path = path.as_ref().to_path_buf();
             move || {
                 let bytes = fs::read(path).unwrap_or_default();
                 let digest: String = Sha256::digest(&bytes)
@@ -103,6 +98,16 @@ impl AutoUpdateController {
         })
         .await;
 
+        artifact.digest == digest
+    }
+
+    /// Checks if the new update is already downloaded.
+    async fn is_downloaded(&self, release: &Release) -> crate::Result<bool> {
+        let path = self.update_dir.join("Mukwa-Update.exe");
+        if !fs::exists(&path)? {
+            return Ok(false);
+        }
+
         #[cfg(target_arch = "x86_64")]
         let platform = Platform::WindowsX64;
         #[cfg(target_arch = "aarch64")]
@@ -112,9 +117,8 @@ impl AutoUpdateController {
             .artifacts
             .get(&platform)
             .ok_or(Error::new("Release artifact not found"))?;
-
-        if artifact.digest != digest {
-            fs::remove_file(&path)?;
+        if !self.verify_checksum(&path, artifact).await {
+            fs::remove_file(path)?;
             return Ok(false);
         }
         Ok(true)
@@ -133,9 +137,15 @@ impl AutoUpdateController {
                     return Ok(());
                 }
                 info!("Found new update, version {}", release.version);
-                let path = self.download_update(release).await?;
-                debug!(path=?path,"Successfully downloaded new update");
-                self.updater.set_update_state(AutoUpdaterState::Ready);
+                match self.download_update(release).await {
+                    Ok(path) => {
+                        debug!(path=?path,"Successfully downloaded new update");
+                        self.updater.set_update_state(AutoUpdaterState::Ready);
+                    }
+                    Err(err) => {
+                        warn!("{}", err.report());
+                    }
+                }
             }
             None => {
                 self.updater.set_update_state(AutoUpdaterState::Idle);
@@ -223,6 +233,11 @@ impl AutoUpdateController {
             }
         })
         .await?;
+
+        if !self.verify_checksum(&dest, artifact).await {
+            fs::remove_file(&dest)?;
+            return Err(Error::new("Update file is corrupted"));
+        }
 
         Ok(dest)
     }
@@ -315,7 +330,8 @@ mod test {
         let mut controller = AutoUpdateController::bind(&app)?;
         controller.update_dir = temp.path().to_owned();
         smol::block_on(async {
-            assert!(!controller.is_downloaded(&release).await.unwrap());
+            let is_downloaded = controller.is_downloaded(&release).await.unwrap();
+            assert!(!is_downloaded);
         });
         assert!(!fs::exists(&path)?);
         Ok(())
@@ -323,6 +339,69 @@ mod test {
 
     #[test]
     fn download_update() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let app = MainWindow::new()?;
+        let mut controller = AutoUpdateController::bind(&app)?;
+        let temp = tempdir()?;
+        controller.update_dir = temp.path().to_owned();
+
+        let server = MockServer::start();
+
+        const SIZE: usize = 500 * 1024;
+        let mock = server.mock(|when, then| {
+            when.method(GET).path("/Mukwa-x86_64-Setup.exe");
+
+            then.status(200).body(vec![20; SIZE]);
+        });
+
+        let mut release = Release {
+            version: Version::new(0, 0, 0),
+            published_at: Default::default(),
+            artifacts: Default::default(),
+            prerelease: false,
+        };
+
+        let digest: String = Sha256::digest([20; SIZE])
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect();
+
+        let artifact = Artifact {
+            download_url: server.url("/Mukwa-x86_64-Setup.exe"),
+            digest,
+        };
+
+        let platform = if cfg!(target_arch = "aarch64") {
+            Platform::WindowsArm64
+        } else {
+            Platform::WindowsX64
+        };
+
+        release.artifacts.insert(platform, artifact);
+
+        let result = smol::block_on(async { controller.download_update(release).await });
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            assert!(result.is_err());
+            return Ok(());
+        }
+
+        let update_path = result?;
+        mock.assert();
+        assert!(fs::exists(&update_path)?);
+        let bytes = fs::read(update_path)?;
+        assert_eq!(bytes, vec![20; SIZE]);
+        assert_eq!(
+            controller.updater.get_update_state(),
+            AutoUpdaterState::Downloading
+        );
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn update_file_corrupted() -> crate::Result<()> {
         i_slint_backend_testing::init_no_event_loop();
         let app = MainWindow::new()?;
         let mut controller = AutoUpdateController::bind(&app)?;
@@ -346,7 +425,7 @@ mod test {
 
         let artifact = Artifact {
             download_url: server.url("/Mukwa-x86_64-Setup.exe"),
-            digest: String::new(),
+            digest: String::from("Not-A-Valid-Checksum"),
         };
 
         let platform = if cfg!(target_arch = "aarch64") {
@@ -359,21 +438,9 @@ mod test {
 
         let result = smol::block_on(async { controller.download_update(release).await });
 
-        #[cfg(not(target_os = "windows"))]
-        {
-            assert!(result.is_err());
-            return Ok(());
-        }
-
-        let update_path = result?;
         mock.assert();
-        assert!(fs::exists(&update_path)?);
-        let bytes = fs::read(update_path)?;
-        assert_eq!(bytes, vec![20; 500 * 1024]);
-        assert_eq!(
-            controller.updater.get_update_state(),
-            AutoUpdaterState::Downloading
-        );
+        assert!(result.is_err());
+        assert!(!fs::exists(controller.update_dir.join("Mukwa-Update.exe"))?);
         Ok(())
     }
 
