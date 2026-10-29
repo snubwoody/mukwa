@@ -6,7 +6,7 @@ use crate::ui::{MainWindow, TransactionState};
 use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::error::ErrorExt;
-use mukwa_core::service::Service;
+use mukwa_core::service::{Service, Transaction};
 use mukwa_core::{Error, Money};
 use slint::{ComponentHandle, Global, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::collections::{HashMap, HashSet};
@@ -305,13 +305,21 @@ impl TransactionController {
                 let id = Uuid::parse_str(&id)?;
                 service.delete_transaction(id)?;
             }
+            state.set_transactions(ModelRc::new(VecModel::default()));
+        } else {
+            let selected_transactions: Vec<_> = state.get_selected_transactions().iter().collect();
+            for id in &selected_transactions {
+                let id = Uuid::parse_str(id)?;
+                service.delete_transaction(id)?;
+            }
+            let transactions: Vec<_> = state
+                .get_transactions()
+                .iter()
+                .filter(|t| !selected_transactions.contains(&t.id))
+                .collect();
+            state.set_transactions(ModelRc::new(VecModel::from(transactions)));
         }
 
-        for id in state.get_selected_transactions().iter() {
-            let id = Uuid::parse_str(&id)?;
-            service.delete_transaction(id)?;
-        }
-        self.load_transactions()?;
         state.set_all_transactions_selected(false);
         state.set_selected_transactions(ModelRc::new(VecModel::default()));
         Ok(())
@@ -447,58 +455,77 @@ impl TransactionController {
         Ok(())
     }
 
+    fn replace_transaction(&self, transaction: Transaction) {
+        let transactions: Vec<ui::Transaction> = self
+            .transaction_state
+            .get_transactions()
+            .iter()
+            .map(|t| {
+                if t.id == transaction.id.to_shared_string() {
+                    transaction.clone().into()
+                } else {
+                    t
+                }
+            })
+            .collect();
+        self.transaction_state
+            .set_transactions(ModelRc::new(Rc::new(VecModel::from(transactions.clone()))));
+        self.transaction_state
+            .set_all_transactions(ModelRc::new(Rc::new(VecModel::from(transactions))));
+    }
+
     fn set_transaction_date(&self, id: &str, date: &str) -> crate::Result<()> {
         let id = Uuid::parse_str(id)?;
         let date = Date::strptime("%Y-%m-%d", date)?;
-        self.service.set_transaction_date(id, date)?;
-        self.load_transactions()?;
+        let transaction = self.service.set_transaction_date(id, date)?;
+        self.replace_transaction(transaction);
         Ok(())
     }
 
     fn set_transaction_note(&self, id: &str, note: &str) -> crate::Result<()> {
         let id = Uuid::parse_str(id)?;
-        self.service.set_transaction_note(id, note)?;
-        self.load_transactions()?;
+        let transaction = self.service.set_transaction_note(id, note)?;
+        self.replace_transaction(transaction);
         Ok(())
     }
 
     fn set_transaction_account(&self, id: &str, account_id: &str) -> crate::Result<()> {
         let id = Uuid::parse_str(id)?;
         let account_id = Uuid::parse_str(account_id)?;
-        self.service.set_transaction_account(id, account_id)?;
-        self.load_transactions()?;
+        let transaction = self.service.set_transaction_account(id, account_id)?;
+        self.replace_transaction(transaction);
         Ok(())
     }
 
     fn set_transaction_payee(&self, id: &str, account_id: &str) -> crate::Result<()> {
         let id = Uuid::parse_str(id)?;
         let account_id = Uuid::parse_str(account_id)?;
-        self.service.set_transaction_payee(id, account_id)?;
-        self.load_transactions()?;
+        let transaction = self.service.set_transaction_payee(id, account_id)?;
+        self.replace_transaction(transaction);
         Ok(())
     }
 
     fn set_transaction_outflow(&self, id: &str, amount: &str) -> crate::Result<()> {
         let id = Uuid::parse_str(id)?;
         let amount = Money::from_str(amount)?;
-        self.service.set_transaction_outflow(id, amount)?;
-        self.load_transactions()?;
+        let transaction = self.service.set_transaction_outflow(id, amount)?;
+        self.replace_transaction(transaction);
         Ok(())
     }
 
     fn set_transaction_inflow(&self, id: &str, amount: &str) -> crate::Result<()> {
         let id = Uuid::parse_str(id)?;
         let amount = Money::from_str(amount)?;
-        self.service.set_transaction_inflow(id, amount)?;
-        self.load_transactions()?;
+        let transaction = self.service.set_transaction_inflow(id, amount)?;
+        self.replace_transaction(transaction);
         Ok(())
     }
 
     fn set_transaction_category(&self, id: &str, category_id: &str) -> crate::Result<()> {
         let id = Uuid::parse_str(id).context("Failed to parse transaction id")?;
         let category_id = Uuid::parse_str(category_id).context("Failed to parse category id")?;
-        self.service.set_transaction_category(id, category_id)?;
-        self.load_transactions()?;
+        let transaction = self.service.set_transaction_category(id, category_id)?;
+        self.replace_transaction(transaction);
         Ok(())
     }
 }
@@ -523,7 +550,6 @@ mod test {
         Ok(controller)
     }
 
-    // TODO: test empty string
     #[test]
     fn search_matches_by_amount() -> crate::Result<()> {
         let controller = setup(|service| {
@@ -874,6 +900,9 @@ mod test {
         let t2 = service.create_expense().submit()?;
         let transaction_state: TransactionState = window.global();
         TransactionController::bind(&window, &service)?;
+        // Making sure it does not load transactions
+        service.create_expense().submit()?;
+        service.create_expense().submit()?;
 
         let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
         assert_eq!(transactions.len(), 2);
@@ -901,6 +930,9 @@ mod test {
         service.create_expense().submit()?;
         let transaction_state: TransactionState = window.global();
         TransactionController::bind(&window, &service)?;
+        // Making sure it does not load transactions from the database
+        service.create_expense().submit()?;
+        service.create_expense().submit()?;
 
         let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
         assert_eq!(transactions.len(), 2);
@@ -915,6 +947,62 @@ mod test {
             .collect();
         assert_eq!(ids.len(), 0);
         assert!(!transaction_state.get_all_transactions_selected());
+        Ok(())
+    }
+
+    #[test]
+    fn do_not_rearrange_transactions() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let transaction_state: TransactionState = window.global();
+        let a1 = service.create_account("", AccountType::Cash)?;
+        let a2 = service.create_account("", AccountType::Cash)?;
+        let group = service.create_category_group("")?;
+        let category = service.create_category("", group.id)?;
+
+        let controller = TransactionController::bind(&window, &service)?;
+        let t1 = service.create_expense().date(date(2020, 1, 1)).submit()?;
+        let t2 = service.create_expense().date(date(2026, 1, 1)).submit()?;
+        controller
+            .transaction_state
+            .set_transactions(ModelRc::new(VecModel::from_slice(&[
+                t1.clone().into(),
+                t2.clone().into(),
+            ])));
+        service.create_expense().submit()?;
+        service.create_expense().submit()?;
+
+        let assert_state = || {
+            let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
+            assert_eq!(transactions.len(), 2);
+            assert_eq!(transactions[0].id, t1.id.to_shared_string());
+            assert_eq!(transactions[1].id, t2.id.to_shared_string());
+        };
+
+        transaction_state
+            .invoke_set_transaction_outflow(t1.id.to_shared_string(), "300".to_shared_string());
+        assert_state();
+        transaction_state
+            .invoke_set_transaction_note(t1.id.to_shared_string(), "Note".to_shared_string());
+        assert_state();
+        transaction_state
+            .invoke_set_transaction_date(t1.id.to_shared_string(), "2020-06-12".to_shared_string());
+        assert_state();
+        transaction_state.invoke_set_transaction_category(
+            t1.id.to_shared_string(),
+            category.id.to_shared_string(),
+        );
+        assert_state();
+        transaction_state
+            .invoke_set_transaction_inflow(t1.id.to_shared_string(), "300".to_shared_string());
+        assert_state();
+        transaction_state
+            .invoke_set_transaction_account(t1.id.to_shared_string(), a1.id.to_shared_string());
+        assert_state();
+        transaction_state
+            .invoke_set_transaction_payee(t1.id.to_shared_string(), a2.id.to_shared_string());
+        assert_state();
         Ok(())
     }
 }
