@@ -12,7 +12,7 @@ use jiff::{ToSpan, Zoned};
 use mukwa_core::fmt::CurrencyFormatter;
 use mukwa_core::service::AccountType;
 use mukwa_core::{Currency, Money, create_test_db};
-use slint::platform::PointerEventButton;
+use slint::platform::{Key, PointerEventButton};
 use slint::{Model, SharedString, ToSharedString};
 use tempfile::tempdir;
 
@@ -442,14 +442,14 @@ fn edit_transaction_updates_sidebar_account_balance() -> Result<()> {
 #[test]
 fn create_account_popup() -> Result<()> {
     let (app, _) = setup()?;
-    let state = app.global::<State>();
+    let state: State = app.global();
+    let transaction_state: TransactionState = app.global();
+    let category_state: CategoryState = app.global();
 
     ElementHandle::find_by_accessible_label(&app, "Create account")
         .next()
         .unwrap()
         .mock_single_click(PointerEventButton::Left);
-
-    // TODO: maybe test close-on-click-outside
 
     ElementHandle::find_by_element_id(&app, "CreateAccountDialog::name")
         .next()
@@ -457,6 +457,8 @@ fn create_account_popup() -> Result<()> {
         .mock_single_click(PointerEventButton::Left);
 
     i_slint_backend_testing::send_keyboard_string_sequence(&app, &SharedString::from("My account"));
+    i_slint_backend_testing::send_keyboard_string_sequence(&app, &SharedString::from(Key::Tab));
+    i_slint_backend_testing::send_keyboard_string_sequence(&app, &SharedString::from("500"));
 
     let account_combobox =
         ElementHandle::find_by_element_id(&app, "CreateAccountDialog::account-type")
@@ -483,6 +485,16 @@ fn create_account_popup() -> Result<()> {
     assert_eq!(accounts.len(), 1);
     assert_eq!(accounts[0].name, "My account");
     assert_eq!(accounts[0].account_type, ui::AccountType::Credit);
+
+    let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
+    assert_eq!(transactions.len(), 1);
+    assert_eq!(transactions[0].amount, Money::new(500).to_shared_string());
+    assert_eq!(transactions[0].account_id, accounts[0].id);
+
+    let categories: Vec<_> = category_state.get_categories().iter().collect();
+    assert_eq!(categories.len(), 1);
+    assert_eq!(categories[0].account_id, accounts[0].id);
+    assert_eq!(categories[0].title, accounts[0].name);
     Ok(())
 }
 
