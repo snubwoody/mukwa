@@ -11,6 +11,7 @@ mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
 
+/// A formatter for monetary values.
 #[derive(Clone, PartialEq, Debug)]
 pub struct CurrencyFormatter {
     currency: Currency,
@@ -22,6 +23,10 @@ impl CurrencyFormatter {
         CurrencyFormatter {
             currency: Currency::USD,
         }
+    }
+
+    pub fn with_currency(currency: Currency) -> Self {
+        CurrencyFormatter { currency }
     }
 
     /// Set the currency symbol
@@ -84,6 +89,7 @@ pub fn format_date(date: Date) -> crate::Result<String> {
     Ok(date.strftime("%d/%m/%Y").to_string())
 }
 
+/// All operating systems that use libc for date and currency formatting.
 #[cfg(all(unix, not(target_os = "macos")))]
 mod linux_like {
     use super::*;

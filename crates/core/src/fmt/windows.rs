@@ -18,6 +18,8 @@ pub struct WString {
 }
 
 impl WString {
+    /// Creates a new empty `WString` with at least the specified capacity. If the `capacity`
+    /// is zero then no allocation will occur.
     pub fn with_capacity(capacity: usize) -> Self {
         WString {
             vec: Vec::with_capacity(capacity),
@@ -28,10 +30,12 @@ impl WString {
         WString { vec: vec![0; size] }
     }
 
+    /// Returns a raw pointer to the inner buffer.
     pub const fn as_ptr(&self) -> *const u16 {
         self.vec.as_ptr()
     }
 
+    /// Returns a mutable raw pointer to the inner buffer.
     pub const fn as_mut_ptr(&mut self) -> *mut u16 {
         self.vec.as_mut_ptr()
     }
@@ -194,8 +198,9 @@ pub fn format_money(value: Money, opt: &CurrencyFormatOptions) -> crate::Result<
     Ok(String::try_from(buffer)?)
 }
 
-/// Formats a date string using the Win32 [GetDateFormatEx] API. The earliest supported date
-/// is January 1, 1601.
+/// Formats a date using the Win32 [GetDateFormatEx] API.
+///
+/// > NOTE: The earliest supported date is January 1, 1601.
 ///
 /// [GetDateFormatEx]: https://learn.microsoft.com/en-us/windows/win32/api/datetimeapi/nf-datetimeapi-getdateformatex
 pub fn format_date(date: Date) -> crate::Result<String> {
@@ -204,7 +209,6 @@ pub fn format_date(date: Date) -> crate::Result<String> {
         wMonth: date.month() as u16,
         wDayOfWeek: date.weekday().to_sunday_zero_offset() as u16,
         wDay: date.day() as u16,
-        // Windows ignores these values
         wHour: 0,
         wMinute: 0,
         wSecond: 0,
@@ -256,7 +260,7 @@ mod test {
 
     #[test]
     fn format_date_before_1601_returns_error() {
-        let result = format_date(date(1600, 12, 31));
-        assert!(result.is_err());
+        assert!(format_date(date(1600, 12, 31)).is_err());
+        assert!(format_date(date(1601, 1, 1)).is_ok());
     }
 }
