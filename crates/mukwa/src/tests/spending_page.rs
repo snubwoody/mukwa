@@ -2,17 +2,17 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use i_slint_backend_testing::ElementHandle;
-use mukwa_core::{Money, fmt::CurrencyFormatter, service::Service};
+use mukwa_core::{Currency, Money, fmt::CurrencyFormatter, service::Service};
 use slint::{
-    ComponentHandle, Model, SharedString, ToSharedString,
+    ComponentHandle, Model, PhysicalSize, SharedString, ToSharedString,
     platform::{Key, PointerEventButton},
 };
 
-use crate::ui::{CategoryState, MainWindow};
+use crate::ui::{CategoryState, MainWindow, Settings};
 
 use super::Result;
 
-fn setup() -> crate::Result<(MainWindow, Service)> {
+fn setup() -> Result<(MainWindow, Service)> {
     let (app, service) = super::setup()?;
 
     ElementHandle::find_by_accessible_label(&app, "Spending")
@@ -21,6 +21,32 @@ fn setup() -> crate::Result<(MainWindow, Service)> {
         .mock_single_click(PointerEventButton::Left);
 
     Ok((app, service))
+}
+
+/// Asserts that an element with the accessible label exists.
+fn assert_exists(handle: &ElementHandle, accessible_label: &str) {
+    let element = handle
+        .query_descendants()
+        .match_accessible_label(accessible_label)
+        .find_first();
+    assert!(
+        element.is_some(),
+        "No element with accessible label '{}' was not found",
+        accessible_label
+    );
+}
+
+/// Asserts that an element with the accessible label does not exist.
+fn assert_not_exists(handle: &ElementHandle, accessible_label: &str) {
+    let element = handle
+        .query_descendants()
+        .match_accessible_label(accessible_label)
+        .find_first();
+    assert!(
+        element.is_none(),
+        "Element with accessible label '{}' exists",
+        accessible_label
+    );
 }
 
 /// Opens the budget target form, enters the `amount` in the text field and creates a new
@@ -260,6 +286,56 @@ fn cancel_create_budget_target_form() -> Result<()> {
 }
 
 #[test]
+fn switch_after_creating_budget_target() -> Result<()> {
+    let (app, _) = setup()?;
+    let window = app.window();
+    window.set_size(PhysicalSize::new(1200, 1200));
+
+    let settings: Settings = app.global();
+    settings.set_currency_code("CAD".to_shared_string());
+
+    let category_state: CategoryState = app.global();
+    category_state.invoke_create_category_group(SharedString::new());
+    let groups: Vec<_> = category_state.get_category_groups().iter().collect();
+    category_state.invoke_create_category(SharedString::from("Rent"), groups[1].id.clone());
+    category_state
+        .invoke_create_category(SharedString::from("Entertainment"), groups[1].id.clone());
+
+    let category_items: Vec<_> =
+        ElementHandle::find_by_element_type_name(&app, "CategoryItem").collect();
+
+    category_items[0].mock_single_click(PointerEventButton::Left);
+
+    create_budget_target(&app, Money::new(50));
+
+    let category_items: Vec<_> =
+        ElementHandle::find_by_element_type_name(&app, "CategoryItem").collect();
+
+    category_items[1]
+        .query_descendants()
+        .match_type_name("TouchArea")
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+    let mut formatter = CurrencyFormatter::new();
+    formatter.set_currency(Currency::CAD);
+
+    let sidebar = ElementHandle::find_by_element_type_name(&app, "SpendingPageSideBar")
+        .next()
+        .unwrap();
+
+    assert_exists(&sidebar, "Create target");
+    let amount = formatter.format_money(Money::new(50))?;
+    let zero_amount = formatter.format_money(Money::new(0))?;
+    assert_not_exists(
+        &sidebar,
+        &format!("Assign {amount} more to reach your target."),
+    );
+    assert_not_exists(&sidebar, &format!("Assigned {zero_amount} of {amount}."));
+    Ok(())
+}
+
+#[test]
 fn budget_target_helper_text() -> Result<()> {
     let (app, _) = setup()?;
     let category_state: CategoryState = app.global();
@@ -327,10 +403,6 @@ fn budget_target_helper_text() -> Result<()> {
     );
 
     category_state.invoke_edit_budget(budget.id, Money::new(200).to_shared_string());
-    for element in sidebar.query_descendants().find_all() {
-        dbg!(element.type_name());
-        dbg!(element.accessible_label());
-    }
     assert!(
         sidebar
             .query_descendants()
