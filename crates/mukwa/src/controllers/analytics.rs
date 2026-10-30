@@ -77,6 +77,7 @@ impl AnalyticsController {
         controller
     }
 
+    /// Calculates the total amount of money spent in the current selected month.
     fn total_spent(&self) -> crate::Result<Money> {
         let date = Date::try_from(self.analytics_state.get_current_date())?;
         let filtered_categories: HashSet<SharedString> = self
