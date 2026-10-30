@@ -259,3 +259,19 @@ fn account_balance_does_not_update_with_search() -> Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn editing_transaction_does_not_reload_all_transactions() -> Result<()> {
+    let (app, service) = super::setup()?;
+    let transaction_state: TransactionState = app.global();
+    let settings: Settings = app.global();
+    settings.set_currency_code("USD".to_shared_string());
+    service.create_account("", AccountType::Cash)?;
+
+    service.create_expense().amount(Money::new(50)).submit()?;
+    service.create_income().amount(Money::new(50)).submit()?;
+    transaction_state.invoke_load_transactions();
+
+    service.create_income().amount(Money::new(50)).submit()?;
+    Ok(())
+}
