@@ -46,6 +46,16 @@
         </screenshot>
     </screenshots>
     <releases>
+        <release version="0.3.2" date="2026-10-30">
+          <url type="details">https://github.com/snubwoody/mukwa/blob/main/CHANGELOG.md#032---2026-10-30</url>
+          <description>
+              <ul>
+                  <li>Windows: Added download progress bar.</li>
+                  <li>Added transaction search box.</li>
+                  <li>Fixed left to budget amount not updating when clicking the assign button.</li>
+              </ul>
+          </description>
+        </release>
         <release version="0.3.1" date="2026-10-22">
           <url type="details">https://github.com/snubwoody/mukwa/blob/main/CHANGELOG.md#031---2026-10-22</url>
           <description>
