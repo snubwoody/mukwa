@@ -15,6 +15,7 @@ mod import_csv;
 mod settings;
 mod transaction;
 
+/// Binds the state and callbacks of all Slint globals to Rust code.
 pub fn bind_all(
     window: &MainWindow,
     state: &AppState,

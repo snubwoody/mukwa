@@ -892,7 +892,7 @@ impl Service {
         Ok(category)
     }
 
-    /// Marks a transaction as unconfirmed
+    /// Marks a transaction as unconfirmed.
     pub fn mark_as_unconfirmed(&self, transaction_id: Uuid) -> crate::Result<()> {
         let connection = self.connection();
         let sql = "INSERT INTO unconfirmed_transactions(transaction_id) VALUES(?)";
@@ -902,6 +902,7 @@ impl Service {
         Ok(())
     }
 
+    /// Marks a transaction as confirmed.
     pub fn confirm_transaction(&self, transaction_id: Uuid) -> crate::Result<()> {
         let connection = self.connection();
         let sql = "DELETE FROM unconfirmed_transactions WHERE transaction_id = ?";
@@ -947,6 +948,7 @@ impl Service {
         Ok(budget)
     }
 
+    /// Updates the category title.
     pub fn update_category(&self, id: Uuid, title: &str) -> crate::Result<Category> {
         let connection = self.connection();
         let sql = "UPDATE categories SET title = ?1 WHERE id = ?2 RETURNING *";
@@ -971,6 +973,7 @@ impl Service {
         Ok(category)
     }
 
+    /// Updates the category group title.
     pub fn update_category_group(&self, id: Uuid, title: &str) -> crate::Result<CategoryGroup> {
         let connection = self.connection();
         let sql = "UPDATE category_groups SET title = ?1 WHERE id = ?2 RETURNING *";
@@ -982,6 +985,7 @@ impl Service {
         Ok(group)
     }
 
+    /// Updates the budget amount.
     pub fn update_budget(&self, id: Uuid, amount: Money) -> crate::Result<Budget> {
         let connection = self.connection();
         let sql = "UPDATE budgets SET amount = ?1 WHERE id = ?2 RETURNING *";
@@ -1124,6 +1128,7 @@ impl Service {
         let transaction = self.get_transaction(id)?;
         let connection = self.connection();
         match transaction.transaction_type() {
+            // Setting outflow on an income coverts it to an expense
             TransactionType::Income => {
                 let sql = "UPDATE transactions SET amount = ?1, sender_id = ?2, receiver_id = null WHERE id = ?3 RETURNING *";
                 let mut stmt = connection.prepare_cached(sql)?;
@@ -1155,6 +1160,7 @@ impl Service {
         let transaction = self.get_transaction(id)?;
         let connection = self.connection();
         match transaction.transaction_type() {
+            // Setting inflow on an expense converts it into an income.
             TransactionType::Expense => {
                 let sql = "UPDATE transactions SET amount = ?1, receiver_id = ?2, sender_id = null WHERE id = ?3 RETURNING *";
                 let mut stmt = connection.prepare_cached(sql)?;
@@ -1231,7 +1237,7 @@ impl Service {
         Ok(transaction)
     }
 
-    /// Returns the total amount left to assign.
+    /// Returns the total amount of money that is available to assign to budgets.
     ///
     /// Calculated by subtracting the total amount assigned to all budgets from the total
     /// income into cash accounts.
@@ -1246,6 +1252,7 @@ impl Service {
         Ok(total_assignable - total_assigned)
     }
 
+    /// Returns the total amount of money deposited into cash accounts.
     fn total_assignable(&self) -> crate::Result<Money> {
         let cash_accounts: HashMap<Uuid, Account> = self
             .fetch_accounts()?
@@ -1270,7 +1277,7 @@ impl Service {
         Ok(total_cash)
     }
 
-    /// Checks for missing categories for credit accounts.
+    /// Creates any missing credit account categories.
     pub fn check_credit_account_categories(&self) -> crate::Result<()> {
         let groups = self.fetch_category_groups()?;
         let credit_group = groups

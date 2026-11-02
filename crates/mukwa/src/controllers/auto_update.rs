@@ -17,11 +17,13 @@ use std::rc::Rc;
 use std::time::Duration;
 use tracing::{debug, info, warn};
 
+/// Binds the `AutoUpdater` global properties and callbacks.
 pub fn bind(app: &MainWindow) -> crate::Result<()> {
     AutoUpdateController::bind(app)?;
     Ok(())
 }
 
+/// Manages auto updates.
 #[derive(Clone)]
 struct AutoUpdateController {
     updater: Rc<AutoUpdater<'static>>,

@@ -64,8 +64,11 @@ export struct CreateTransactionOpts {
 
 export enum AutoUpdaterState {
     idle,
+    /// Checking for updates.
     checking,
+    /// The update is being downloaded.
     downloading,
+    /// The update is ready to be installed.
     ready,
 }
 

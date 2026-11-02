@@ -17,6 +17,7 @@ use tracing::info;
 #[derive(Debug, Clone)]
 pub enum SettingsBuffer {
     File(PathBuf),
+    // The in-memory buffer is used to make testing easier.
     Memory,
 }
 
@@ -41,10 +42,12 @@ impl SettingsStore {
         Ok(())
     }
 
+    /// Returns the curreny code.
     pub fn currency_code(&self) -> String {
         self.settings().currency_code.clone()
     }
 
+    /// Returns the font family.
     pub fn font_family(&self) -> String {
         self.settings().appearance.font_family.clone()
     }
@@ -57,6 +60,7 @@ impl SettingsStore {
         self.inner.borrow_mut()
     }
 
+    /// Writes the settings to the file. Noop if the `SettingsStore` uses an in-memory buffer.
     fn write(&self) -> Result<()> {
         if let SettingsBuffer::File(path) = &self.buffer {
             let settings = self.settings();
@@ -75,6 +79,7 @@ impl SettingsStore {
         }
     }
 
+    /// Opens or initializes a `SettingsStore` from the provided path.
     pub fn open(path: impl AsRef<Path>) -> Result<SettingsStore> {
         match File::open(&path) {
             Ok(mut file) => {
@@ -112,6 +117,7 @@ impl SettingsStore {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct Settings {
+    /// The ISO 4217 currency code.
     currency_code: String,
     #[serde(default)]
     appearance: Appearance,

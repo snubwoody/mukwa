@@ -14,7 +14,7 @@ use uuid::Uuid;
 pub struct AppState {
     service: Service,
     accounts: Rc<VecModel<ui::Account>>,
-    // We can't map arrays in slint so we have to maintain duplicate arrays for comboboxes
+    // We can't map arrays in Slint so we have to maintain duplicate arrays for comboboxes
     // see <https://github.com/slint-ui/slint/issues/1328>
     account_options: Rc<VecModel<ui::ComboBoxItem>>,
 }
@@ -38,6 +38,7 @@ impl AppState {
         Ok(state)
     }
 
+    /// Returns the inner [`Service`].
     pub fn service(&self) -> Service {
         self.service.clone()
     }
@@ -92,13 +93,11 @@ impl AppState {
         Ok(())
     }
 
+    /// Deletes an account and all associated transactions.
     pub fn delete_account(&mut self, id: &str) -> crate::Result<()> {
         let id = Uuid::parse_str(id)?;
         self.service.delete_account(id)?;
         info!("Deleted account {id}");
-        // FIXME
-        //self.reset_budgets(self.current_budget_month)?;
-        //self.reset_categories()?;
         self.load_accounts()?;
         Ok(())
     }
