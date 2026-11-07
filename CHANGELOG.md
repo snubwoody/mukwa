@@ -1,5 +1,9 @@
 ## (unreleased)
 
+- Added button to audit accounts. Auditing an account lets you confirm whether the bank account balance 
+matches the account balance in Mukwa. If it does then the account is audited, if not then a correction 
+transaction can be made which will make the two account balances match. Audited transactions are hidden 
+so that you don't have to worry about them, they can be shown at any time.
 - Added button to close the budget target sidebar.
 
 ## 0.3.2 - 2026-10-30
