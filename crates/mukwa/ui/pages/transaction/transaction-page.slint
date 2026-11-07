@@ -8,7 +8,8 @@ import {
     Api,
     Category,
     CategoryState,
-    TransactionState, Account,
+    TransactionState,
+    Account,
 } from "../../globals.slint";
 import { FontSize } from "../../theme.slint";
 import {
@@ -663,6 +664,7 @@ component AuditAccount {
                     text: @tr("Is your bank account balance:");
                     color: Colors.textBody;
                 }
+
                 Text {
                     text: State.format-money(balance, Settings.currency-code);
                     color: Colors.textBody;
@@ -676,6 +678,7 @@ component AuditAccount {
                     text: @tr("No");
                     theme: neutral;
                 }
+
                 PrimaryButton {
                     text: @tr("Yes");
                     clicked => {
@@ -684,11 +687,10 @@ component AuditAccount {
                     }
                 }
             }
-            
         }
     }
 
-    popup-audited := PopupWindow{
+    popup-audited := PopupWindow {
         y: button.height;
         width: 250px;
         Rectangle {
@@ -707,6 +709,7 @@ component AuditAccount {
                 color: Colors.textHeading;
                 font-weight: FontWeight.semi-bold;
             }
+
             Text {
                 text: @tr("All audited transactions have been hidden.");
                 color: Colors.textBody;
@@ -714,7 +717,6 @@ component AuditAccount {
                 wrap: word-wrap;
             }
         }
-
     }
 }
 
