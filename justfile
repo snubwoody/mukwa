@@ -1,17 +1,16 @@
 set windows-shell := ["powershell", "-c"]
 
+# Create a new migration
+[working-directory: "crates/core"]
 add-migration name:
-    cargo run --bin utils migrate new {{ name }}
+    cargo run -p utils migrate new {{ name }}
 
 migrate:
-    cargo run --bin utils migrate up
+    cargo run -p utils migrate up
 
 # Run the app
 run:
-    cargo run --bin mukwa
-
-lint:
-    cargo clippy --all-targets
+    cargo run -p mukwa
 
 bundle-windows:
     scripts/bundle-windows.ps1
