@@ -143,13 +143,14 @@ impl AnalyticsController {
         }
         let date = Date::try_from(date).unwrap_or(Zoned::now().date());
         let transactions = self.service.fetch_transactions()?;
-        let no_transactions = transactions
+        let no_expenses = transactions
             .iter()
             .filter(|t| t.date.year() == date.year() && t.date.month() == date.month())
+            .filter(|t| t.transaction_type() == TransactionType::Expense)
             .collect::<Vec<_>>()
             .is_empty();
-        self.analytics_state.set_has_transactions(!no_transactions);
-        if no_transactions {
+        self.analytics_state.set_has_transactions(!no_expenses);
+        if no_expenses {
             let radius = width.min(height) / 2.0;
             let chart = PieChart::new(width / 2.0, height / 2.0, vec![1.0], radius)
                 .with_colors(vec![tiny_skia::Color::from_rgba8(230, 230, 230, 255)])
@@ -462,6 +463,33 @@ mod test {
         let service = Service::open_in_memory()?;
         let controller = AnalyticsController::bind(&app, &service);
 
+        let slices: Vec<_> = controller
+            .draw_pie_chart(500.0, 500.0, ui::Date::default())?
+            .iter()
+            .collect();
+        assert_eq!(slices.len(), 1);
+
+        let slice = &slices[0];
+        assert_eq!(slice.amount, Money::ZERO.to_shared_string());
+        assert_eq!(slice.ratio, 1.0);
+        assert_eq!(slice.fill, slint::Color::from_rgb_u8(230, 230, 230));
+        Ok(())
+    }
+
+    #[test]
+    fn draw_pie_chart_with_no_expenses() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let app = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let account = service.create_account("", AccountType::Cash)?;
+        let account2 = service.create_account("", AccountType::Cash)?;
+        service.create_income().submit()?;
+        service
+            .create_transfer()
+            .accounts(account.id, account2.id)
+            .submit()?;
+
+        let controller = AnalyticsController::bind(&app, &service);
         let slices: Vec<_> = controller
             .draw_pie_chart(500.0, 500.0, ui::Date::default())?
             .iter()
