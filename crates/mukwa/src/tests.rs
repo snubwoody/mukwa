@@ -18,6 +18,7 @@ use tempfile::tempdir;
 
 pub use testing::*;
 mod analytics_page;
+mod prop;
 mod spending_page;
 mod transaction_page;
 
