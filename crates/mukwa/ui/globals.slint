@@ -37,7 +37,11 @@ export struct Budget {
     month: int,
 }
 
-export enum TransactionType { income, expense, transfer }
+export enum TransactionType {
+    income,
+    expense,
+    transfer,
+}
 
 export struct Transaction {
     id: string,
@@ -50,6 +54,7 @@ export struct Transaction {
     amount: string,
     note: string,
     inflow: string,
+    audited: bool,
 }
 
 export struct CreateTransactionOpts {
