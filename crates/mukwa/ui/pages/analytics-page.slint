@@ -258,8 +258,11 @@ component PieChart inherits VerticalLayout {
         Rectangle {
             width: 500px;
             height: 500px;
+            accessible-label: "Pie chart";
 
             for slice in pie-chart-slices: Rectangle {
+                accessible-label: slice.label;
+                accessible-value: slice.ratio;
                 Path {
                     width: 100%;
                     height: 100%;
