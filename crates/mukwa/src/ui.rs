@@ -231,6 +231,7 @@ impl From<mukwa_core::service::Transaction> for Transaction {
             inflow,
             amount: value.amount.to_shared_string(),
             transaction_type: transaction_type.into(),
+            audited: value.audited
         }
     }
 }
@@ -284,6 +285,7 @@ impl From<&mukwa_core::service::Transaction> for Transaction {
             inflow,
             amount: value.amount.to_shared_string(),
             transaction_type: transaction_type.into(),
+            audited: value.audited
         }
     }
 }
