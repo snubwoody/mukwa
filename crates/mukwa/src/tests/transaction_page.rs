@@ -875,3 +875,26 @@ fn edit_outflow_updates_account_balance() -> crate::Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn hide_audited_transactions() -> Result<()> {
+    let (app, service) = super::setup()?;
+    let account = service.create_account("",AccountType::Cash)?;
+    let account2 = service.create_account("",AccountType::Cash)?;
+    service.create_expense().account(account.id).submit()?;
+    service.create_income().account(account.id).submit()?;
+    service.create_expense().account(account2.id).submit()?;
+    
+    let transaction_state: TransactionState = app.global();
+    transaction_state.invoke_load_transactions();
+    
+    let table = ElementHandle::find_by_element_type_name(&app, "Table").next().unwrap();
+    let transactions = table.query_descendants().match_type_name("TransactionRow").find_all();
+    assert_eq!(transactions.len(),3);
+    transaction_state.invoke_audit_account(account.id.to_shared_string());
+    transaction_state.invoke_load_transactions();
+    
+    let transactions = table.query_descendants().match_type_name("TransactionRow").find_all();
+    assert_eq!(transactions.len(),1);
+    Ok(())
+}
