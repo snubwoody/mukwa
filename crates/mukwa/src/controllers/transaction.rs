@@ -255,6 +255,18 @@ impl TransactionController {
             }
         });
 
+        transaction_state.on_audit_account({
+            let controller = controller.clone();
+            move |id| {
+                if let Err(err) = controller
+                    .audit_account(&id)
+                    .context("Failed to audit account")
+                {
+                    warn!("{}", err.report());
+                }
+            }
+        });
+
         transaction_state.on_load_transactions({
             let controller = controller.clone();
             move || {
@@ -386,6 +398,12 @@ impl TransactionController {
         self.transaction_state
             .get_transactions()
             .insert_row(0, transaction.into())?;
+        Ok(())
+    }
+
+    fn audit_account(&self, account_id: &str) -> crate::Result<()> {
+        self.service.audit_account(Uuid::parse_str(account_id)?)?;
+        self.load_transactions()?;
         Ok(())
     }
 
@@ -862,6 +880,24 @@ mod test {
         assert_eq!(transaction.outflow.as_str(), Money::new(300).to_string());
         assert!(transaction.inflow.is_empty());
         assert!(transaction.category_id.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn audit_account() -> crate::Result<()>{
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let account = service.create_account("", AccountType::Cash)?;
+        service.create_expense().account(account.id).submit()?;
+        let transaction_state: TransactionState = window.global();
+        TransactionController::bind(&window, &service)?;
+        
+        transaction_state.invoke_audit_account(account.id.to_shared_string());
+        let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
+        let all_transactions: Vec<_> = transaction_state.get_all_transactions().iter().collect();
+        assert!(transactions[0].audited);
+        assert!(all_transactions[0].audited);
         Ok(())
     }
 
