@@ -9,6 +9,7 @@ import {
     Category,
     CategoryState,
     TransactionState,
+    Account,
     AccountState,
 } from "../../globals.slint";
 import { FontSize } from "../../theme.slint";
@@ -641,6 +642,91 @@ component Search {
     }
 }
 
+component AuditAccount {
+    in property <Account> account;
+    property <string> balance: State.account-balance(account.id);
+
+    button := PrimaryButton {
+        text: @tr("Audit");
+        clicked => popup.show();
+    }
+
+    popup := PopupWindow {
+        y: button.height;
+        close-policy: close-on-click-outside;
+        Rectangle {
+            background: white;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Colors.borderNeutral;
+        }
+
+        VerticalLayout {
+            padding: 16px;
+            spacing: 32px;
+            VerticalLayout {
+                spacing: 16px;
+                cross-axis-alignment: center;
+                Text {
+                    text: @tr("Is your bank account balance:");
+                    color: Colors.textBody;
+                }
+
+                Text {
+                    text: State.format-money(balance, Settings.currency-code);
+                    color: Colors.textBody;
+                    font-weight: FontWeight.semi-bold;
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                PrimaryButton {
+                    text: @tr("No");
+                    theme: neutral;
+                }
+
+                PrimaryButton {
+                    text: @tr("Yes");
+                    clicked => {
+                        popup.close();
+                        popup-audited.show();
+                    }
+                }
+            }
+        }
+    }
+
+    popup-audited := PopupWindow {
+        y: button.height;
+        width: 250px;
+        Rectangle {
+            background: white;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Colors.borderNeutral;
+        }
+
+        VerticalLayout {
+            spacing: 12px;
+            padding: 16px;
+            cross-axis-alignment: center;
+            Text {
+                text: @tr("Account audited");
+                color: Colors.textHeading;
+                font-weight: FontWeight.semi-bold;
+            }
+
+            Text {
+                text: @tr("All audited transactions have been hidden.");
+                color: Colors.textBody;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+        }
+    }
+}
+
 export component TransactionPage inherits VerticalLayout {
     in property <[Transaction]> transactions;
     in property <string> active-account-id;
@@ -648,138 +734,141 @@ export component TransactionPage inherits VerticalLayout {
     property <data-transfer> csv-data;
     callback create-account();
 
-    VerticalLayout {
-        padding: 12px;
-        spacing: 4px;
-
-        Text {
-            text: active-account-id.is-empty
-                ? @tr("All accounts")
-                : AccountState.get-account(active-account-id).name;
-            color: Colors.textBody;
-            font-weight: FontWeight.semi-bold;
-        }
-
-        balance := Text {
-            text: active-account-id.is-empty
-                ? State.format-money(AccountState.total-balance(),Settings.currency-code)
-                : State.format-money(AccountState.accounts[AccountState.accounts.find-index((value) => value.id == active-account-id)].balance, Settings.currency-code);
-            font-size: FontSize.heading-sm;
-            color: Colors.textHeading;
-            font-weight: FontWeight.semi-bold;
-        }
-    }
-
-    import-csv-dialog := ImportCsvDialog {
-        x: Api.window-size().width * 0.5 - self.width * 0.5 - root.absolute-position.x;
-        y: Api.window-size().height * 0.5 - self.height * 0.5;
-        data: csv-data;
-        account-id: active-account-id;
-    }
-
     HorizontalLayout {
-        cross-axis-alignment: center;
-        padding-left: 4px;
-        padding-right: 16px;
-        padding-top: 8px;
-        padding-bottom: 8px;
-
-        HorizontalLayout {
-            alignment: start;
-
-            if TransactionState.selected-transactions.length > 0 || TransactionState.all-transactions-selected: PrimaryButton {
-                text: @tr("Delete");
-                theme: ghost;
-                clicked => {
-                    TransactionState.delete-selected-transactions();
-                    AccountState.load-accounts();
-                }
-
-                Icon {
-                    icon: Icons.trash;
-                    stroke: Colors.textBody;
-                }
-            }
-        }
-
-        HorizontalLayout {
-            cross-axis-alignment: center;
-            spacing: 8px;
-            alignment: end;
-            if !active-account-id.is-empty: IconButton {
-                icon: Icons.file-down;
-                theme: ghost;
-                accessible-label: @tr("Import CSV file");
-                clicked => {
-                    csv-data = ImportCsvState.open-csv();
-                    import-csv-dialog.show();
-                }
-            }
-
-            Search { }
-
-            PrimaryButton {
-                text: @tr("New");
-                clicked => {
-                    new-transaction-active = true;
-                }
-            }
-        }
-    }
-
-    Table {
-        width: 100%;
-        property <int> length: active-account-id.is-empty ? 7 : 6;
-
-        Rectangle {
-            width: 100%;
-            height: 2px;
-            background: Colors.neutral50;
-        }
-
-        TransactionTableHeader {
-            length: length;
-            show-account: active-account-id.is-empty;
-        }
-
-        if new-transaction-active: NewTransactionRow {
-            length: length;
-            active-account-id: active-account-id;
-            closed => {
-                new-transaction-active = false;
-                if active-account-id.is-empty {
-                    // balance.text = State.format-money(TransactionState.total-balance(),Settings.currency-code)
-                }
-            }
-        }
-
-        if AccountState.accounts.length == 0: VerticalLayout {
-            alignment: center;
-            cross-axis-alignment: center;
-            spacing: 12px;
-            padding: 48px;
+        alignment: space-between;
+        cross-axis-alignment: start;
+        padding: 12px;
+        VerticalLayout {
+            spacing: 4px;
 
             Text {
-                text: @tr("Create your first account. You can import transactions or add them manually.");
-                wrap: word-wrap;
-                max-width: 350px;
-                horizontal-alignment: center;
+                text: active-account-id.is-empty
+                    ? @tr("All accounts")
+                    : State.get-account(active-account-id).name;
                 color: Colors.textBody;
+                font-weight: FontWeight.semi-bold;
             }
 
-            PrimaryButton {
-                text: @tr("Create account");
-                clicked => create-account();
+            total-spent := Text {
+                text: active-account-id.is-empty
+                    ? State.format-money(TransactionState.total-balance(),Settings.currency-code)
+                    : State.format-money(State.accounts[State.accounts.find-index((value) => value.id == active-account-id)].balance, Settings.currency-code);
+                font-size: FontSize.heading-sm;
+                color: Colors.textHeading;
+                font-weight: FontWeight.semi-bold;
             }
         }
 
-        for transaction[index] in transactions: TransactionRow {
-            transaction: transaction;
-            active-account-id: active-account-id;
-            length: length;
-            visible: active-account-id.is-empty ? true :
-                transaction.account-id == active-account-id || transaction.payee-id == active-account-id;
-            height: self.visible ? self.preferred-height : 0;
+        import-csv-dialog := ImportCsvDialog {
+            x: Api.window-size().width * 0.5 - self.width * 0.5 - root.absolute-position.x;
+            y: Api.window-size().height * 0.5 - self.height * 0.5;
+            data: csv-data;
+            account-id: active-account-id;
+        }
+
+        HorizontalLayout {
+            cross-axis-alignment: center;
+            padding-left: 4px;
+            padding-right: 16px;
+            padding-top: 8px;
+            padding-bottom: 8px;
+
+            HorizontalLayout {
+                alignment: start;
+
+                if TransactionState.selected-transactions.length > 0 || TransactionState.all-transactions-selected: PrimaryButton {
+                    text: @tr("Delete");
+                    theme: ghost;
+                    clicked => {
+                        TransactionState.delete-selected-transactions();
+                        AccountState.load-accounts();
+                    }
+
+                    Icon {
+                        icon: Icons.trash;
+                        stroke: Colors.textBody;
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                cross-axis-alignment: center;
+                spacing: 8px;
+                alignment: end;
+                if !active-account-id.is-empty: IconButton {
+                    icon: Icons.file-down;
+                    theme: ghost;
+                    accessible-label: @tr("Import CSV file");
+                    clicked => {
+                        csv-data = ImportCsvState.open-csv();
+                        import-csv-dialog.show();
+                    }
+                }
+
+                Search { }
+
+                PrimaryButton {
+                    text: @tr("New");
+                    clicked => {
+                        new-transaction-active = true;
+                    }
+                }
+            }
+        }
+
+        Table {
+            width: 100%;
+            property <int> length: active-account-id.is-empty ? 7 : 6;
+
+            Rectangle {
+                width: 100%;
+                height: 2px;
+                background: Colors.neutral50;
+            }
+
+            TransactionTableHeader {
+                length: length;
+                show-account: active-account-id.is-empty;
+            }
+
+            if new-transaction-active: NewTransactionRow {
+                length: length;
+                active-account-id: active-account-id;
+                closed => {
+                    new-transaction-active = false;
+                    if active-account-id.is-empty {
+                    // balance.text = State.format-money(TransactionState.total-balance(),Settings.currency-code)
+                }
+                }
+            }
+
+            if AccountState.accounts.length == 0: VerticalLayout {
+                alignment: center;
+                cross-axis-alignment: center;
+                spacing: 12px;
+                padding: 48px;
+
+                Text {
+                    text: @tr("Create your first account. You can import transactions or add them manually.");
+                    wrap: word-wrap;
+                    max-width: 350px;
+                    horizontal-alignment: center;
+                    color: Colors.textBody;
+                }
+
+                PrimaryButton {
+                    text: @tr("Create account");
+                    clicked => create-account();
+                }
+            }
+
+            for transaction[index] in transactions: TransactionRow {
+                transaction: transaction;
+                active-account-id: active-account-id;
+                length: length;
+                visible: active-account-id.is-empty ? true :
+                    transaction.account-id == active-account-id || transaction.payee-id == active-account-id;
+                height: self.visible ? self.preferred-height : 0;
+            }
         }
     }
-}
