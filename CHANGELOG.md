@@ -1,3 +1,9 @@
+## (unreleased)
+
+### Bug fixes
+
+- The pie chart no longer has a fixed size and adapts to the size of the screen.
+
 ## 0.3.2 - 2026-10-30
 
 - Windows: Added download progress bar.
