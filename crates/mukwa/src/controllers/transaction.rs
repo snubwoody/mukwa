@@ -259,8 +259,8 @@ impl TransactionController {
             let controller = controller.clone();
             move || {
                 if let Err(err) = controller
-                    .load_transactions()
-                    .context("Failed to load transactions")
+                .load_transactions()
+                .context("Failed to load transactions")
                 {
                     warn!("{}", err.report())
                 }

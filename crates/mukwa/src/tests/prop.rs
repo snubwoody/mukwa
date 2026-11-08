@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-//! Property-based fuzz testing.
+//! Simulation tests
 
 // TODO:
 // - Maybe prop testing for each page
@@ -21,7 +21,7 @@ use slint::{
 
 use crate::ui::{self, MainWindow, State, TransactionState};
 
-#[derive(Debug,Clone, Copy,PartialEq,Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 enum Action {
     CreateTransaction = 0,
@@ -47,13 +47,19 @@ pub struct TestRunner {
     app: MainWindow,
     succeeded: bool,
     current_run: u64,
-    seed: u64
+    seed: u64,
 }
 
 impl TestRunner {
     fn new(seed: u64) -> TestRunner {
         let (app, _) = super::setup().unwrap();
-        TestRunner { rng: Rng::with_seed(seed), app,succeeded: false,current_run: 0,seed}
+        TestRunner {
+            rng: Rng::with_seed(seed),
+            app,
+            succeeded: false,
+            current_run: 0,
+            seed,
+        }
     }
 
     fn run(&mut self) -> crate::Result<()> {
@@ -148,7 +154,8 @@ impl TestRunner {
     /// - Click the "Save" button and submit the form.
     fn create_transaction(&mut self) {
         // FIXME: panicking on unbounded inputs
-        let amount = Money::new(self.rng.i64(0..10000));
+        let amount = Money::new(self.rng.i64(0..));
+        dbg!(amount.to_string());
         let transaction_page =
             ElementHandle::find_by_element_type_name(&self.app, "TransactionPage")
                 .next()
@@ -179,8 +186,7 @@ impl TestRunner {
         // TODO: fill items here
 
         // TODO: also test no accounts?
-        let account_cell = 
-            new_transaction_row
+        let account_cell = new_transaction_row
             .query_descendants()
             .match_type_name("AccountCell")
             .find_first()
@@ -251,7 +257,7 @@ impl TestRunner {
     }
 }
 
-impl Drop for TestRunner{
+impl Drop for TestRunner {
     fn drop(&mut self) {
         if self.succeeded {
             return;
@@ -259,22 +265,24 @@ impl Drop for TestRunner{
 
         let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test-output");
         fs::create_dir_all(&dir).unwrap();
-        let mut content = format!("Seed: {}\n",self.seed);
-        content += &format!("Failed on run: {}",self.current_run);
-        let path = dir.join(format!("test-{}.txt",self.seed));
+        let mut content = format!("Seed: {}\n", self.seed);
+        content += &format!("Failed on run: {}", self.current_run);
+        let path = dir.join(format!("test-{}.txt", self.seed));
         fs::write(&path, content).unwrap();
-        eprintln!("Saved test state to {}",path.display());
+        eprintln!("Saved test state to {}", path.display());
     }
 }
 
 #[test]
 fn test() -> crate::Result<()> {
-    let seed = if let Ok(seed) = std::env::var("TEST_SEED") && let Ok(seed) = seed.parse::<u64>(){
+    let seed = if let Ok(seed) = std::env::var("TEST_SEED")
+        && let Ok(seed) = seed.parse::<u64>()
+    {
         seed
     } else {
         fastrand::u64(..)
     };
-    
+
     eprintln!("Running test runner with seed {seed}");
     eprintln!("To re-run this test use the command:");
     eprintln!("TEST_SEED={seed} cargo test");

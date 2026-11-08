@@ -763,21 +763,31 @@ impl Service {
     /// Calculates the account balance.
     pub fn account_balance(&self, account_id: Uuid) -> crate::Result<Money> {
         let connection = self.connection();
-        let mut expense_stmt = connection.prepare_cached(
-            "SELECT coalesce(sum(amount),0) FROM transactions WHERE sender_id = ?1",
-        )?;
-        let mut income_stmt = connection.prepare_cached(
-            "SELECT coalesce(sum(amount),0) FROM transactions WHERE receiver_id = ?1",
-        )?;
-        let total_expenses = expense_stmt.query_one([account_id.to_string()], |row| {
-            Ok(Money::from_scaled(row.get::<_, i64>(0)?))
-        })?;
-        let total_incomes = income_stmt.query_one([account_id.to_string()], |row| {
-            Ok(Money::from_scaled(row.get::<_, i64>(0)?))
-        })?;
+        let mut expense_stmt =
+            connection.prepare_cached("SELECT amount FROM transactions WHERE sender_id = ?1")?;
+        let mut income_stmt =
+            connection.prepare_cached("SELECT amount FROM transactions WHERE receiver_id = ?1")?;
+        let total_expenses: Money = expense_stmt
+            .query_and_then([account_id.to_string()], |row| {
+                let amount = row.get::<_, i64>("amount")?;
+                Ok(Money::from_scaled(amount))
+            })?
+            .collect::<Result<Vec<_>, Error>>()?
+            .iter()
+            .copied()
+            .sum();
 
-        let total = total_incomes - total_expenses;
+        let total_income: Money = income_stmt
+            .query_and_then([account_id.to_string()], |row| {
+                let amount = row.get::<_, i64>("amount")?;
+                Ok(Money::from_scaled(amount))
+            })?
+            .collect::<Result<Vec<_>, Error>>()?
+            .iter()
+            .copied()
+            .sum();
 
+        let total = total_income - total_expenses;
         Ok(total)
     }
 

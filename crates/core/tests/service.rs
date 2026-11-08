@@ -515,6 +515,45 @@ fn account_balance() -> mukwa_core::Result<()> {
 }
 
 #[test]
+fn account_balance_income_integer_overflow() -> mukwa_core::Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("", AccountType::Cash)?;
+    service
+        .create_income()
+        .amount(Money::MAX)
+        .account(account.id)
+        .submit()?;
+    service
+        .create_income()
+        .amount(Money::new(200))
+        .account(account.id)
+        .submit()?;
+
+    let total = service.account_balance(account.id)?;
+    assert_eq!(total, Money::MAX);
+    Ok(())
+}
+
+#[test]
+fn account_balance_expense_integer_overflow() -> mukwa_core::Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("", AccountType::Cash)?;
+    service
+        .create_expense()
+        .amount(Money::MAX)
+        .account(account.id)
+        .submit()?;
+    service
+        .create_expense()
+        .amount(Money::new(200))
+        .account(account.id)
+        .submit()?;
+
+    assert!(service.account_balance(account.id).is_ok());
+    Ok(())
+}
+
+#[test]
 fn account_balance_negative() -> mukwa_core::Result<()> {
     let service = Service::open_in_memory()?;
     let account = service.create_account("", AccountType::Cash)?;
