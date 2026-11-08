@@ -9,7 +9,7 @@
 // - Maybe a trait
 // - maybe save the database to a file on failure
 
-use std::{fs, ops::ControlFlow, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 use fastrand::Rng;
 use i_slint_backend_testing::{AccessibleRole, ElementHandle};
@@ -155,7 +155,6 @@ impl TestRunner {
     fn create_transaction(&mut self) {
         // FIXME: panicking on unbounded inputs
         let amount = Money::new(self.rng.i64(0..));
-        dbg!(amount.to_string());
         let transaction_page =
             ElementHandle::find_by_element_type_name(&self.app, "TransactionPage")
                 .next()

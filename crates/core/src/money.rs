@@ -54,7 +54,11 @@ impl Money {
     /// assert_eq!(Money::new(-100).abs(),Money::new(100))
     /// ```
     pub fn abs(&self) -> Self {
-        Money(self.0.abs())
+        if self.0 == i64::MIN {
+            Money::from_scaled(i64::MAX)
+        } else {
+            Money(self.0.abs())
+        }
     }
 
     pub const fn from_scaled(value: i64) -> Self {
@@ -429,6 +433,13 @@ mod test {
         let b = Money::new(100);
         let c = a + b;
         assert_eq!(c, Money::new(200));
+    }
+
+    #[test]
+    fn abs() {
+        assert_eq!(Money::new(10).abs(), Money::new(10));
+        assert_eq!(Money::new(-500).abs(), Money::new(500));
+        assert_eq!(Money::new(i64::MIN).abs(), Money::new(i64::MAX));
     }
 
     #[test]

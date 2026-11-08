@@ -148,14 +148,14 @@ impl CategoryController {
             let controller = controller.clone();
             move || {
                 if let Err(err) = controller
-                .load_category_groups()
-                .context("Failed to load category groups")
+                    .load_category_groups()
+                    .context("Failed to load category groups")
                 {
                     warn!("{}", err.report());
                 }
                 if let Err(err) = controller
-                .load_categories()
-                .context("Failed to load categories")
+                    .load_categories()
+                    .context("Failed to load categories")
                 {
                     warn!("{}", err.report());
                 }
