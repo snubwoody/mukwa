@@ -6,15 +6,15 @@ edition.workspace = true
 [[bench]]
 name = "service"
 harness = false
-path = "src/service.rs"
+path = "service.rs"
 
 [[bench]]
 name = "fmt"
 harness = false
-path = "src/fmt.rs"
+path = "fmt.rs"
 
 [dependencies]
-divan = "0.1.21"
+criterion = "0.5.1"
 tempfile.workspace = true
 rusqlite.workspace = true
-mukwa-core = {path = "../crates/core"}
+mukwa-core = { path = "../crates/core" }
