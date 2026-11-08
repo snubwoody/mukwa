@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-//! Property-based testing. 
+//! Property-based testing.
 
 // TODO:
 // - Maybe prop testing for each page
@@ -47,12 +47,60 @@ impl TestRunner {
             );
         }
 
+        self.create_account();
         self.create_transaction();
         Ok(())
     }
 
-    fn create_account(&mut self){
+    fn create_account(&mut self) {
+        let state: State = self.app.global();
+        let accounts_len = state.get_accounts().iter().len();
+        let balance = Money::new(self.rng.i64(..));
+        let name = "My account";
 
+        ElementHandle::find_by_accessible_label(&self.app, "Create account")
+            .next()
+            .unwrap()
+            .mock_single_click(PointerEventButton::Left);
+
+        ElementHandle::find_by_element_id(&self.app, "CreateAccountDialog::name")
+            .next()
+            .unwrap()
+            .mock_single_click(PointerEventButton::Left);
+
+        i_slint_backend_testing::send_keyboard_string_sequence(
+            &self.app,
+            name,
+        );
+        i_slint_backend_testing::send_keyboard_string_sequence(
+            &self.app,
+            &SharedString::from(Key::Tab),
+        );
+        i_slint_backend_testing::send_keyboard_string_sequence(&self.app, &balance.to_string());
+
+        ElementHandle::find_by_element_id(&self.app, "CreateAccountDialog::create-account")
+            .next()
+            .unwrap()
+            .mock_single_click(PointerEventButton::Left);
+
+        // TODO: assert that the elements are not visible
+
+        assert!(
+            ElementHandle::find_by_element_id(&self.app, "CreateAccountDialog::create-account")
+                .next()
+                .is_none(),
+            "CreateAccountDialog::create-account should not be visible"
+        );
+
+        let accounts: Vec<_> = state.get_accounts().iter().collect();
+        assert_eq!(
+            accounts.len(),
+            accounts_len + 1,
+            "Test should have created a new account"
+        );
+        let account = &accounts[accounts.len()-1];
+        assert_eq!(account.balance,balance.to_shared_string());
+        assert_eq!(account.name,name);
     }
 
     /// Creates a transaction and verifies its creating using the following steps:
