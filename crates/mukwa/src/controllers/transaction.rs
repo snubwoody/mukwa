@@ -385,6 +385,9 @@ impl TransactionController {
 
         self.transaction_state
             .get_transactions()
+            .insert_row(0, transaction.clone().into())?;
+        self.transaction_state
+            .get_all_transactions()
             .insert_row(0, transaction.into())?;
         Ok(())
     }
