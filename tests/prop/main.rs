@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+// TODO: save to target/prop-tests
+
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
 //! Property based fuzz testing
 
 // TODO:
@@ -9,17 +14,19 @@
 // - Maybe a trait
 // - maybe save the database to a file on failure
 
+#![allow(unused)]
 use std::{fs, path::PathBuf};
 
 use fastrand::Rng;
 use i_slint_backend_testing::{AccessibleRole, ElementHandle};
-use mukwa_core::Money;
+use mukwa::{AppState, SettingsStore};
+use mukwa_core::{Money, create_test_db, service::Service};
 use slint::{
     ComponentHandle, Model, SharedString, ToSharedString,
     platform::{Key, PointerEventButton},
 };
 
-use crate::ui::{self, MainWindow, State, TransactionState};
+use mukwa::ui::{self, MainWindow, State, TransactionState};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -28,6 +35,7 @@ enum Action {
     CreateAccount = 1,
 }
 
+// TODO: create CreateAccount struct and store a randomly chosen enter_balance variable 
 impl Action {
     const MAX: u8 = Action::CreateAccount as u8;
 }
@@ -52,7 +60,7 @@ pub struct TestRunner {
 
 impl TestRunner {
     fn new(seed: u64) -> TestRunner {
-        let (app, _) = super::setup().unwrap();
+        let (app, _) = setup().unwrap();
         TestRunner {
             rng: Rng::with_seed(seed),
             app,
@@ -62,7 +70,7 @@ impl TestRunner {
         }
     }
 
-    fn run(&mut self) -> crate::Result<()> {
+    fn run(&mut self) -> mukwa::Result<()> {
         let state: State = self.app.global();
         // TODO: account options has len of 7 every time?
         for _ in 0..self.rng.u8(..) {
@@ -270,8 +278,18 @@ impl Drop for TestRunner {
     }
 }
 
+fn setup() -> mukwa::Result<(MainWindow, Service)> {
+    i_slint_backend_testing::init_no_event_loop();
+    let service = Service::new(create_test_db());
+    let app = MainWindow::new()?;
+    let state = AppState::new(service.clone())?;
+    let settings = SettingsStore::open_in_memory();
+    mukwa::controllers::bind_all(&app, &state, &settings)?;
+    Ok((app, service))
+}
+
 #[test]
-fn test() -> crate::Result<()> {
+fn prop_test() -> mukwa::Result<()> {
     let seed = if let Ok(seed) = std::env::var("TEST_SEED")
         && let Ok(seed) = seed.parse::<u64>()
     {
@@ -287,4 +305,8 @@ fn test() -> crate::Result<()> {
     let mut runner = TestRunner::new(seed);
     runner.run()?;
     Ok(())
+}
+
+fn main(){
+
 }

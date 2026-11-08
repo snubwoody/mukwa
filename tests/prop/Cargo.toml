@@ -1,0 +1,24 @@
+[package]
+name = "prop-tests"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "prop-tests"
+path = "main.rs"
+
+[dependencies]
+smol = "2.0.2"
+slint.workspace = true
+fastrand = "2.5.0"
+mukwa = { path = "../../crates/mukwa" }
+mukwa-core = { path = "../../crates/core" }
+
+[dependencies.i-slint-backend-testing]
+git = "https://github.com/snubwoody/slint.git"
+branch = "mukwa"
+features = ["internal"]
+
+[dependencies.i-slint-core]
+git = "https://github.com/snubwoody/slint.git"
+branch = "mukwa"
