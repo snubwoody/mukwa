@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+//! Property-based testing. 
+
 // TODO:
 // - Maybe prop testing for each page
 // - Deterministic seeding
@@ -8,7 +10,11 @@
 
 use fastrand::Rng;
 use i_slint_backend_testing::{AccessibleRole, ElementHandle};
-use slint::{ComponentHandle, Model, ToSharedString, platform::PointerEventButton};
+use mukwa_core::Money;
+use slint::{
+    ComponentHandle, Model, SharedString, ToSharedString,
+    platform::{Key, PointerEventButton},
+};
 
 use crate::ui::{self, MainWindow, State, TransactionState};
 
@@ -45,8 +51,18 @@ impl TestRunner {
         Ok(())
     }
 
-    // TODO: use the same RNG for seeding
+    fn create_account(&mut self){
+
+    }
+
+    /// Creates a transaction and verifies its creating using the following steps:
+    /// - Click the "New" button and open the transaction form.
+    /// - Randomly pick the account.
+    /// - Enter a random amount in the outflow textfield.
+    /// - Click the "Save" button and submit the form.
     fn create_transaction(&mut self) {
+        // FIXME: panicking on unbounded inputs
+        let amount = Money::new(self.rng.i64(0..10000));
         let transaction_page =
             ElementHandle::find_by_element_type_name(&self.app, "TransactionPage")
                 .next()
@@ -94,6 +110,31 @@ impl TestRunner {
         let account_id = account_option.accessible_id().unwrap();
         account_option.mock_single_click(PointerEventButton::Left);
 
+        let outflow_cell = new_transaction_row
+            .query_descendants()
+            .match_id("NewTransactionRow::outflow-cell")
+            .find_first()
+            .unwrap();
+
+        outflow_cell.mock_single_click(PointerEventButton::Left);
+        // Clear the text field first
+        i_slint_backend_testing::send_key_combo(
+            &self.app,
+            [
+                Key::RightArrow,
+                Key::RightArrow,
+                Key::RightArrow,
+                Key::RightArrow,
+                Key::Backspace,
+                Key::Backspace,
+                Key::Backspace,
+            ],
+        );
+
+        // TODO: Implement better random number inputs
+        i_slint_backend_testing::send_keyboard_string_sequence(&self.app, &amount.to_string());
+        i_slint_backend_testing::send_key_combo(&self.app, [Key::Return]);
+
         new_transaction_row
             .query_descendants()
             .match_accessible_role(AccessibleRole::Button)
@@ -113,10 +154,13 @@ impl TestRunner {
         let transaction_state: TransactionState = self.app.global();
         let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
         let all_transactions: Vec<_> = transaction_state.get_all_transactions().iter().collect();
-        assert_eq!(transactions.len(), 1);
-        assert_eq!(all_transactions.len(), 1);
-        assert_eq!(transactions[0].account_id, account_id);
-        assert_eq!(all_transactions[0].account_id, account_id);
+        let assert_transaction = |transaction: &ui::Transaction| {
+            assert_eq!(transaction.account_id, account_id);
+            assert_eq!(transaction.outflow, amount.to_shared_string());
+        };
+        assert_transaction(&all_transactions[0]);
+        assert_transaction(&transactions[0]);
+        dbg!(transactions);
     }
 }
 

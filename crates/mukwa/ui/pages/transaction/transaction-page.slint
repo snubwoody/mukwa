@@ -457,6 +457,7 @@ component NewTransactionRow inherits VerticalLayout {
         outflow-cell := MoneyCell {
             width: parent.width / length;
             amount: transaction.outflow;
+            accessible-id: "outflow-cell";
             changed(value) => {
                 transaction.outflow = value;
                 transaction.inflow = "";
