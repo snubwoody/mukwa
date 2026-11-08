@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-//! Property-based testing.
+//! Property-based fuzz testing.
 
 // TODO:
 // - Maybe prop testing for each page
@@ -9,7 +9,7 @@
 // - Maybe a trait
 // - maybe save the database to a file on failure
 
-use std::{fs, path::PathBuf};
+use std::{fs, ops::ControlFlow, path::PathBuf};
 
 use fastrand::Rng;
 use i_slint_backend_testing::{AccessibleRole, ElementHandle};
@@ -96,7 +96,7 @@ impl TestRunner {
         let state: State = self.app.global();
         let accounts_len = state.get_accounts().iter().len();
         // FIXME: panicking on unbounded inputs
-        let balance = Money::new(self.rng.i64(0..10000));
+        let balance = Money::new(self.rng.i64(0..));
         let name = "My account";
 
         ElementHandle::find_by_accessible_label(&self.app, "Create account")
@@ -179,19 +179,20 @@ impl TestRunner {
         // TODO: fill items here
 
         // TODO: also test no accounts?
-        new_transaction_row
+        let account_cell = 
+            new_transaction_row
             .query_descendants()
             .match_type_name("AccountCell")
             .find_first()
-            .unwrap()
-            .mock_single_click(PointerEventButton::Left);
+            .unwrap();
 
-        let account_options = new_transaction_row
+        account_cell.mock_single_click(PointerEventButton::Left);
+
+        let account_options = account_cell
             .query_descendants()
             .match_accessible_role(AccessibleRole::ListItem)
             .find_all();
 
-        // dbg!(account_options.len());
         let account_option = self.rng.choice(account_options).unwrap();
         let account_id = account_option.accessible_id().unwrap();
         account_option.mock_single_click(PointerEventButton::Left);
