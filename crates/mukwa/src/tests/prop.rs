@@ -7,6 +7,7 @@
 // - Maybe prop testing for each page
 // - Deterministic seeding
 // - Maybe a trait
+// - maybe save the database to a file on failure
 
 use fastrand::Rng;
 use i_slint_backend_testing::{AccessibleRole, ElementHandle};
@@ -18,10 +19,25 @@ use slint::{
 
 use crate::ui::{self, MainWindow, State, TransactionState};
 
+#[derive(Debug,Clone, Copy,PartialEq,Eq)]
+#[repr(u8)]
 enum Action {
-    CreateTransaction,
-    EditTransaction,
-    DeleteTransaction,
+    CreateTransaction = 0,
+    CreateAccount = 1,
+}
+
+impl Action {
+    const MAX: u8 = Action::CreateAccount as u8;
+}
+
+impl From<u8> for Action {
+    fn from(value: u8) -> Self {
+        match value {
+            x if x == Action::CreateTransaction as u8 => Action::CreateTransaction,
+            x if x == Action::CreateAccount as u8 => Action::CreateAccount,
+            _ => panic!("Cannot convert {value} into Action"),
+        }
+    }
 }
 
 pub struct TestRunner {
@@ -47,15 +63,30 @@ impl TestRunner {
             );
         }
 
-        self.create_account();
-        self.create_transaction();
+        for _ in 0..2 {
+            let actions: Vec<_> = (1..self.rng.u8(2..10))
+                .map(|_| Action::from(self.rng.u8(0..=Action::MAX)))
+                .collect();
+            for action in actions {
+                match action {
+                    Action::CreateAccount => {
+                        self.create_account();
+                    }
+                    Action::CreateTransaction => {
+                        self.create_transaction();
+                    }
+                }
+            }
+        }
+
         Ok(())
     }
 
     fn create_account(&mut self) {
         let state: State = self.app.global();
         let accounts_len = state.get_accounts().iter().len();
-        let balance = Money::new(self.rng.i64(..));
+        // FIXME: panicking on unbounded inputs
+        let balance = Money::new(self.rng.i64(0..10000));
         let name = "My account";
 
         ElementHandle::find_by_accessible_label(&self.app, "Create account")
@@ -68,10 +99,7 @@ impl TestRunner {
             .unwrap()
             .mock_single_click(PointerEventButton::Left);
 
-        i_slint_backend_testing::send_keyboard_string_sequence(
-            &self.app,
-            name,
-        );
+        i_slint_backend_testing::send_keyboard_string_sequence(&self.app, name);
         i_slint_backend_testing::send_keyboard_string_sequence(
             &self.app,
             &SharedString::from(Key::Tab),
@@ -98,9 +126,9 @@ impl TestRunner {
             accounts_len + 1,
             "Test should have created a new account"
         );
-        let account = &accounts[accounts.len()-1];
-        assert_eq!(account.balance,balance.to_shared_string());
-        assert_eq!(account.name,name);
+        let account = &accounts[accounts.len() - 1];
+        assert_eq!(account.balance, balance.to_shared_string());
+        assert_eq!(account.name, name);
     }
 
     /// Creates a transaction and verifies its creating using the following steps:
@@ -153,7 +181,7 @@ impl TestRunner {
             .match_accessible_role(AccessibleRole::ListItem)
             .find_all();
 
-        dbg!(account_options.len());
+        // dbg!(account_options.len());
         let account_option = self.rng.choice(account_options).unwrap();
         let account_id = account_option.accessible_id().unwrap();
         account_option.mock_single_click(PointerEventButton::Left);
@@ -208,7 +236,7 @@ impl TestRunner {
         };
         assert_transaction(&all_transactions[0]);
         assert_transaction(&transactions[0]);
-        dbg!(transactions);
+        // dbg!(transactions);
     }
 }
 
