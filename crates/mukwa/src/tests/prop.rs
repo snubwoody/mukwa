@@ -9,6 +9,8 @@
 // - Maybe a trait
 // - maybe save the database to a file on failure
 
+use std::{fs, path::PathBuf};
+
 use fastrand::Rng;
 use i_slint_backend_testing::{AccessibleRole, ElementHandle};
 use mukwa_core::Money;
@@ -43,16 +45,18 @@ impl From<u8> for Action {
 pub struct TestRunner {
     rng: Rng,
     app: MainWindow,
+    succeeded: bool,
+    current_run: u64,
+    seed: u64
 }
 
 impl TestRunner {
-    fn new(rng: Rng) -> TestRunner {
+    fn new(seed: u64) -> TestRunner {
         let (app, _) = super::setup().unwrap();
-        TestRunner { rng, app }
+        TestRunner { rng: Rng::with_seed(seed), app,succeeded: false,current_run: 0,seed}
     }
 
     fn run(&mut self) -> crate::Result<()> {
-        let action = Action::CreateTransaction;
         let state: State = self.app.global();
         // TODO: account options has len of 7 every time?
         for _ in 0..self.rng.u8(..) {
@@ -63,7 +67,12 @@ impl TestRunner {
             );
         }
 
-        for _ in 0..2 {
+        for run in 1..3 {
+            self.current_run = run;
+            // TODO: maybe add enum weights so that certain things are more likely,
+            // to prevent things from being too uniform
+            // TODO: pick a random subset of actions to choose from?
+            // Pick a random combination of actions
             let actions: Vec<_> = (1..self.rng.u8(2..10))
                 .map(|_| Action::from(self.rng.u8(0..=Action::MAX)))
                 .collect();
@@ -79,6 +88,7 @@ impl TestRunner {
             }
         }
 
+        self.succeeded = true;
         Ok(())
     }
 
@@ -240,10 +250,35 @@ impl TestRunner {
     }
 }
 
+impl Drop for TestRunner{
+    fn drop(&mut self) {
+        if self.succeeded {
+            return;
+        }
+
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test-output");
+        fs::create_dir_all(&dir).unwrap();
+        let mut content = format!("Seed: {}\n",self.seed);
+        content += &format!("Failed on run: {}",self.current_run);
+        let path = dir.join(format!("test-{}.txt",self.seed));
+        fs::write(&path, content).unwrap();
+        eprintln!("Saved test state to {}",path.display());
+    }
+}
+
 #[test]
 fn test() -> crate::Result<()> {
-    let rng = Rng::new();
-    let mut runner = TestRunner::new(rng);
+    let seed = if let Ok(seed) = std::env::var("TEST_SEED") && let Ok(seed) = seed.parse::<u64>(){
+        seed
+    } else {
+        fastrand::u64(..)
+    };
+    
+    eprintln!("Running test runner with seed {seed}");
+    eprintln!("To re-run this test use the command:");
+    eprintln!("TEST_SEED={seed} cargo test");
+
+    let mut runner = TestRunner::new(seed);
     runner.run()?;
     Ok(())
 }
