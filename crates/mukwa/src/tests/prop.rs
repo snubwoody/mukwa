@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-//! Simulation tests
+//! Property based fuzz testing
 
 // TODO:
 // - Maybe prop testing for each page
@@ -101,7 +101,6 @@ impl TestRunner {
     fn create_account(&mut self) {
         let state: State = self.app.global();
         let accounts_len = state.get_accounts().iter().len();
-        // FIXME: panicking on unbounded inputs
         let balance = Money::new(self.rng.i64(0..));
         let name = "My account";
 
@@ -153,7 +152,6 @@ impl TestRunner {
     /// - Enter a random amount in the outflow textfield.
     /// - Click the "Save" button and submit the form.
     fn create_transaction(&mut self) {
-        // FIXME: panicking on unbounded inputs
         let amount = Money::new(self.rng.i64(0..));
         let transaction_page =
             ElementHandle::find_by_element_type_name(&self.app, "TransactionPage")
