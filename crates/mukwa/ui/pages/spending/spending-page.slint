@@ -95,25 +95,18 @@ component CategoryItem inherits VerticalLayout {
                         accepted(value) => CategoryState.update-category(category.id, value);
                     }
 
-                    Text {
-                        text: helper-text();
-                        color: Colors.textBody;
-
-                        function helper-text() -> string {
-                            if Api.money-to-float(CategoryState.total-spent(budget.id)) == Api.money-to-float(budget.amount) && Api.money-to-float(budget.amount) > 0 {
+                    helper-text := Text {
+                        property <string> available: CategoryState.left-to-spend(category.id, current-date);
+                        text: {
+                            if Api.money-to-float(available) == 0 && Api.money-to-float(budget.amount) > 0 {
                                 return "Fully spent";
                             }
-                            if Api.money-to-float(CategoryState.total-spent(budget.id)) > Api.money-to-float(budget.amount) {
-                                return "Overspent "
-                                    + State.format-money(CategoryState.total-spent(budget.id),Settings.currency-code)
-                                    + " of "
-                                    + State.format-money(budget.amount,Settings.currency-code);
+                            if Api.money-to-float(available) < 0 {
+                                return "Overspent by " + State.format-money(available, Settings.currency-code);
                             }
-                            return "Spent "
-                                + State.format-money(CategoryState.total-spent(budget.id),Settings.currency-code)
-                                + " of "
-                                + State.format-money(budget.amount,Settings.currency-code);
+                            return "";
                         }
+                        color: Colors.textBody;
                     }
                 }
 

@@ -2,8 +2,11 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use crate::ui::{CategoryState, MainWindow, Settings};
-use i_slint_backend_testing::ElementHandle;
-use mukwa_core::service::AccountType;
+use crate::{AppState, SettingsStore, controllers};
+use i_slint_backend_testing::{ElementHandle, ElementRoot};
+use jiff::civil::{Date, date};
+use jiff::{ToSpan, Zoned};
+use mukwa_core::service::{AccountType, CreateBudgetOpts};
 use mukwa_core::{Currency, Money, fmt::CurrencyFormatter, service::Service};
 use slint::{
     ComponentHandle, Model, PhysicalSize, SharedString, ToSharedString,
@@ -642,4 +645,201 @@ fn assign_button_reloads_left_to_budget() -> Result<()> {
         formatter.format_money(Money::new(250))?
     );
     Ok(())
+}
+
+#[test]
+fn category_helper_text() -> Result<()> {
+    // TODO: test
+    // - Zero
+    // - Overspent
+    // - Rollover
+    // - No budget?
+    // - Budget progress
+    // - Hide helper text if budget is 0 and spent is 0
+    // - Make similar tests for fully spent and overspent
+    // - Try using closures instead
+
+    struct TestCase {
+        budgets: Vec<(Date, Money)>,
+        transactions: Vec<(Date, Money)>,
+        expected: (Date, Money, Money),
+    }
+
+    let test_cases = [
+        TestCase {
+            budgets: vec![(Zoned::now().date(), Money::new(100))],
+            transactions: vec![(Zoned::now().date(), Money::new(20))],
+            expected: (Zoned::now().date(), Money::new(20), Money::new(100)),
+        },
+        // Spent 0 of 100
+        TestCase {
+            budgets: vec![(Zoned::now().date(), Money::new(100))],
+            transactions: vec![],
+            expected: (Zoned::now().date(), Money::ZERO, Money::new(100)),
+        },
+        // Spent 0 of 0
+        TestCase {
+            budgets: vec![(Zoned::now().date(), Money::ZERO)],
+            transactions: vec![],
+            expected: (Zoned::now().date(), Money::ZERO, Money::ZERO),
+        },
+        // Rollover into next month
+        TestCase {
+            budgets: vec![
+                (Zoned::now().date(), Money::new(100)),
+                (Zoned::now().date() + 1.month(), Money::ZERO),
+            ],
+            transactions: vec![(Zoned::now().date(), Money::new(20))],
+            expected: (Zoned::now().date() + 1.month(), Money::ZERO, Money::new(80)),
+        },
+    ];
+
+    i_slint_backend_testing::init_no_event_loop();
+    for case in test_cases {
+        let service = Service::open_in_memory()?;
+        service.create_account("", AccountType::Cash)?;
+
+        let group = service.create_category_group("")?;
+        let category = service.create_category("Test Category", group.id)?;
+        for (date, amount) in case.budgets {
+            service.create_budget(CreateBudgetOpts {
+                amount: Some(amount),
+                month: Some(date),
+                category_id: category.id,
+            })?;
+        }
+        for (date, amount) in case.transactions {
+            service
+                .create_expense()
+                .category(category.id)
+                .date(date)
+                .amount(amount)
+                .submit()?;
+        }
+
+        let app = MainWindow::new()?;
+        let state = AppState::new(service.clone())?;
+        let settings = SettingsStore::open_in_memory();
+        controllers::bind_all(&app, &state, &settings)?;
+
+        let settings: Settings = app.global();
+        settings.set_currency_code("CAD".to_shared_string());
+        let category_state: CategoryState = app.global();
+        category_state.invoke_set_current_budget_month(case.expected.0.into());
+        let formatter = CurrencyFormatter::with_currency(Currency::CAD);
+
+        let root_element = app.root_element();
+        find_by_accessible_label(&root_element, "Spending")
+            .mock_single_click(PointerEventButton::Left);
+        let category_item = find_by_type_name(&root_element, "CategoryItem");
+        let helper_text = category_item
+            .query_descendants()
+            .match_id("CategoryItem::helper-text")
+            .find_first()
+            .unwrap();
+        assert_eq!(
+            helper_text.accessible_label().unwrap(),
+            format!(
+                "Spent {} of {}",
+                formatter.format_money(case.expected.1)?,
+                formatter.format_money(case.expected.2)?
+            ),
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn category_helper_text_fully_spent() -> Result<()> {
+    // TODO: test
+    // - Zero
+    // - Overspent
+    // - Rollover
+    // - No budget?
+    // - Budget progress
+    // - Hide helper text if budget is 0 and spent is 0
+    // - Make similar tests for fully spent and overspent
+    // - Try using closures instead
+
+    i_slint_backend_testing::init_no_event_loop();
+    let run_test = |budgets: &[(Date, Money)], transactions: &[(Date, Money)], date: Date| {
+        let service = Service::open_in_memory().unwrap();
+        service.create_account("", AccountType::Cash).unwrap();
+
+        let group = service.create_category_group("").unwrap();
+        let category = service.create_category("Test Category", group.id).unwrap();
+        for (date, amount) in budgets {
+            service
+                .create_budget(CreateBudgetOpts {
+                    amount: Some(*amount),
+                    month: Some(*date),
+                    category_id: category.id,
+                })
+                .unwrap();
+        }
+        for (date, amount) in transactions {
+            service
+                .create_expense()
+                .category(category.id)
+                .date(*date)
+                .amount(*amount)
+                .submit()
+                .unwrap();
+        }
+
+        let app = MainWindow::new().unwrap();
+        let window = app.window();
+        window.set_size(PhysicalSize::new(1200, 1200));
+        let state = AppState::new(service.clone()).unwrap();
+        let settings = SettingsStore::open_in_memory();
+        controllers::bind_all(&app, &state, &settings).unwrap();
+        let category_state: CategoryState = app.global();
+        category_state.invoke_set_current_budget_month(date.into());
+
+        let root_element = app.root_element();
+        find_by_accessible_label(&root_element, "Spending")
+            .mock_single_click(PointerEventButton::Left);
+        let category_item = find_by_type_name(&root_element, "CategoryItem");
+        category_item.visit_descendants(|el| {
+            dbg!(el.type_name());
+            dbg!(el.accessible_label());
+            dbg!(el.id());
+            std::ops::ControlFlow::<ElementHandle>::Continue(())
+        });
+        let helper_text = category_item
+            .query_descendants()
+            .match_id("CategoryItem::helper-text")
+            .find_first()
+            .unwrap();
+        assert_eq!(helper_text.accessible_label().unwrap(), "Fully spent");
+    };
+
+    let now = Zoned::now().date();
+    run_test(&[(now, Money::new(100))], &[(now, Money::new(100))], now);
+    // Rollover into future months
+    run_test(
+        &[(now, Money::new(100))],
+        &[
+            (now + 2.months(), Money::new(50)),
+            (now + 7.months(), Money::new(50)),
+        ],
+        now + 10.months(),
+    );
+    Ok(())
+}
+
+fn find_by_accessible_label(element: &ElementHandle, label: &str) -> ElementHandle {
+    element
+        .query_descendants()
+        .match_accessible_label(label)
+        .find_first()
+        .unwrap()
+}
+
+fn find_by_type_name(element: &ElementHandle, type_name: &str) -> ElementHandle {
+    element
+        .query_descendants()
+        .match_type_name(type_name)
+        .find_first()
+        .unwrap()
 }
