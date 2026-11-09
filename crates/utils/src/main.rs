@@ -2,9 +2,12 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use clap::{Parser, Subcommand};
+use jiff::Zoned;
+use mukwa_core::Money;
 use mukwa_core::auto_update::Manifest;
 use mukwa_core::error::ErrorExt;
 use mukwa_core::migrator::Migrator;
+use mukwa_core::service::{AccountType, Service};
 use rusqlite::Connection;
 use std::collections::HashSet;
 use std::fmt::Write;
@@ -16,6 +19,148 @@ use usvg::Node;
 use usvg::tiny_skia_path::{PathSegment, PathSegmentsIter};
 use zip::ZipArchive;
 
+/// Fills the [`Service`] with random realistic data.
+struct ServiceFaker;
+
+impl ServiceFaker {
+    const BANK_NAMES: [&str; 9] = [
+        "TD Savings",
+        "TD Visa",
+        "TD MasterCard",
+        "RBC MasterCard",
+        "Absa Visa",
+        "FNB Savings",
+        "FNB Visa",
+        "Zanaco Chequing",
+        "Chase Savings",
+    ];
+    const CATEGORY_TITLES: [&str; 11] = [
+        "Groceries",
+        "Rent",
+        "Entertainment",
+        "Travel",
+        "Subscriptions",
+        "School",
+        "Self care",
+        "Water",
+        "Electricity",
+        "Investments",
+        "Taxes & Fees",
+    ];
+    const CATEGORY_GROUP_TITLES: [&str; 4] = ["Wants", "Needs", "Bills", "Lifestyle"];
+
+    fn new() -> Self {
+        ServiceFaker
+    }
+
+    fn fill_transactions(&self, service: &Service) -> mukwa_core::Result<()> {
+        let accounts = service.fetch_accounts()?;
+        let categories = service.fetch_categories()?;
+        let today = Zoned::now().date();
+
+        for _ in 0..fastrand::u16(20..=200) {
+            let accounts = fastrand::choose_multiple(&accounts, 2);
+            let date = jiff::civil::date(
+                fastrand::i16(today.year() - 1..today.year() + 1),
+                fastrand::i8(1..=12),
+                fastrand::i8(1..28),
+            );
+            let choice = match fastrand::f32() {
+                p if p < 0.70 => 1, // 70% chance for expenses
+                p if p < 0.90 => 3, // 20% chance for transfers
+                _ => 2,             // 10% chance for incomes
+            };
+            match choice {
+                1 => {
+                    let category = fastrand::choice(&categories).unwrap();
+                    // Weighted amounts to simulate more realistic data
+                    let amount = match fastrand::f32() {
+                        p if p < 0.70 => fastrand::i64(1..=250),
+                        p if p < 0.90 => fastrand::i64(251..=1000),
+                        _ => fastrand::i64(1001..=5000),
+                    };
+                    let amount = Money::new(amount);
+                    service
+                        .create_expense()
+                        .category(category.id)
+                        .account(accounts[0].id)
+                        .date(date)
+                        .amount(amount)
+                        .submit()?;
+                }
+                2 => {
+                    let amount = match fastrand::f32() {
+                        p if p < 0.50 => fastrand::i64(2001..=5000),
+                        p if p < 0.90 => fastrand::i64(1001..=2000),
+                        _ => fastrand::i64(0..=1000),
+                    };
+                    let amount = Money::new(amount);
+                    service
+                        .create_income()
+                        .account(accounts[0].id)
+                        .date(date)
+                        .amount(amount)
+                        .submit()?;
+                }
+                3 => {
+                    let amount = Money::new(fastrand::i64(1..=5000));
+                    service
+                        .create_transfer()
+                        .accounts(accounts[0].id, accounts[1].id)
+                        .date(date)
+                        .amount(amount)
+                        .submit()?;
+                }
+                _ => unreachable!(),
+            }
+        }
+        Ok(())
+    }
+
+    fn fill_accounts(&self, service: &Service) -> mukwa_core::Result<()> {
+        for name in ServiceFaker::BANK_NAMES {
+            if fastrand::bool() {
+                continue;
+            }
+            service.create_account(name, AccountType::Cash)?;
+            // TODO: create starting balance
+        }
+        Ok(())
+    }
+
+    fn fill_categories(&self, service: &Service) -> mukwa_core::Result<()> {
+        let groups = service.fetch_category_groups()?;
+        let groups: Vec<_> = groups.iter().filter(|g| !g.is_meta).collect();
+        for title in ServiceFaker::CATEGORY_TITLES {
+            if fastrand::bool() {
+                continue;
+            }
+            let group = fastrand::choice(&groups).unwrap();
+            service.create_category(title, group.id)?;
+            // TODO: create budget
+        }
+        Ok(())
+    }
+
+    fn fill_category_groups(&self, service: &Service) -> mukwa_core::Result<()> {
+        for title in ServiceFaker::CATEGORY_GROUP_TITLES {
+            if fastrand::bool() {
+                continue;
+            }
+            service.create_category_group(title)?;
+        }
+        Ok(())
+    }
+
+    fn fill(&self, service: &Service) -> mukwa_core::Result<()> {
+        self.fill_accounts(service)?;
+        self.fill_category_groups(service)?;
+        self.fill_categories(service)?;
+        self.fill_transactions(service)?;
+        Ok(())
+    }
+}
+
 #[derive(Parser)]
 struct Cli {
     #[command(subcommand)]
@@ -24,6 +169,12 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Generate a database filled with random realistic data.
+    Faker {
+        /// The path to the sqlite database file
+        #[arg(short, long, default_value = "data.sqlite")]
+        path: PathBuf,
+    },
     GenerateIcons,
     Manifest {
         #[command(subcommand)]
@@ -93,6 +244,7 @@ fn run() -> mukwa_core::Result<()> {
                 info!("Created release manifest at {}", path.display());
             }
         },
+        Command::Faker { path } => generate_data(path)?,
     }
     Ok(())
 }
@@ -106,6 +258,21 @@ fn main() {
     if let Err(err) = run() {
         warn!("{}", err.report());
     }
+}
+
+fn generate_data(path: PathBuf) -> mukwa_core::Result<()> {
+    if fs::exists(&path)? {
+        fs::remove_file(&path)?;
+    }
+    let mut connection = Connection::open(&path)?;
+    let mut migrator = Migrator::new();
+    migrator.load_embedded()?;
+    migrator.migrate(&mut connection)?;
+    let service = Service::new(connection);
+    let faker = ServiceFaker::new();
+    faker.fill(&service)?;
+    info!("Generated fake data at {}", path.display());
+    Ok(())
 }
 
 fn generate_icons() -> mukwa_core::Result<()> {

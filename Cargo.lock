@@ -6659,6 +6659,8 @@ name = "utils"
 version = "0.3.2"
 dependencies = [
  "clap",
+ "fastrand",
+ "jiff",
  "mukwa-core",
  "rusqlite",
  "serde_json",
