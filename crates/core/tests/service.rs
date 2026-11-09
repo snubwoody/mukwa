@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 use jiff::Zoned;
-use jiff::civil::date;
+use jiff::civil::{Date, date};
 use mukwa_core::Result;
 use mukwa_core::migrator::Migrator;
 use mukwa_core::service::{AccountType, Category, CreateBudgetOpts, Service, TransactionType};
@@ -1188,32 +1188,81 @@ fn delete_budget_target() -> Result<()> {
 
 #[test]
 fn available_to_spend() -> Result<()> {
-    let service = Service::open_in_memory()?;
-    let group = service.create_category_group("")?;
-    let category = service.create_category("", group.id)?;
+    struct TestCase {
+        budgets: Vec<(Date, Money)>,
+        transactions: Vec<(Date, Money)>,
+        expected: (Date, Money),
+    }
 
-    service.create_budget(CreateBudgetOpts {
-        amount: Some(Money::new(50)),
-        month: Some(date(2026, 5, 1)),
-        category_id: category.id,
-    })?;
-    service
-        .create_expense()
-        .category(category.id)
-        .date(date(2026, 5, 12))
-        .amount(Money::new(10))
-        .submit()?;
-    service
-        .create_expense()
-        .category(category.id)
-        .date(date(2026, 6, 1))
-        .amount(Money::new(20))
-        .submit()?;
+    let test_cases = [
+        TestCase {
+            budgets: vec![(date(1999, 12, 31), Money::new(100))],
+            transactions: vec![(date(2000, 1, 1), Money::new(20))],
+            expected: (date(2000, 1, 1), Money::new(80)),
+        },
+        TestCase {
+            budgets: vec![(date(2026, 1, 1), Money::new(100))],
+            transactions: vec![(date(2026, 1, 1), Money::new(120))],
+            expected: (date(2026, 1, 1), Money::new(-20)),
+        },
+        // Future transactions don't affect past budgets
+        TestCase {
+            budgets: vec![(date(1999, 6, 1), Money::new(100))],
+            transactions: vec![(date(2000, 1, 1), Money::new(50))],
+            expected: (date(1999, 7, 1), Money::new(100)),
+        },
+        // Budgets don't affect those in the past
+        TestCase {
+            budgets: vec![(date(1999, 6, 1), Money::new(100))],
+            transactions: vec![],
+            expected: (date(1999, 5, 1), Money::ZERO),
+        },
+        // Budgets rollover into future months
+        TestCase {
+            budgets: vec![
+                (date(2005, 12, 1), Money::new(100)),
+                (date(2006, 1, 1), Money::new(50)),
+            ],
+            transactions: vec![(date(2006, 2, 1), Money::new(30))],
+            expected: (date(2006, 7, 1), Money::new(120)),
+        },
+        // Budget not created yet
+        TestCase {
+            budgets: vec![],
+            transactions: vec![(date(2006, 2, 1), Money::new(30))],
+            expected: (date(2006, 2, 1), Money::new(-30)),
+        },
+        // No budgets or transactions
+        TestCase {
+            budgets: vec![],
+            transactions: vec![],
+            expected: (Zoned::now().date(), Money::ZERO),
+        },
+    ];
 
-    let amount = service.available_to_spend(category.id, date(2026, 5, 1))?;
-    assert_eq!(amount, Money::new(40));
-    let amount = service.available_to_spend(category.id, date(2026, 6, 1))?;
-    assert_eq!(amount, Money::new(20));
+    for case in test_cases {
+        let service = Service::open_in_memory()?;
+        let group = service.create_category_group("")?;
+        let category = service.create_category("", group.id)?;
+        for (date, amount) in case.budgets {
+            service.create_budget(CreateBudgetOpts {
+                amount: Some(amount),
+                month: Some(date),
+                category_id: category.id,
+            })?;
+        }
+        for (date, amount) in case.transactions {
+            service
+                .create_expense()
+                .category(category.id)
+                .date(date)
+                .amount(amount)
+                .submit()?;
+        }
+
+        let amount = service.available_to_spend(category.id, case.expected.0)?;
+        assert_eq!(amount, case.expected.1);
+    }
     Ok(())
 }
 
