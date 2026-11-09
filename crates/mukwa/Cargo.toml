@@ -3,6 +3,10 @@ name = "mukwa"
 version.workspace = true
 edition.workspace = true
 
+[[bin]]
+name = "mukwa"
+path = "src/main.rs"
+
 [dependencies]
 mukwa-core = { path = "../core" }
 slint.workspace = true
