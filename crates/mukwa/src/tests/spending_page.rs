@@ -246,6 +246,40 @@ fn cancel_edit_budget_target_form() -> Result<()> {
 }
 
 #[test]
+fn close_sidebar() -> Result<()> {
+    let (app, _) = setup()?;
+    let category_state: CategoryState = app.global();
+    category_state.invoke_create_category_group(SharedString::new());
+    let groups: Vec<_> = category_state.get_category_groups().iter().collect();
+    category_state.invoke_create_category(SharedString::from("Rent"), groups[1].id.clone());
+
+    ElementHandle::find_by_element_type_name(&app, "CategoryItem")
+        .next()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    create_budget_target(&app, Money::new(50));
+
+    let sidebar = ElementHandle::find_by_element_type_name(&app, "SpendingPageSideBar")
+        .next()
+        .unwrap();
+
+    sidebar
+        .query_descendants()
+        .match_accessible_label("Close")
+        .find_first()
+        .unwrap()
+        .mock_single_click(PointerEventButton::Left);
+
+    assert!(
+        ElementHandle::find_by_element_type_name(&app, "SpendingPageSideBar")
+            .next()
+            .is_none()
+    );
+    Ok(())
+}
+
+#[test]
 fn cancel_create_budget_target_form() -> Result<()> {
     let (app, _) = setup()?;
     let category_state: CategoryState = app.global();

@@ -1,3 +1,7 @@
+## (unreleased)
+
+- Added button to close the budget target sidebar.
+
 ## 0.3.2 - 2026-10-30
 
 - Windows: Added download progress bar.
