@@ -455,7 +455,7 @@ impl CategoryController {
         let id = Uuid::parse_str(id)?;
         let date = Date::try_from(date)?;
         let available = self.service.available_to_spend_in_group(id, date)?;
-        Ok(available.max(Money::ZERO))
+        Ok(available)
     }
 
     fn total_spent_in_group(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
@@ -477,7 +477,7 @@ impl CategoryController {
         let id = Uuid::parse_str(id)?;
         let date = Date::try_from(date)?;
         let available = self.service.available_to_spend(id, date)?;
-        Ok(available.max(Money::ZERO))
+        Ok(available)
     }
 
     fn total_assigned_in_group(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
@@ -708,12 +708,12 @@ mod test {
     }
 
     #[test]
-    fn left_to_spend_caps_at_zero() -> crate::Result<()> {
+    fn left_to_spend_negative() -> crate::Result<()> {
         let (service, category_state, _) = setup()?;
         service.create_account("", AccountType::Cash)?;
         let group = service.create_category_group("")?;
-        let category = service.create_category(Default::default(), group.id)?;
-        let budget = service.create_budget(CreateBudgetOpts {
+        let category = service.create_category("", group.id)?;
+        service.create_budget(CreateBudgetOpts {
             category_id: category.id,
             amount: Some(Money::new(200)),
             month: Some(Zoned::now().date()),
@@ -725,8 +725,8 @@ mod test {
             .category(category.id)
             .submit()?;
         let total = category_state
-            .invoke_left_to_spend(budget.id.to_shared_string(), Zoned::now().date().into());
-        assert_eq!(total, Money::ZERO.to_shared_string());
+            .invoke_left_to_spend(category.id.to_shared_string(), Zoned::now().date().into());
+        assert_eq!(total, Money::new(-300).to_shared_string());
         Ok(())
     }
 
