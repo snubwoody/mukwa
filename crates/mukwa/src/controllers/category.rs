@@ -343,9 +343,9 @@ impl CategoryController {
 
         category_state.on_left_to_spend({
             let controller = controller.clone();
-            move |id| {
+            move |id, date| {
                 controller
-                    .left_to_spend(&id)
+                    .left_to_spend(&id, date)
                     .unwrap_or_else(|err| {
                         warn!("Failed to calculate left to spend: {err}");
                         Money::ZERO
@@ -475,11 +475,13 @@ impl CategoryController {
         Ok(total)
     }
 
-    fn left_to_spend(&self, id: &str) -> crate::Result<Money> {
-        let total = self.total_spent(id)?;
+    fn left_to_spend(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
+        // let total = self.total_spent(id)?;
         let id = Uuid::parse_str(id)?;
-        let budget = self.service.get_budget(id)?;
-        let available = budget.amount - total;
+        let date = Date::try_from(date)?;
+        // let budget = self.service.get_budget(id)?;
+        // let available = budget.amount - total;
+        let available = self.service.available_to_spend(id, date)?;
         Ok(available.max(Money::ZERO))
     }
 
@@ -727,7 +729,8 @@ mod test {
             .date(Zoned::now().date())
             .category(category.id)
             .submit()?;
-        let total = category_state.invoke_left_to_spend(budget.id.to_shared_string());
+        let total = category_state
+            .invoke_left_to_spend(budget.id.to_shared_string(), Zoned::now().date().into());
         assert_eq!(total, Money::ZERO.to_shared_string());
         Ok(())
     }

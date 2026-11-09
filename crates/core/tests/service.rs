@@ -1185,3 +1185,93 @@ fn delete_budget_target() -> Result<()> {
     assert!(target.is_none());
     Ok(())
 }
+
+#[test]
+fn available_to_spend() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
+
+    service.create_budget(CreateBudgetOpts {
+        amount: Some(Money::new(50)),
+        month: Some(date(2026, 5, 1)),
+        category_id: category.id,
+    })?;
+    service
+        .create_expense()
+        .category(category.id)
+        .date(date(2026, 5, 12))
+        .amount(Money::new(10))
+        .submit()?;
+    service
+        .create_expense()
+        .category(category.id)
+        .date(date(2026, 6, 1))
+        .amount(Money::new(20))
+        .submit()?;
+
+    let amount = service.available_to_spend(category.id, date(2026, 5, 1))?;
+    assert_eq!(amount, Money::new(40));
+    let amount = service.available_to_spend(category.id, date(2026, 6, 1))?;
+    assert_eq!(amount, Money::new(20));
+    Ok(())
+}
+
+#[test]
+fn available_to_spend_across_year_boundary() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
+
+    service.create_budget(CreateBudgetOpts {
+        amount: Some(Money::new(50)),
+        month: Some(date(2025, 12, 1)),
+        category_id: category.id,
+    })?;
+    service
+        .create_expense()
+        .category(category.id)
+        .date(date(2025, 12, 1))
+        .amount(Money::new(10))
+        .submit()?;
+    service
+        .create_expense()
+        .category(category.id)
+        .date(date(2026, 6, 1))
+        .amount(Money::new(20))
+        .submit()?;
+
+    let amount = service.available_to_spend(category.id, date(2025, 12, 1))?;
+    assert_eq!(amount, Money::new(40));
+    let amount = service.available_to_spend(category.id, date(2026, 6, 1))?;
+    assert_eq!(amount, Money::new(20));
+    Ok(())
+}
+
+#[test]
+fn available_to_spend_filters_by_category() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let group = service.create_category_group("")?;
+    let category = service.create_category("", group.id)?;
+
+    service.create_budget(CreateBudgetOpts {
+        amount: Some(Money::new(50)),
+        month: Some(date(2026, 5, 1)),
+        category_id: category.id,
+    })?;
+    service
+        .create_expense()
+        .category(category.id)
+        .date(date(2026, 5, 12))
+        .amount(Money::new(10))
+        .submit()?;
+    service
+        .create_expense()
+        .date(date(2025, 5, 1))
+        .amount(Money::new(20))
+        .submit()?;
+
+    let amount = service.available_to_spend(category.id, date(2026, 5, 1))?;
+    assert_eq!(amount, Money::new(40));
+    Ok(())
+}

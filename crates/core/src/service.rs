@@ -1252,6 +1252,29 @@ impl Service {
         Ok(total_assignable - total_assigned)
     }
 
+    /// Returns the total amount available to spend for a budget.
+    pub fn available_to_spend(&self, category_id: Uuid, date: Date) -> crate::Result<Money> {
+        let budgets = self.fetch_budgets()?;
+        let transactions = self.fetch_transactions()?;
+
+        let total_assigned: Money = budgets
+            .iter()
+            .filter(|b| b.category_id == category_id)
+            .filter(|b| (b.year, b.month) <= (date.year() as i64, date.month() as i64))
+            .map(|b| b.amount)
+            .sum();
+
+        let total_spent: Money = transactions
+            .iter()
+            .filter(|t| t.transaction_type() == TransactionType::Expense)
+            .filter(|t| t.category_id == Some(category_id))
+            .filter(|t| (t.date.year(), t.date.month()) <= (date.year(), date.month()))
+            .map(|t| t.amount)
+            .sum();
+
+        Ok(total_assigned - total_spent)
+    }
+
     /// Returns the total amount of money deposited into cash accounts.
     fn total_assignable(&self) -> crate::Result<Money> {
         let cash_accounts: HashMap<Uuid, Account> = self
