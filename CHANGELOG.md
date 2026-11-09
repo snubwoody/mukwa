@@ -1,5 +1,6 @@
 ## (unreleased)
 
+- Budgets now carry over to future months.
 - Added button to close the budget target sidebar.
 
 ## 0.3.2 - 2026-10-30
