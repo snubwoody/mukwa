@@ -795,6 +795,20 @@ impl Service {
         Ok(categories)
     }
 
+    /// Fetches all the categories in the category group.
+    pub fn fetch_categories_in_group(&self, id: Uuid) -> crate::Result<Vec<Category>> {
+        let mut categories = vec![];
+        let connection = self.connection();
+        let sql = "SELECT * FROM categories WHERE group_id = ?";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows = stmt.query_and_then([id.to_string()], |row| Category::try_from(row))?;
+
+        for row in rows {
+            categories.push(row?);
+        }
+        Ok(categories)
+    }
+
     /// Fetches all category groups from the database.
     pub fn fetch_category_groups(&self) -> crate::Result<Vec<CategoryGroup>> {
         let mut category_groups = vec![];
@@ -1273,6 +1287,20 @@ impl Service {
             .sum();
 
         Ok(total_assigned - total_spent)
+    }
+
+    pub fn available_to_spend_in_group(&self, id: Uuid, date: Date) -> crate::Result<Money> {
+        let mut available = Money::ZERO;
+        let groups = self.fetch_category_groups()?;
+        let group = groups
+            .iter()
+            .find(|g| g.id == id)
+            .ok_or(Error::new("Category group not found"))?;
+        let categories = self.fetch_categories_in_group(group.id)?;
+        for category in categories {
+            available += self.available_to_spend(category.id, date)?;
+        }
+        Ok(available)
     }
 
     /// Returns the total amount of money deposited into cash accounts.

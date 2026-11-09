@@ -452,11 +452,9 @@ impl CategoryController {
     }
 
     fn left_to_spend_in_group(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
-        let total = self.total_spent_in_group(id, date.clone())?;
         let id = Uuid::parse_str(id)?;
         let date = Date::try_from(date)?;
-        let assigned = self.service.total_assigned_in_group(id, date)?;
-        let available = assigned - total;
+        let available = self.service.available_to_spend_in_group(id, date)?;
         Ok(available.max(Money::ZERO))
     }
 
@@ -476,11 +474,8 @@ impl CategoryController {
     }
 
     fn left_to_spend(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
-        // let total = self.total_spent(id)?;
         let id = Uuid::parse_str(id)?;
         let date = Date::try_from(date)?;
-        // let budget = self.service.get_budget(id)?;
-        // let available = budget.amount - total;
         let available = self.service.available_to_spend(id, date)?;
         Ok(available.max(Money::ZERO))
     }
