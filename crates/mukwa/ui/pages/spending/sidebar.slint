@@ -219,16 +219,26 @@ export component SpendingPageSideBar inherits Rectangle {
     in property <Category> category;
     background: Colors.surface0;
     callback assigned();
+    callback closed();
 
     VerticalLayout {
         padding: 20px;
         spacing: 20px;
         alignment: start;
 
-        Text {
-            text: category.title;
-            color: Colors.textBody;
-            font-weight: FontWeight.semi-bold;
+        HorizontalLayout {
+            Text {
+                text: category.title;
+                color: Colors.textBody;
+                font-weight: FontWeight.semi-bold;
+            }
+
+            IconButton {
+                icon: Icons.x;
+                theme: ghost;
+                accessible-label: @tr("Close");
+                clicked => closed();
+            }
         }
 
         BudgetTarget {
