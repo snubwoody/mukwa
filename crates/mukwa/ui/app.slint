@@ -10,6 +10,7 @@ import {
     CategoryState,
     Category,
     Api,
+    AccountState,
 } from "globals.slint";
 export {
     Account,
@@ -85,7 +86,7 @@ component AccountListItem inherits SidebarButton {
         ContextMenuItem {
             text: @tr("Delete");
             clicked => {
-                State.delete-account(account.id);
+                AccountState.delete-account(account.id);
                 parent.close();
             }
         }
@@ -95,12 +96,12 @@ component AccountListItem inherits SidebarButton {
         alignment: space-between;
         width: 100%;
 
-        Text {
+        name := Text {
             text: account.name;
             color: Colors.textBody;
         }
 
-        Text {
+        balance := Text {
             text: State.format-money(account.balance, Settings.currency-code);
             color: Colors.textBody;
         }
@@ -151,8 +152,8 @@ component CreateAccountDialog inherits PopupWindow {
 
     function submit() {
         selected-account-type == "cash"
-            ? State.create-account(name.text,cash,balance.text)
-            : State.create-account(name.text,credit,balance.text);
+            ? AccountState.create-account(name.text,cash,balance.text)
+            : AccountState.create-account(name.text,credit,balance.text);
         CategoryState.load-state();
         TransactionState.load-transactions();
         self.close();
@@ -360,7 +361,7 @@ export component MainWindow inherits Window {
 
         HorizontalLayout {
             sidebar := Sidebar {
-                accounts: State.accounts;
+                accounts: AccountState.accounts;
                 current-page: active-page;
                 active-account-id: active-account-id;
                 select-page(page) => {

@@ -71,24 +71,26 @@ impl TransactionController {
         });
 
         transaction_state.on_delete_selected_transactions({
-            let global_state = global_state.as_weak();
+            let _global_state = global_state.as_weak();
             let controller = controller.clone();
             move || {
                 if let Err(err) = controller.delete_selected_transactions() {
                     warn!("Failed to delete transactions: {err}");
                 }
-                global_state.unwrap().invoke_load_accounts();
+                // FIXME
+                // global_state.unwrap().invoke_load_accounts();
             }
         });
 
         transaction_state.on_delete_transaction({
             let controller = controller.clone();
-            let global_state = global_state.as_weak();
+            let _global_state = global_state.as_weak();
             move |id| {
                 if let Err(err) = controller.delete_transaction(&id) {
                     warn!("Failed to delete transaction: {err}");
                 }
-                global_state.unwrap().invoke_load_accounts();
+                // FIXME
+                // global_state.unwrap().invoke_load_accounts();
             }
         });
 
@@ -141,24 +143,24 @@ impl TransactionController {
         });
 
         transaction_state.on_set_transaction_outflow({
-            let global_state = global_state.as_weak();
             let controller = controller.clone();
             move |id, amount| {
                 if let Err(err) = controller.set_transaction_outflow(&id, &amount) {
                     warn!("Failed to set transaction outflow: {err}");
                 }
-                global_state.unwrap().invoke_load_accounts();
+                // FIXME
+                // global_state.unwrap().invoke_load_accounts();
             }
         });
 
         transaction_state.on_set_transaction_inflow({
-            let global_state = global_state.as_weak();
             let controller = controller.clone();
             move |id, amount| {
                 if let Err(err) = controller.set_transaction_inflow(&id, &amount) {
                     warn!("Failed to set transaction inflow: {err}");
                 }
-                global_state.unwrap().invoke_load_accounts();
+                // FIXME
+                // global_state.unwrap().invoke_load_accounts();
             }
         });
 
@@ -190,7 +192,6 @@ impl TransactionController {
         });
 
         transaction_state.on_create_transaction({
-            let global_state = global_state.as_weak();
             let controller = controller.clone();
             move |opts| {
                 if let Err(err) = controller
@@ -199,7 +200,8 @@ impl TransactionController {
                 {
                     warn!("{}", err.report())
                 }
-                global_state.unwrap().invoke_load_accounts();
+                // FIXME
+                // global_state.unwrap().invoke_load_accounts();
             }
         });
 

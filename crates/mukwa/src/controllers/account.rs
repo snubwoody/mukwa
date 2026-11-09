@@ -318,4 +318,27 @@ mod test {
         assert_eq!(state.get_accounts().iter().len(), 2);
         Ok(())
     }
+
+    #[test]
+    fn starting_balance_transaction_kind() -> crate::Result<()> {
+        let (app, controller) = setup()?;
+        let account_state: AccountState = app.global();
+
+        account_state.invoke_create_account(
+            "".to_shared_string(),
+            ui::AccountType::Cash,
+            "500".to_shared_string(),
+        );
+        account_state.invoke_create_account(
+            "".to_shared_string(),
+            ui::AccountType::Credit,
+            "500".to_shared_string(),
+        );
+        let transactions = controller.service.fetch_transactions()?;
+        let t1 = &transactions[0];
+        let t2 = &transactions[1];
+        assert_eq!(t1.kind, TransactionKind::StartingBalance);
+        assert_eq!(t2.kind, TransactionKind::StartingBalance);
+        Ok(())
+    }
 }

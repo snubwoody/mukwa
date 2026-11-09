@@ -8,8 +8,8 @@ use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::fmt::CurrencyFormatter;
 use mukwa_core::service::TransactionType;
-use mukwa_core::{Currency, Error, Money, fmt};
-use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
+use mukwa_core::{Currency, Money, fmt};
+use slint::{ComponentHandle, ModelRc, SharedString, ToSharedString, VecModel};
 use std::collections::HashSet;
 use std::rc::Rc;
 use std::str::FromStr;
@@ -53,15 +53,11 @@ pub fn bind(window: &MainWindow, state: &AppState) {
     let currencies_model_rc = ModelRc::new(currencies_model);
     let fonts_model = Rc::new(VecModel::from(fonts));
     let fonts_model_rc = ModelRc::new(fonts_model);
-    let accounts_model_rc = ModelRc::new(state.accounts());
-    let account_options_rc = ModelRc::new(state.account_options());
 
     let global_state = window.global::<ui::State>();
 
     global_state.set_currency_options(currencies_model_rc);
     global_state.set_font_options(fonts_model_rc);
-    global_state.set_accounts(accounts_model_rc);
-    global_state.set_account_options(account_options_rc);
 
     global_state.on_total_spent_all({
         let state = state.clone();
@@ -80,58 +76,6 @@ pub fn bind(window: &MainWindow, state: &AppState) {
             }
             Err(err) => {
                 warn!("Error while calculating total spent: {err}");
-                Money::ZERO.to_shared_string()
-            }
-        }
-    });
-
-    global_state.on_create_account({
-        let mut state = state.clone();
-        move |name, account_type, balance| {
-            if let Err(err) = state.create_account(name.as_str(), account_type, balance.as_str()) {
-                warn!("Failed to create account: {err}")
-            }
-        }
-    });
-
-    global_state.on_load_accounts({
-        let mut state = state.clone();
-        move || {
-            if let Err(err) = state.load_accounts() {
-                warn!(
-                    "{}",
-                    Error::with_source("Failed to load accounts", err).report()
-                )
-            }
-        }
-    });
-
-    global_state.on_get_account({
-        let state = state.clone();
-        move |id| {
-            state
-                .accounts()
-                .iter()
-                .find(|a| a.id == id)
-                .unwrap_or_default()
-        }
-    });
-
-    global_state.on_delete_account({
-        let mut state = state.clone();
-        move |id| {
-            if let Err(err) = state.delete_account(&id) {
-                warn!("Failed to delete account: {err}")
-            }
-        }
-    });
-
-    global_state.on_account_balance({
-        let state = state.clone();
-        move |id| match state.account_balance(&id) {
-            Ok(balance) => balance.to_shared_string(),
-            Err(err) => {
-                warn!("Failed to calculate account balance: {err}");
                 Money::ZERO.to_shared_string()
             }
         }
@@ -190,38 +134,4 @@ pub fn bind(window: &MainWindow, state: &AppState) {
             }
         }
     })
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::ui::{AccountType, State};
-    use mukwa_core::service::{Service, TransactionKind};
-
-    #[test]
-    fn starting_balance_transaction_kind() -> crate::Result<()> {
-        i_slint_backend_testing::init_no_event_loop();
-        let app = MainWindow::new()?;
-        let service = Service::open_in_memory()?;
-        let state = AppState::new(service.clone())?;
-
-        bind(&app, &state);
-        let state: State = app.global();
-        state.invoke_create_account(
-            "".to_shared_string(),
-            AccountType::Cash,
-            "500".to_shared_string(),
-        );
-        state.invoke_create_account(
-            "".to_shared_string(),
-            AccountType::Credit,
-            "500".to_shared_string(),
-        );
-        let transactions = service.fetch_transactions()?;
-        let t1 = &transactions[0];
-        let t2 = &transactions[1];
-        assert_eq!(t1.kind, TransactionKind::StartingBalance);
-        assert_eq!(t2.kind, TransactionKind::StartingBalance);
-        Ok(())
-    }
 }
