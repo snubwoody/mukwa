@@ -154,6 +154,21 @@ export global CategoryState {
     in-out property <Date> current-month;
 }
 
+export global AccountState {
+    callback create-account(name: string, type: AccountType, balance: string);
+    callback delete-account(string);
+    callback load-accounts();
+
+    // FIXME: might be redundant
+    pure callback total-spent-all(Date) -> string;
+    pure callback get-account(id: string) -> Account;
+    pure callback account-balance(id: string) -> string;
+
+    // Account options for combo boxes
+    in-out property <[ComboBoxItem]> account-options;
+    in-out property <[Account]> accounts;
+}
+
 export global State {
     // Account state
     callback create-account(name: string, type: AccountType, balance: string);

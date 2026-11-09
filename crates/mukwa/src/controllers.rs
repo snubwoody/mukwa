@@ -5,6 +5,7 @@ use crate::settings::SettingsStore;
 use crate::state::AppState;
 use crate::ui::MainWindow;
 
+mod account;
 mod analytics;
 mod api;
 mod auto_update;
@@ -23,6 +24,7 @@ pub fn bind_all(
 ) -> crate::Result<()> {
     let service = state.service();
 
+    account::bind(window, &service)?;
     calendar::bind(window);
     analytics::bind(window, state);
     settings::bind(window, settings.clone());
