@@ -30,7 +30,7 @@ export global SpendingPageState {
 }
 
 component CategoryItem inherits VerticalLayout {
-    in property <Date> current-date;
+    property <Date> current-date: CategoryState.current-month;
     in property <Category> category;
     property <Budget> budget: CategoryState.get-budget(category.id, current-date);
     callback selected(string);
@@ -161,7 +161,7 @@ component CategoryItem inherits VerticalLayout {
 }
 
 component CategoryGroupItem {
-    in property <Date> current-date;
+    property <Date> current-date: CategoryState.current-month;
     in property <CategoryGroup> category-group;
     property <bool> open: true;
     callback category-selected(string);
@@ -341,7 +341,6 @@ component CategoryGroupItem {
 
         if root.open: VerticalLayout {
             for category in CategoryState.categories-in-group(category-group.id): CategoryItem {
-                current-date: current-date;
                 category: category;
                 selected(id) => category-selected(id);
             }
@@ -350,7 +349,7 @@ component CategoryGroupItem {
 }
 
 component SpendingPageBody inherits VerticalLayout {
-    in-out property <Date> current-date: CalendarState.today();
+    property <Date> current-date: CategoryState.current-month;
     property <string> left-to-budget: SpendingPageState.left-to-budget;
     callback category-selected(string);
     alignment: start;
@@ -371,8 +370,7 @@ component SpendingPageBody inherits VerticalLayout {
             theme: ghost;
             accessible-label: @tr("Previous month");
             clicked => {
-                current-date = CalendarState.decrement-month(current-date);
-                CategoryState.set-current-budget-month(current-date);
+                CategoryState.set-current-budget-month(CalendarState.decrement-month(current-date));
             }
         }
 
@@ -387,8 +385,7 @@ component SpendingPageBody inherits VerticalLayout {
             theme: ghost;
             accessible-label: @tr("Next month");
             clicked => {
-                current-date = CalendarState.increment-month(current-date);
-                CategoryState.set-current-budget-month(current-date);
+                CategoryState.set-current-budget-month(CalendarState.increment-month(current-date));
             }
         }
     }
@@ -536,7 +533,6 @@ component SpendingPageBody inherits VerticalLayout {
             content := VerticalLayout {
                 for category-group in CategoryState.category-groups: CategoryGroupItem {
                     category-group: category-group;
-                    current-date: current-date;
                     category-selected(id) => category-selected(id);
                 }
             }
