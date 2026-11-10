@@ -34,17 +34,15 @@ component CategoryItem inherits VerticalLayout {
     property <Date> current-date: CategoryState.current-month;
     in property <Category> category;
     property <Budget> budget: CategoryState.get-budget(category.id, current-date);
+    property <string> total-assigned: CategoryState.total-assigned(category.id, current-date);
+    property <string> total-spent-in-category: CategoryState.total-spent-in-category(category.id, current-date);
     callback selected(string);
 
     function budget-progress() -> float {
-        if Api.money-to-float(budget.amount) <= 0 && Api.money-to-float(CategoryState.total-spent(budget.id)) > 0 {
-            return 1;
-        }
-        if Api.money-to-float(budget.amount) <= 0 {
+        if Api.money-to-float(total-spent-in-category) == 0 {
             return 0;
         }
-        return Math.max(Api.money-to-float(CategoryState.total-spent(budget.id)))
-            / Api.money-to-float(budget.amount);
+        return Api.money-to-float(total-spent-in-category) / Api.money-to-float(total-assigned);
     }
 
     context-menu := ContextMenu {

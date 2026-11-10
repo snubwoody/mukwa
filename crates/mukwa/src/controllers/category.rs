@@ -280,6 +280,30 @@ impl CategoryController {
             }
         });
 
+        category_state.on_total_assigned({
+            let controller = controller.clone();
+            move |id, date| {
+                controller
+                    .total_assigned(&id, date)
+                    .context("Failed to calculate total assigned")
+                    .inspect_err(|err| warn!("{}", err.report()))
+                    .unwrap_or_default()
+                    .to_shared_string()
+            }
+        });
+
+        category_state.on_total_spent_in_category({
+            let controller = controller.clone();
+            move |id, date| {
+                controller
+                    .total_spent_in_category(&id, date)
+                    .context("Failed to calculate total spent in category")
+                    .inspect_err(|err| warn!("{}", err.report()))
+                    .unwrap_or_default()
+                    .to_shared_string()
+            }
+        });
+
         category_state.on_move_category({
             let controller = controller.clone();
             move |id, group_id| {
@@ -484,6 +508,20 @@ impl CategoryController {
         let id = Uuid::parse_str(id)?;
         let date = Date::try_from(date)?;
         let total = self.service.total_assigned_in_group(id, date)?;
+        Ok(total)
+    }
+
+    fn total_assigned(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
+        let id = Uuid::parse_str(id)?;
+        let date = Date::try_from(date)?;
+        let total = self.service.total_assigned(id, date)?;
+        Ok(total)
+    }
+
+    fn total_spent_in_category(&self, id: &str, date: ui::Date) -> crate::Result<Money> {
+        let id = Uuid::parse_str(id)?;
+        let date = Date::try_from(date)?;
+        let total = self.service.total_spent_in_category(id, date)?;
         Ok(total)
     }
 

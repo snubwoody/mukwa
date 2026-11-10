@@ -846,3 +846,97 @@ fn category_left_to_spend() -> Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn category_progress_bar() -> Result<()> {
+    i_slint_backend_testing::init_no_event_loop();
+    let run_test =
+        |budgets: &[(Date, Money)], transactions: &[(Date, Money)], date: Date, progress: f32| {
+            let service = Service::open_in_memory().unwrap();
+            service.create_account("", AccountType::Cash).unwrap();
+
+            let group = service.create_category_group("").unwrap();
+            let category = service.create_category("Test Category", group.id).unwrap();
+            for (date, amount) in budgets {
+                service
+                    .create_budget(CreateBudgetOpts {
+                        amount: Some(*amount),
+                        month: Some(*date),
+                        category_id: category.id,
+                    })
+                    .unwrap();
+            }
+            for (date, amount) in transactions {
+                service
+                    .create_expense()
+                    .category(category.id)
+                    .date(*date)
+                    .amount(*amount)
+                    .submit()
+                    .unwrap();
+            }
+
+            let app = MainWindow::new().unwrap();
+            let window = app.window();
+            window.set_size(PhysicalSize::new(1200, 1200));
+            let settings = SettingsStore::open_in_memory();
+            controllers::bind_all(&app, &service, &settings).unwrap();
+            let category_state: CategoryState = app.global();
+            category_state.invoke_set_current_budget_month(date.into());
+
+            let root_element = app.root_element();
+            find_by_accessible_label(&root_element, "Spending")
+                .mock_single_click(PointerEventButton::Left);
+            let category_item = find_by_type_name(&root_element, "CategoryItem");
+            let progress_bar = find_by_type_name(&category_item, "ProgressBar");
+            assert_eq!(
+                progress_bar.accessible_value().unwrap(),
+                progress.to_shared_string()
+            );
+        };
+
+    let now = Zoned::now().date();
+    run_test(
+        &[(now, Money::new(100))],
+        &[(now, Money::new(100))],
+        now,
+        1.0,
+    );
+    run_test(&[(now, Money::ZERO)], &[], now, 0.0);
+    // Rollover into future months
+    run_test(
+        &[(now, Money::new(100)), (now + 10.months(), Money::ZERO)],
+        &[
+            (now + 2.months(), Money::new(50)),
+            (now + 7.months(), Money::new(25)),
+        ],
+        now + 10.months(),
+        0.75,
+    );
+    run_test(
+        &[(now, Money::new(100)), (now - 2.months(), Money::ZERO)],
+        &[
+            (now + 2.months(), Money::new(50)),
+            (now + 7.months(), Money::new(50)),
+        ],
+        now - 2.months(),
+        0.0,
+    );
+    run_test(
+        &[(now, Money::new(100)), (now - 2.months(), Money::ZERO)],
+        &[
+            (now + 2.months(), Money::new(30)),
+            (now + 7.months(), Money::new(80)),
+        ],
+        now + 5.months(),
+        0.3,
+    );
+    run_test(
+        &[(now, Money::new(100))],
+        &[(now, Money::new(120))],
+        now,
+        1.2,
+    );
+    run_test(&[(now, Money::new(20))], &[(now, Money::new(10))], now, 0.5);
+    Ok(())
+}
