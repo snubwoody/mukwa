@@ -117,6 +117,7 @@ pub struct Transaction {
     pub note: Option<String>,
     pub amount: Money,
     pub kind: TransactionKind,
+    pub audited: bool,
 }
 
 impl Transaction {
@@ -197,6 +198,12 @@ impl<'a> TryFrom<&Row<'a>> for Transaction {
             None => None,
         };
 
+        let audited = match value.get::<_, i64>("is_audited")? {
+            0 => false,
+            1 => true,
+            _ => return Err(Error::new("Invalid is_audited value")),
+        };
+
         let transaction = Transaction {
             id: Uuid::parse_str(&id)?,
             amount: Money::from_scaled(amount),
@@ -206,6 +213,7 @@ impl<'a> TryFrom<&Row<'a>> for Transaction {
             receiver_id,
             category_id,
             kind,
+            audited,
         };
 
         Ok(transaction)
@@ -719,7 +727,7 @@ impl Service {
         let connection = self.connection();
 
         let sql = "SELECT \
-            t.id,t.amount,t.transaction_date,t.sender_id,t.receiver_id,t.category_id,t.note,t.kind \
+            t.id,t.amount,t.transaction_date,t.sender_id,t.receiver_id,t.category_id,t.note,t.kind,t.is_audited \
             FROM transactions t \
             LEFT JOIN categories c ON t.category_id = c.id \
             WHERE c.group_id = ?";

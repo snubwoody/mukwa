@@ -3,10 +3,36 @@
 
 // Tests to make sure the migrations don't break the user's database.
 
+use jiff::Zoned;
 use mukwa_core::service::{AccountType, Service, TransactionKind};
-use mukwa_core::{Result, migrator::Migrator};
-use rusqlite::Connection;
+use mukwa_core::{Error, Money, Result, migrator::Migrator};
+use rusqlite::{Connection, params};
+use std::str::FromStr;
 use uuid::Uuid;
+
+fn create_expense(service: &Service, note: &str) -> crate::Result<()> {
+    let accounts = service.fetch_accounts()?;
+    if accounts.is_empty() {
+        return Err(Error::new("Cannot create a transaction without an account"));
+    }
+
+    let account_id = accounts[0].id;
+    let amount = Money::new(0);
+    let date = Zoned::now().date();
+    let connection = service.connection();
+    let sql = "INSERT INTO transactions(id,transaction_date,sender_id,amount,note) \
+            VALUES(?1,?2,?3,?4,?5)";
+    let mut stmt = connection.prepare_cached(sql)?;
+    let params = params![
+        Uuid::now_v7().to_string(),
+        date.to_string(),
+        account_id.to_string(),
+        amount.inner(),
+        note
+    ];
+    stmt.execute(params)?;
+    Ok(())
+}
 
 #[test]
 fn old_accounts_default_to_cash_accounts() -> Result<()> {
@@ -77,16 +103,47 @@ fn mark_starting_balance_transactions() -> Result<()> {
     migrator.migrate_until(&mut connection, 20261023100557)?;
     let service = Service::new(Connection::open(temp.path())?);
     service.create_account("", AccountType::Cash)?;
-    let transaction1 = service.create_expense().note("Starting balance").submit()?;
-    let transaction2 = service
-        .create_expense()
-        .note("Not Starting balance")
-        .submit()?;
+    create_expense(&service, "Starting balance")?;
+    create_expense(&service, "Not Starting balance")?;
     migrator.migrate(&mut connection)?;
 
-    let transaction1 = service.get_transaction(transaction1.id)?;
-    let transaction2 = service.get_transaction(transaction2.id)?;
-    assert_eq!(transaction1.kind, TransactionKind::StartingBalance);
-    assert_eq!(transaction2.kind, TransactionKind::Regular);
+    let transaction_kinds = {
+        let connection = service.connection();
+        let mut stmt = connection.prepare("SELECT id,kind FROM transactions")?;
+        let mut transaction_kinds: Vec<_> = stmt
+            .query_and_then([], |row| {
+                let id = Uuid::from_str(row.get::<_, String>("id")?.as_str())?;
+                let kind = TransactionKind::try_from(row.get::<_, i64>("kind")?)?;
+                Ok::<_, Error>((id, kind))
+            })?
+            .map(|r| r.unwrap())
+            .collect();
+        transaction_kinds.sort_by(|a, b| a.0.cmp(&b.0));
+        transaction_kinds
+    };
+
+    assert_eq!(transaction_kinds[0].1, TransactionKind::StartingBalance);
+    assert_eq!(transaction_kinds[1].1, TransactionKind::Regular);
+    Ok(())
+}
+
+#[test]
+fn old_transactions_are_not_audited() -> Result<()> {
+    let temp = tempfile::NamedTempFile::new()?;
+    let mut connection = Connection::open(temp.path())?;
+
+    let mut migrator = Migrator::new();
+    migrator.load_embedded()?;
+    migrator.migrate_until(&mut connection, 20261023104439)?;
+
+    let service = Service::new(Connection::open(temp.path())?);
+    service.create_account("", AccountType::Cash)?;
+
+    create_expense(&service, "")?;
+    migrator.migrate(&mut connection)?;
+
+    for transaction in service.fetch_transactions()? {
+        assert!(!transaction.audited);
+    }
     Ok(())
 }
