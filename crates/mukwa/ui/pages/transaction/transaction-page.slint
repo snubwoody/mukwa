@@ -9,6 +9,7 @@ import {
     Category,
     CategoryState,
     TransactionState,
+    AccountState,
 } from "../../globals.slint";
 import { FontSize } from "../../theme.slint";
 import {
@@ -133,7 +134,7 @@ export component AccountCell inherits TableCell {
     callback changed(string);
 
     if !self.is-editing: Text {
-        text: State.get-account(transaction.account-id).name;
+        text: AccountState.get-account(transaction.account-id).name;
         color: Colors.textBody;
     }
 
@@ -157,18 +158,18 @@ component PayeeCell inherits TableCell {
 
     function payee() -> string {
         if active-account-id.is-empty && transaction.transaction-type == transfer {
-            return "Transfer:" + State.get-account(transaction.payee-id).name;
+            return "Transfer:" + AccountState.get-account(transaction.payee-id).name;
         }
         if active-account-id.is-empty {
             return "";
         }
         if active-account-id == transaction.payee-id {
-            return "Transfer:" + State.get-account(transaction.account-id).name;
+            return "Transfer:" + AccountState.get-account(transaction.account-id).name;
         }
         if active-account-id == transaction.account-id && transaction.transaction-type == transfer {
-            return "Transfer:" + State.get-account(transaction.payee-id).name;
+            return "Transfer:" + AccountState.get-account(transaction.payee-id).name;
         }
-        return State.get-account(transaction.payee-id).name;
+        return AccountState.get-account(transaction.payee-id).name;
     }
 
     callback changed(string);
@@ -180,7 +181,7 @@ component PayeeCell inherits TableCell {
 
     if self.is-editing: ComboBox {
         width: 100%;
-        options: State.account-options;
+        options: AccountState.account-options;
         current-value: transaction.account-id;
         init => {
             self.open();
@@ -307,10 +308,11 @@ component TransactionRow inherits TableRow {
     if active-account-id == "": AccountCell {
         width: parent.width / length;
         transaction: transaction;
-        options: State.account-options;
+        options: AccountState.account-options;
         current-value: transaction.account-id;
         changed(value) => {
             TransactionState.set-transaction-account(transaction.id,value);
+            AccountState.load-accounts();
         }
     }
 
@@ -320,6 +322,7 @@ component TransactionRow inherits TableRow {
         active-account-id: active-account-id;
         changed(value) => {
             TransactionState.set-transaction-payee(transaction.id,value);
+            AccountState.load-accounts();
         }
     }
 
@@ -339,7 +342,7 @@ component TransactionRow inherits TableRow {
         }
     }
 
-    MoneyCell {
+    outflow-cell := MoneyCell {
         width: parent.width / length;
         amount: outflow();
 
@@ -358,10 +361,11 @@ component TransactionRow inherits TableRow {
 
         changed(value) => {
             TransactionState.set-transaction-outflow(transaction.id, value);
+            AccountState.load-accounts();
         }
     }
 
-    MoneyCell {
+    inflow-cell := MoneyCell {
         amount: inflow();
 
         function inflow() -> string {
@@ -379,6 +383,7 @@ component TransactionRow inherits TableRow {
 
         changed(value) => {
             TransactionState.set-transaction-inflow(transaction.id, value);
+            AccountState.load-accounts();
         }
     }
 }
@@ -387,7 +392,7 @@ component NewTransactionRow inherits VerticalLayout {
     property <Transaction> transaction: {
         id: "placeholder-transaction",
         date: Api.today(),
-        account-id: active-account-id.is-empty ? State.accounts[0].id : active-account-id,
+        account-id: active-account-id.is-empty ? AccountState.accounts[0].id : active-account-id,
         payee-id: "",
         category-id: "",
         transaction-type: expense,
@@ -415,7 +420,7 @@ component NewTransactionRow inherits VerticalLayout {
         if active-account-id.is-empty: AccountCell {
             width: parent.width / length;
             transaction: transaction;
-            options: State.account-options;
+            options: AccountState.account-options;
             current-value: transaction.account-id;
             changed(value) => {
                 transaction.account-id = value;
@@ -449,7 +454,7 @@ component NewTransactionRow inherits VerticalLayout {
             }
         }
 
-        MoneyCell {
+        outflow-cell := MoneyCell {
             width: parent.width / length;
             amount: transaction.outflow;
             changed(value) => {
@@ -459,7 +464,7 @@ component NewTransactionRow inherits VerticalLayout {
             }
         }
 
-        MoneyCell {
+        inflow-cell := MoneyCell {
             width: parent.width / length;
             amount: transaction.inflow;
             changed(value) => {
@@ -493,6 +498,7 @@ component NewTransactionRow inherits VerticalLayout {
                     note: transaction.note,
                     inflow: transaction.inflow,
                 });
+                AccountState.load-accounts();
                 root.closed();
             }
         }
@@ -509,6 +515,7 @@ component NewTransactionRow inherits VerticalLayout {
                     note: transaction.note,
                     inflow: transaction.inflow,
                 });
+                AccountState.load-accounts();
             }
         }
     }
@@ -648,15 +655,15 @@ export component TransactionPage inherits VerticalLayout {
         Text {
             text: active-account-id.is-empty
                 ? @tr("All accounts")
-                : State.get-account(active-account-id).name;
+                : AccountState.get-account(active-account-id).name;
             color: Colors.textBody;
             font-weight: FontWeight.semi-bold;
         }
 
-        total-spent := Text {
+        balance := Text {
             text: active-account-id.is-empty
-                ? State.format-money(TransactionState.total-balance(),Settings.currency-code)
-                : State.format-money(State.accounts[State.accounts.find-index((value) => value.id == active-account-id)].balance, Settings.currency-code);
+                ? State.format-money(AccountState.total-balance(),Settings.currency-code)
+                : State.format-money(AccountState.accounts[AccountState.accounts.find-index((value) => value.id == active-account-id)].balance, Settings.currency-code);
             font-size: FontSize.heading-sm;
             color: Colors.textHeading;
             font-weight: FontWeight.semi-bold;
@@ -683,7 +690,10 @@ export component TransactionPage inherits VerticalLayout {
             if TransactionState.selected-transactions.length > 0 || TransactionState.all-transactions-selected: PrimaryButton {
                 text: @tr("Delete");
                 theme: ghost;
-                clicked => TransactionState.delete-selected-transactions();
+                clicked => {
+                    TransactionState.delete-selected-transactions();
+                    AccountState.load-accounts();
+                }
 
                 Icon {
                     icon: Icons.trash;
@@ -737,10 +747,13 @@ export component TransactionPage inherits VerticalLayout {
             active-account-id: active-account-id;
             closed => {
                 new-transaction-active = false;
+                if active-account-id.is-empty {
+                    // balance.text = State.format-money(TransactionState.total-balance(),Settings.currency-code)
+                }
             }
         }
 
-        if State.accounts.length == 0: VerticalLayout {
+        if AccountState.accounts.length == 0: VerticalLayout {
             alignment: center;
             cross-axis-alignment: center;
             spacing: 12px;

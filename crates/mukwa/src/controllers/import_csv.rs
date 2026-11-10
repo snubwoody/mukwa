@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use crate::state::AppState;
 use crate::ui::{ComboBoxItem, ImportCsvState, MainWindow};
 use jiff::civil::Date;
 use mukwa_core::error::ErrorExt;
+use mukwa_core::service::Service;
 use mukwa_core::{Error, Money};
 use native_dialog::DialogBuilder;
 use slint::{
@@ -15,7 +15,7 @@ use std::str::FromStr;
 use tracing::{info, warn};
 use uuid::Uuid;
 
-pub fn bind(window: &MainWindow, app_state: &AppState) {
+pub fn bind(window: &MainWindow, service: &Service) {
     let csv_state = window.global::<ImportCsvState>();
 
     // FIXME: panics on unequal lengths
@@ -51,10 +51,10 @@ pub fn bind(window: &MainWindow, app_state: &AppState) {
 
     csv_state.on_import_transactions({
         let csv_state = csv_state.as_weak();
-        let app_state = app_state.clone();
+        let service = service.clone();
         move || {
             let csv_state = csv_state.unwrap();
-            match import_transactions(csv_state, &app_state) {
+            match import_transactions(csv_state, &service) {
                 Ok(len) => info!("Successfully imported {len} transactions"),
                 Err(err) => warn!("Failed to import transactions: {err}"),
             }
@@ -102,7 +102,7 @@ fn read_csv(data: DataTransfer, csv_state: &ImportCsvState) -> crate::Result<()>
     Ok(())
 }
 
-fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Result<usize> {
+fn import_transactions(state: ImportCsvState, service: &Service) -> crate::Result<usize> {
     // TODO: ignore failures?
     let state = state.as_weak();
     let state = state.unwrap();
@@ -112,8 +112,6 @@ fn import_transactions(state: ImportCsvState, app_state: &AppState) -> crate::Re
     let note_index = state.get_note_column_index() as usize;
     let account_id = Uuid::parse_str(&state.get_account_id())?;
     let date_format = state.get_date_format();
-
-    let service = app_state.service();
 
     let mut transaction_map = HashMap::new();
     let transactions = service.fetch_transactions()?;
@@ -193,7 +191,6 @@ mod test {
         let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let account = service.create_account("", AccountType::Cash)?;
-        let app_state = AppState::new(service)?;
         let csv_state = window.global::<ImportCsvState>();
         let records = vec![vec!["01/12/2024", "50.00", ""]];
 
@@ -202,9 +199,9 @@ mod test {
         csv_state.set_note_column_index(2);
         csv_state.set_account_id(account.id.to_shared_string());
         csv_state.set_records(records_to_model(records));
-        import_transactions(csv_state, &app_state)?;
+        import_transactions(csv_state, &service)?;
 
-        let transactions = app_state.service().fetch_transactions()?;
+        let transactions = service.fetch_transactions()?;
         let transaction = &transactions[0];
         assert_eq!(transaction.date, date(2024, 12, 1));
         assert_eq!(transaction.amount, Money::new(50));
@@ -219,7 +216,6 @@ mod test {
         let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let account = service.create_account("", AccountType::Cash)?;
-        let app_state = AppState::new(service)?;
         let csv_state = window.global::<ImportCsvState>();
         let records = vec![vec!["2024/12/31", "50.00", ""]];
 
@@ -229,9 +225,9 @@ mod test {
         csv_state.set_date_format(SharedString::from("%Y/%m/%d"));
         csv_state.set_account_id(account.id.to_shared_string());
         csv_state.set_records(records_to_model(records));
-        import_transactions(csv_state, &app_state)?;
+        import_transactions(csv_state, &service)?;
 
-        let transactions = app_state.service().fetch_transactions()?;
+        let transactions = service.fetch_transactions()?;
         let transaction = &transactions[0];
         assert_eq!(transaction.date, date(2024, 12, 31));
         Ok(())
@@ -243,7 +239,6 @@ mod test {
         let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let account = service.create_account("", AccountType::Cash)?;
-        let app_state = AppState::new(service)?;
         let csv_state = window.global::<ImportCsvState>();
         let records = vec![vec!["01/12/2024", "500.00", ""]];
 
@@ -252,9 +247,9 @@ mod test {
         csv_state.set_note_column_index(2);
         csv_state.set_account_id(account.id.to_shared_string());
         csv_state.set_records(records_to_model(records));
-        import_transactions(csv_state, &app_state)?;
+        import_transactions(csv_state, &service)?;
 
-        let transactions = app_state.service().fetch_transactions()?;
+        let transactions = service.fetch_transactions()?;
         let transaction = &transactions[0];
         assert_eq!(transaction.date, date(2024, 12, 1));
         assert_eq!(transaction.amount, Money::new(500));
@@ -269,7 +264,6 @@ mod test {
         let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let account = service.create_account("", AccountType::Cash)?;
-        let app_state = AppState::new(service)?;
         let csv_state = window.global::<ImportCsvState>();
         let records = vec![vec!["01/12/2024", "500.00", ""]];
 
@@ -278,11 +272,11 @@ mod test {
         csv_state.set_note_column_index(2);
         csv_state.set_account_id(account.id.to_shared_string());
         csv_state.set_records(records_to_model(records));
-        import_transactions(csv_state, &app_state)?;
+        import_transactions(csv_state, &service)?;
 
-        let transactions = app_state.service().fetch_transactions()?;
+        let transactions = service.fetch_transactions()?;
         let transaction = &transactions[0];
-        let unconfirmed_transactions = app_state.service().fetch_unconfirmed_transactions()?;
+        let unconfirmed_transactions = service.fetch_unconfirmed_transactions()?;
         assert!(unconfirmed_transactions.contains(&transaction.id));
         Ok(())
     }
@@ -298,7 +292,6 @@ mod test {
             .date(date(2024, 12, 31))
             .amount(Money::new(500))
             .submit()?;
-        let app_state = AppState::new(service)?;
         let csv_state = window.global::<ImportCsvState>();
         let records = vec![
             vec!["31/12/2024", "500.00", ""],
@@ -310,12 +303,12 @@ mod test {
         csv_state.set_note_column_index(2);
         csv_state.set_account_id(account.id.to_shared_string());
         csv_state.set_records(records_to_model(records));
-        import_transactions(csv_state, &app_state)?;
+        import_transactions(csv_state, &service)?;
 
-        let transactions = app_state.service().fetch_transactions()?;
+        let transactions = service.fetch_transactions()?;
         assert_eq!(transactions.len(), 2);
 
-        let unconfirmed_transactions = app_state.service().fetch_unconfirmed_transactions()?;
+        let unconfirmed_transactions = service.fetch_unconfirmed_transactions()?;
         let transaction = &transactions[0];
         let transaction2 = &transactions[1];
         assert!(unconfirmed_transactions.contains(&transaction2.id));
@@ -329,13 +322,12 @@ mod test {
         let window = MainWindow::new()?;
         let service = Service::open_in_memory()?;
         let account = service.create_account("", AccountType::Cash)?;
-        let app_state = AppState::new(service)?;
         let csv_state = window.global::<ui::ImportCsvState>();
 
         csv_state.set_account_id(account.id.to_shared_string());
-        import_transactions(csv_state, &app_state)?;
+        import_transactions(csv_state, &service)?;
 
-        assert!(app_state.service().fetch_transactions()?.is_empty());
+        assert!(service.fetch_transactions()?.is_empty());
         Ok(())
     }
 

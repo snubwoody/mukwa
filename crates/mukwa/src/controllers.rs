@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+use mukwa_core::service::Service;
+
 use crate::settings::SettingsStore;
-use crate::state::AppState;
 use crate::ui::MainWindow;
 
+mod account;
 mod analytics;
 mod api;
 mod auto_update;
@@ -18,20 +20,18 @@ mod transaction;
 /// Binds the state and callbacks of all Slint globals to Rust code.
 pub fn bind_all(
     window: &MainWindow,
-    state: &AppState,
+    service: &Service,
     settings: &SettingsStore,
 ) -> crate::Result<()> {
-    let service = state.service();
-
+    account::bind(window, service)?;
     calendar::bind(window);
-    analytics::bind(window, state);
+    analytics::bind(window, service);
     settings::bind(window, settings.clone());
-    analytics::bind(window, state);
-    global::bind(window, state);
+    global::bind(window);
     api::bind(window);
-    import_csv::bind(window, state);
-    category::bind(window, &service)?;
-    transaction::bind(window, service)?;
+    import_csv::bind(window, service);
+    category::bind(window, service)?;
+    transaction::bind(window, service.clone())?;
     auto_update::bind(window)?;
     Ok(())
 }

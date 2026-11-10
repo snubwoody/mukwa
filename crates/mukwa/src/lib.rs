@@ -3,7 +3,6 @@
 
 pub mod controllers;
 mod settings;
-mod state;
 #[cfg(test)]
 mod tests;
 pub mod ui;
@@ -11,7 +10,6 @@ pub mod ui;
 pub use mukwa_core::error::{Error, Result};
 pub use settings::SettingsStore;
 
-pub use crate::state::AppState;
 use crate::ui::MainWindow;
 use mukwa_core::migrator::Migrator;
 use mukwa_core::service::Service;
@@ -54,8 +52,7 @@ pub fn run() -> Result<()> {
     let main_window = MainWindow::new()?;
     let service = init_service(data_dir)?;
     let settings = SettingsStore::open(settings_dir.join("settings.toml"))?;
-    let state = AppState::new(service)?;
-    controllers::bind_all(&main_window, &state, &settings)?;
+    controllers::bind_all(&main_window, &service, &settings)?;
 
     #[cfg(windows)]
     {
