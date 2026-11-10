@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-// TODO: save to target/prop-tests
-
-// SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2026 Wakunguma Kalimukwa
-
 //! Property based fuzz testing
 
 // TODO:
 // - Maybe prop testing for each page
+// - TODO: save state or logs to target/prop-tests
 // - Deterministic seeding
 // - Maybe a trait
 // - maybe save the database to a file on failure
@@ -18,26 +14,28 @@
 use std::{fs, path::PathBuf};
 
 use fastrand::Rng;
-use i_slint_backend_testing::{AccessibleRole, ElementHandle};
-use mukwa::{AppState, SettingsStore};
-use mukwa_core::{Money, create_test_db, service::Service};
+use i_slint_backend_testing::{AccessibleRole, ElementHandle,ElementRoot};
+use mukwa::{SettingsStore, ui::{AccountState, Settings}};
+use mukwa_core::{Currency, Money, create_test_db, fmt::CurrencyFormatter, service::Service};
 use slint::{
     ComponentHandle, Model, SharedString, ToSharedString,
     platform::{Key, PointerEventButton},
 };
 
 use mukwa::ui::{self, MainWindow, State, TransactionState};
+use mukwa::testing::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 enum Action {
     CreateTransaction = 0,
     CreateAccount = 1,
+    EditOutflow = 2,
 }
 
 // TODO: create CreateAccount struct and store a randomly chosen enter_balance variable 
 impl Action {
-    const MAX: u8 = Action::CreateAccount as u8;
+    const MAX: u8 = Action::EditOutflow as u8;
 }
 
 impl From<u8> for Action {
@@ -45,6 +43,7 @@ impl From<u8> for Action {
         match value {
             x if x == Action::CreateTransaction as u8 => Action::CreateTransaction,
             x if x == Action::CreateAccount as u8 => Action::CreateAccount,
+            x if x == Action::EditOutflow as u8 => Action::EditOutflow,
             _ => panic!("Cannot convert {value} into Action"),
         }
     }
@@ -71,7 +70,7 @@ impl TestRunner {
     }
 
     fn run(&mut self) -> mukwa::Result<()> {
-        let state: State = self.app.global();
+        let state: AccountState = self.app.global();
         // TODO: account options has len of 7 every time?
         for _ in 0..self.rng.u8(..) {
             state.invoke_create_account(
@@ -98,6 +97,9 @@ impl TestRunner {
                     Action::CreateTransaction => {
                         self.create_transaction();
                     }
+                    Action::EditOutflow => {
+                        self.edit_outflow();
+                    }
                 }
             }
         }
@@ -107,7 +109,7 @@ impl TestRunner {
     }
 
     fn create_account(&mut self) {
-        let state: State = self.app.global();
+        let state: AccountState = self.app.global();
         let accounts_len = state.get_accounts().iter().len();
         let balance = Money::new(self.rng.i64(0..));
         let name = "My account";
@@ -152,6 +154,41 @@ impl TestRunner {
         let account = &accounts[accounts.len() - 1];
         assert_eq!(account.balance, balance.to_shared_string());
         assert_eq!(account.name, name);
+    }
+
+    fn edit_outflow(&mut self){
+        // TODO: check negative values
+        // TODO: test that the balance in the transaction changes
+        // TODO: negative outflow converts to expense
+        // FIXME: is it generating the same amount?
+        let amount = Money::new(self.rng.i64(0..));
+        let root_element = self.app.root_element();
+        
+        let transactions = find_all_by_type_name(&root_element, "TransactionRow");
+        if transactions.is_empty(){
+            return;
+        }
+        
+        let transaction = self.rng.choice(&transactions).unwrap();
+        let transaction_id = transaction.accessible_id().unwrap();
+
+        let outflow_cell = find_by_id(&transaction, "TransactionRow::outflow-cell");
+        outflow_cell.mock_single_click(PointerEventButton::Left);
+        // Clear the text field
+        outflow_cell.mock_single_click(PointerEventButton::Left);
+        outflow_cell.mock_single_click(PointerEventButton::Left);
+        i_slint_backend_testing::send_key_combo(&self.app, [Key::Backspace]);
+        i_slint_backend_testing::send_keyboard_string_sequence(&self.app, &amount.to_string());
+        i_slint_backend_testing::send_key_combo(&self.app, [Key::Return]);
+
+        let state: TransactionState = self.app.global();
+        let transactions: Vec<_> = state.get_all_transactions().iter().collect();
+        let transaction = transactions.iter().find(|t|t.id == transaction_id.to_shared_string()).unwrap();
+        assert_eq!(transaction.amount,amount.to_shared_string());
+
+        let settings: Settings = self.app.global();
+        settings.set_font_family("CAD".to_shared_string());
+        let formatter = CurrencyFormatter::with_currency(Currency::CAD);
     }
 
     /// Creates a transaction and verifies its creating using the following steps:
@@ -278,16 +315,7 @@ impl Drop for TestRunner {
     }
 }
 
-fn setup() -> mukwa::Result<(MainWindow, Service)> {
-    i_slint_backend_testing::init_no_event_loop();
-    let service = Service::new(create_test_db());
-    let app = MainWindow::new()?;
-    let state = AppState::new(service.clone())?;
-    let settings = SettingsStore::open_in_memory();
-    mukwa::controllers::bind_all(&app, &state, &settings)?;
-    Ok((app, service))
-}
-
+// TODO tick method
 #[test]
 fn prop_test() -> mukwa::Result<()> {
     let seed = if let Ok(seed) = std::env::var("TEST_SEED")
@@ -304,6 +332,7 @@ fn prop_test() -> mukwa::Result<()> {
 
     let mut runner = TestRunner::new(seed);
     runner.run()?;
+    eprintln!("No errors found");
     Ok(())
 }
 
