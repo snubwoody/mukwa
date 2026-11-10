@@ -3,6 +3,7 @@
 
 pub mod controllers;
 mod settings;
+pub mod testing;
 #[cfg(test)]
 mod tests;
 pub mod ui;

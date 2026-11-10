@@ -11,58 +11,15 @@ use jiff::civil::date;
 use jiff::{ToSpan, Zoned};
 use mukwa_core::fmt::CurrencyFormatter;
 use mukwa_core::service::AccountType;
-use mukwa_core::{Currency, Money, create_test_db};
+use mukwa_core::{Currency, Money};
 use slint::platform::{Key, PointerEventButton};
 use slint::{Model, SharedString, ToSharedString};
 use tempfile::tempdir;
 
+pub use testing::*;
 mod analytics_page;
 mod spending_page;
 mod transaction_page;
-
-fn setup() -> crate::Result<(MainWindow, Service)> {
-    i_slint_backend_testing::init_no_event_loop();
-    let service = Service::new(create_test_db());
-    let app = MainWindow::new()?;
-    let settings = SettingsStore::open_in_memory();
-    controllers::bind_all(&app, &service, &settings)?;
-    Ok((app, service))
-}
-
-/// Finds the element with the given accessible label, panics if the element cannot be found.
-fn find_by_accessible_label(element: &ElementHandle, label: &str) -> ElementHandle {
-    element
-        .query_descendants()
-        .match_accessible_label(label)
-        .find_first()
-        .unwrap_or_else(|| panic!("Element with accessible label '{label}' not found"))
-}
-
-/// Finds the element with the given type id, panics if the element cannot be found.
-fn find_by_id(element: &ElementHandle, id: &str) -> ElementHandle {
-    element
-        .query_descendants()
-        .match_id(id)
-        .find_first()
-        .unwrap_or_else(|| panic!("Element with id '{id}' not found"))
-}
-
-/// Finds the element with the given type name, panics if the element cannot be found.
-fn find_by_type_name(element: &ElementHandle, type_name: &str) -> ElementHandle {
-    element
-        .query_descendants()
-        .match_type_name(type_name)
-        .find_first()
-        .unwrap_or_else(|| panic!("Element with type name '{type_name}' not found"))
-}
-
-/// Finds all the elements with the given type name.
-fn find_all_by_type_name(element: &ElementHandle, type_name: &str) -> Vec<ElementHandle> {
-    element
-        .query_descendants()
-        .match_type_name(type_name)
-        .find_all()
-}
 
 #[test]
 fn total_spent_all_only_includes_expenses() -> Result<()> {
