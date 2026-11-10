@@ -89,6 +89,7 @@ pub enum TransactionKind {
     #[default]
     Regular = 0,
     StartingBalance = 1,
+    Correction = 2,
 }
 
 impl TryFrom<i64> for TransactionKind {
@@ -100,6 +101,7 @@ impl TryFrom<i64> for TransactionKind {
             x if x == TransactionKind::StartingBalance as i64 => {
                 Ok(TransactionKind::StartingBalance)
             }
+            x if x == TransactionKind::Correction as i64 => Ok(TransactionKind::Correction),
             _ => Err(Error::new(&format!("Unknown transaction kind: {v}"))),
         }
     }
