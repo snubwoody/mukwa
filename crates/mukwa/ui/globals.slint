@@ -163,6 +163,7 @@ export global AccountState {
     pure callback total-spent-all(Date) -> string;
     pure callback get-account(id: string) -> Account;
     pure callback account-balance(id: string) -> string;
+    pure callback total-balance() -> string;
 
     // Account options for combo boxes
     in-out property <[ComboBoxItem]> account-options;

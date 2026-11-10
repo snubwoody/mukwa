@@ -82,6 +82,18 @@ impl AccountController {
             }
         });
 
+        state.on_total_balance({
+            let state = state.as_weak();
+            move || {
+                let state = state.unwrap();
+                let mut total = Money::ZERO;
+                for account in state.get_accounts().iter() {
+                    total += Money::from_str(&account.balance).unwrap_or_default();
+                }
+                total.to_shared_string()
+            }
+        });
+
         state.on_get_account({
             let state = state.as_weak();
             move |id| {

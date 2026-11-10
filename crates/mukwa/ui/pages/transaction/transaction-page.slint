@@ -660,7 +660,7 @@ export component TransactionPage inherits VerticalLayout {
 
         balance := Text {
             text: active-account-id.is-empty
-                ? State.format-money(TransactionState.total-balance(),Settings.currency-code)
+                ? State.format-money(AccountState.total-balance(),Settings.currency-code)
                 : State.format-money(AccountState.accounts[AccountState.accounts.find-index((value) => value.id == active-account-id)].balance, Settings.currency-code);
             font-size: FontSize.heading-sm;
             color: Colors.textHeading;
@@ -688,7 +688,10 @@ export component TransactionPage inherits VerticalLayout {
             if TransactionState.selected-transactions.length > 0 || TransactionState.all-transactions-selected: PrimaryButton {
                 text: @tr("Delete");
                 theme: ghost;
-                clicked => TransactionState.delete-selected-transactions();
+                clicked => {
+                    TransactionState.delete-selected-transactions();
+                    AccountState.load-accounts();
+                }
 
                 Icon {
                     icon: Icons.trash;
@@ -742,6 +745,9 @@ export component TransactionPage inherits VerticalLayout {
             active-account-id: active-account-id;
             closed => {
                 new-transaction-active = false;
+                if active-account-id.is-empty {
+                    // balance.text = State.format-money(TransactionState.total-balance(),Settings.currency-code)
+                }
             }
         }
 

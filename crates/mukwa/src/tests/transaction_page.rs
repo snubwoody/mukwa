@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use std::{any::Any, ops::ControlFlow};
+use std::ops::ControlFlow;
 
 use crate::{
     tests::{
@@ -129,6 +129,7 @@ fn type_in_searchbox() -> Result<()> {
 fn total_balance_does_not_update_with_search() -> Result<()> {
     let (app, service) = super::setup()?;
     let transaction_state: TransactionState = app.global();
+    let account_state: AccountState = app.global();
     let settings: Settings = app.global();
     settings.set_currency_code("USD".to_shared_string());
     service.create_account("", AccountType::Cash)?;
@@ -145,6 +146,7 @@ fn total_balance_does_not_update_with_search() -> Result<()> {
     service.create_income().amount(Money::new(200)).submit()?;
     let root_element = app.root_element();
     transaction_state.invoke_load_transactions();
+    account_state.invoke_load_accounts();
 
     let search = find_by_type_name(&root_element, "Search");
     find_by_accessible_label(&search, "Search").mock_single_click(PointerEventButton::Left);
@@ -259,87 +261,6 @@ fn editing_transaction_does_not_reload_all_transactions() -> Result<()> {
     transaction_state.invoke_load_transactions();
 
     service.create_income().amount(Money::new(50)).submit()?;
-    Ok(())
-}
-
-#[test]
-fn delete_transaction_updates_sidebar_account_balance() -> Result<()> {
-    let (app, _) = setup()?;
-    let transaction_state = app.global::<TransactionState>();
-    let settings = app.global::<Settings>();
-    let account_state: AccountState = app.global();
-    settings.invoke_set_currency_code("USD".to_shared_string());
-
-    account_state.invoke_create_account(
-        "Cash Account".to_shared_string(),
-        ui::AccountType::Cash,
-        "0".to_shared_string(),
-    );
-
-    transaction_state.invoke_create_transaction(CreateTransactionOpts {
-        account_id: SharedString::new(),
-        category_id: SharedString::new(),
-        date: SharedString::new(),
-        inflow: SharedString::new(),
-        note: SharedString::new(),
-        outflow: SharedString::from("500"),
-        payee_id: SharedString::new(),
-    });
-
-    transaction_state.invoke_create_transaction(CreateTransactionOpts {
-        account_id: SharedString::new(),
-        category_id: SharedString::new(),
-        date: SharedString::new(),
-        inflow: SharedString::new(),
-        note: SharedString::new(),
-        outflow: SharedString::from("500"),
-        payee_id: SharedString::new(),
-    });
-
-    let cash_account = ElementHandle::find_by_element_type_name(&app, "AccountListItem")
-        .next()
-        .unwrap()
-        .query_descendants()
-        .match_type_name("Text")
-        .find_all();
-
-    let mut formatter = CurrencyFormatter::new();
-    formatter.set_currency(Currency::USD);
-
-    assert_eq!(
-        cash_account[1].accessible_label().unwrap(),
-        formatter
-            .format_money(Money::new(-1000))?
-            .to_shared_string()
-    );
-
-    let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
-    transaction_state.invoke_delete_transaction(transactions[0].id.clone());
-
-    let cash_account = ElementHandle::find_by_element_type_name(&app, "AccountListItem")
-        .next()
-        .unwrap()
-        .query_descendants()
-        .match_type_name("Text")
-        .find_all();
-    assert_eq!(
-        cash_account[1].accessible_label().unwrap(),
-        formatter.format_money(Money::new(-500))?.to_shared_string()
-    );
-
-    transaction_state.invoke_select_transaction(transactions[1].id.clone());
-    transaction_state.invoke_delete_selected_transactions();
-
-    let cash_account = ElementHandle::find_by_element_type_name(&app, "AccountListItem")
-        .next()
-        .unwrap()
-        .query_descendants()
-        .match_type_name("Text")
-        .find_all();
-    assert_eq!(
-        cash_account[1].accessible_label().unwrap(),
-        formatter.format_money(Money::ZERO)?.to_shared_string()
-    );
     Ok(())
 }
 
@@ -800,7 +721,85 @@ fn create_transaction_updates_account_balance() -> crate::Result<()> {
         find_by_id(&root_element, "TransactionPage::balance")
             .accessible_label()
             .unwrap(),
-        formatter.format_money(Money::new(-50))?
+        formatter.format_money(Money::new(-60))?
+    );
+    Ok(())
+}
+
+#[test]
+fn delete_transaction_updates_account_balance() -> crate::Result<()> {
+    let (app, _) = setup()?;
+    let account_state: AccountState = app.global();
+    app.global::<Settings>()
+        .set_currency_code("CAD".to_shared_string());
+    let formatter = CurrencyFormatter::with_currency(Currency::CAD);
+    let root_element = app.root_element();
+
+    account_state.invoke_create_account(
+        "My account".to_shared_string(),
+        ui::AccountType::Cash,
+        "".to_shared_string(),
+    );
+
+    let page = find_by_type_name(&root_element, "TransactionPage");
+    let create_transaction = |text: &str| {
+        find_by_accessible_label(&page, "New").mock_single_click(PointerEventButton::Left);
+        find_by_id(&page, "NewTransactionRow::outflow-cell")
+            .mock_single_click(PointerEventButton::Left);
+        // Clear the text field
+        i_slint_backend_testing::send_key_combo(
+            &app,
+            [
+                Key::RightArrow,
+                Key::RightArrow,
+                Key::RightArrow,
+                Key::RightArrow,
+                Key::RightArrow,
+                Key::Backspace,
+                Key::Backspace,
+                Key::Backspace,
+                Key::Backspace,
+                Key::Backspace,
+            ],
+        );
+        i_slint_backend_testing::send_keyboard_string_sequence(&app, text);
+        i_slint_backend_testing::send_keyboard_string_sequence(
+            &app,
+            &SharedString::from(Key::Return),
+        );
+        find_by_accessible_label(&page, "Save").mock_single_click(PointerEventButton::Left);
+    };
+
+    create_transaction("10");
+    create_transaction("40");
+    create_transaction("60");
+
+    let transactions = find_all_by_type_name(&page, "TransactionRow");
+    find_by_type_name(&transactions[2], "Checkbox").mock_single_click(PointerEventButton::Left);
+    find_by_accessible_label(&page, "Delete").mock_single_click(PointerEventButton::Left);
+    assert_eq!(
+        find_by_id(&root_element, "AccountListItem::balance")
+            .accessible_label()
+            .unwrap(),
+        formatter.format_money(Money::new(-100))?
+    );
+    assert_eq!(
+        find_by_id(&root_element, "TransactionPage::balance")
+            .accessible_label()
+            .unwrap(),
+        formatter.format_money(Money::new(-100))?
+    );
+
+    find_by_type_name(&root_element, "AccountListItem").mock_single_click(PointerEventButton::Left);
+    let transactions = find_all_by_type_name(&page, "TransactionRow");
+    find_by_type_name(&transactions[0], "Checkbox").mock_single_click(PointerEventButton::Left);
+    find_by_accessible_label(&page, "Delete").mock_single_click(PointerEventButton::Left);
+
+    assert_eq!(
+        find_by_id(&root_element, "TransactionPage::balance")
+            .accessible_label()
+            .unwrap(),
+        formatter.format_money(Money::new(-40))?
     );
     Ok(())
 }
