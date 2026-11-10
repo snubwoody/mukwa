@@ -29,15 +29,6 @@ fn setup() -> crate::Result<(MainWindow, Service)> {
     Ok((app, service))
 }
 
-fn setup_with_service(service: Service) -> crate::Result<(MainWindow, Service)> {
-    i_slint_backend_testing::init_no_event_loop();
-    let app = MainWindow::new()?;
-    let state = AppState::new(service.clone())?;
-    let settings = SettingsStore::open_in_memory();
-    controllers::bind_all(&app, &state, &settings)?;
-    Ok((app, service))
-}
-
 /// Finds the element with the given accessible label, panics if the element cannot be found.
 fn find_by_accessible_label(element: &ElementHandle, label: &str) -> ElementHandle {
     element
