@@ -103,6 +103,7 @@ export global TransactionState {
     in-out property <bool> all-transactions-selected: false;
 
     callback search(string);
+    callback audit-account(string);
     callback clear-search();
     callback select-transaction(id: string);
     callback delete-transaction(id: string);

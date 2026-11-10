@@ -875,3 +875,83 @@ fn edit_outflow_updates_account_balance() -> crate::Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn audit_account_button_visibility() -> Result<()> {
+    let (app, _) = setup()?;
+    let root_element = app.root_element();
+    let account_state: AccountState = app.global();
+    account_state.invoke_create_account(
+        "My account".to_shared_string(),
+        ui::AccountType::Cash,
+        "".to_shared_string(),
+    );
+
+    assert!(
+        root_element
+            .query_descendants()
+            .match_accessible_role(AccessibleRole::Button)
+            .match_accessible_label("Audit")
+            .find_first()
+            .is_none()
+    );
+
+    find_by_accessible_label(&root_element, "My account")
+        .mock_single_click(PointerEventButton::Left);
+
+    assert!(
+        root_element
+            .query_descendants()
+            .match_accessible_role(AccessibleRole::Button)
+            .match_accessible_label("Audit")
+            .find_first()
+            .is_some()
+    );
+
+    Ok(())
+}
+
+#[test]
+fn audit_account_with_matching_balance() -> Result<()> {
+    let (app, service) = setup()?;
+    let settings: Settings = app.global();
+    settings.set_currency_code("CAD".to_shared_string());
+
+    let root_element = app.root_element();
+    let account_state: AccountState = app.global();
+    account_state.invoke_create_account(
+        "My account".to_shared_string(),
+        ui::AccountType::Cash,
+        "".to_shared_string(),
+    );
+    service.create_expense().amount(Money::new(50)).submit()?;
+    account_state.invoke_load_accounts();
+
+    find_by_accessible_label(&root_element, "My account")
+        .mock_single_click(PointerEventButton::Left);
+    find_by_accessible_label(&root_element, "Audit").mock_single_click(PointerEventButton::Left);
+
+    let audit_element = find_by_type_name(&root_element, "Audit");
+    assert!(
+        audit_element
+            .query_descendants()
+            .match_accessible_label("Is your bank account balance:")
+            .find_first()
+            .is_some()
+    );
+
+    let formatter = CurrencyFormatter::with_currency(Currency::CAD);
+    let balance = formatter.format_money(Money::new(-50))?;
+    assert!(
+        audit_element
+            .query_descendants()
+            .match_accessible_label(balance)
+            .find_first()
+            .is_some()
+    );
+
+    find_by_accessible_label(&audit_element, "Yes").mock_single_click(PointerEventButton::Left);
+    let transactions = service.fetch_transactions()?;
+    assert!(transactions[0].audited);
+    Ok(())
+}

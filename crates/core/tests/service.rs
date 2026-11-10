@@ -1476,3 +1476,46 @@ fn available_to_spend_filters_by_category() -> Result<()> {
     assert_eq!(amount, Money::new(40));
     Ok(())
 }
+
+#[test]
+fn audit_account() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("", AccountType::Cash)?;
+    let account2 = service.create_account("", AccountType::Cash)?;
+    service.create_expense().account(account.id).submit()?;
+    service.create_income().account(account.id).submit()?;
+    service
+        .create_transfer()
+        .accounts(account.id, account2.id)
+        .submit()?;
+
+    for transaction in service.fetch_transactions()? {
+        assert!(!transaction.audited);
+    }
+    service.audit_account(account.id)?;
+    for transaction in service.fetch_transactions()? {
+        assert!(transaction.audited);
+    }
+    Ok(())
+}
+
+#[test]
+fn audit_account_does_not_affect_other_accounts() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("", AccountType::Cash)?;
+    let account2 = service.create_account("", AccountType::Cash)?;
+    service.create_expense().account(account.id).submit()?;
+    service.create_income().account(account.id).submit()?;
+    let t1 = service
+        .create_transfer()
+        .accounts(account.id, account2.id)
+        .submit()?;
+    let t2 = service.create_expense().account(account2.id).submit()?;
+    service.audit_account(account.id)?;
+
+    let t1 = service.get_transaction(t1.id)?;
+    let t2 = service.get_transaction(t2.id)?;
+    assert!(t1.audited);
+    assert!(!t2.audited);
+    Ok(())
+}
