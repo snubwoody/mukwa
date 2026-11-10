@@ -955,3 +955,30 @@ fn audit_account_with_matching_balance() -> Result<()> {
     assert!(transactions[0].audited);
     Ok(())
 }
+
+#[test]
+fn hide_audited_transactions() -> Result<()> {
+    let (app, service) = setup()?;
+    let account = service.create_account("", AccountType::Cash)?;
+    let account2 = service.create_account("", AccountType::Cash)?;
+    service.create_expense().account(account.id).submit()?;
+    service.create_income().account(account.id).submit()?;
+    service.create_expense().account(account2.id).submit()?;
+
+    let transaction_state: TransactionState = app.global();
+    transaction_state.invoke_load_transactions();
+
+    let root_element = app.root_element();
+    let table = find_by_type_name(&root_element, "Table");
+    let transactions = find_all_by_type_name(&root_element, "TransactionRow");
+    assert_eq!(transactions.len(), 3);
+    transaction_state.invoke_audit_account(account.id.to_shared_string());
+    transaction_state.invoke_load_transactions();
+
+    let transactions = table
+        .query_descendants()
+        .match_type_name("TransactionRow")
+        .find_all();
+    assert_eq!(transactions.len(), 1);
+    Ok(())
+}

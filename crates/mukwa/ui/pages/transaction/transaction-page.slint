@@ -872,9 +872,23 @@ export component TransactionPage inherits VerticalLayout {
             transaction: transaction;
             active-account-id: active-account-id;
             length: length;
-            visible: active-account-id.is-empty ? true :
-                transaction.account-id == active-account-id || transaction.payee-id == active-account-id;
+            visible: is-visible();
             height: self.visible ? self.preferred-height : 0;
+            function is-visible() -> bool {
+                if transaction.audited {
+                    return false;
+                }
+                if active-account-id.is-empty {
+                    return true;
+                }
+                if transaction.account-id == active-account-id {
+                    return true;
+                }
+                if transaction.payee-id == active-account-id {
+                    return true;
+                }
+                return false;
+            }
         }
     }
 }
