@@ -153,7 +153,7 @@ component CategoryItem inherits VerticalLayout {
                 horizontal-alignment: end;
             }
 
-            Text {
+            left-to-spend := Text {
                 width: 100px;
                 text: State.format-money(CategoryState.left-to-spend(category.id,current-date),Settings.currency-code);
                 color: Colors.textBody;
