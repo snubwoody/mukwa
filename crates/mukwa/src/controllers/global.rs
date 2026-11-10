@@ -4,10 +4,8 @@
 use crate::state::AppState;
 use crate::ui;
 use crate::ui::MainWindow;
-use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::fmt::CurrencyFormatter;
-use mukwa_core::service::TransactionType;
 use mukwa_core::{Currency, Money, fmt};
 use slint::{ComponentHandle, ModelRc, SharedString, ToSharedString, VecModel};
 use std::collections::HashSet;
@@ -58,28 +56,6 @@ pub fn bind(window: &MainWindow, state: &AppState) {
 
     global_state.set_currency_options(currencies_model_rc);
     global_state.set_font_options(fonts_model_rc);
-
-    global_state.on_total_spent_all({
-        let state = state.clone();
-
-        move |month| match state.service().fetch_transactions() {
-            Ok(transactions) => {
-                let date = Date::new(month.year as i16, month.month as i8, month.day as i8)
-                    .unwrap_or(Zoned::now().date());
-                let total: Money = transactions
-                    .iter()
-                    .filter(|t| t.transaction_type() == TransactionType::Expense)
-                    .filter(|t| t.date.year() == date.year() && t.date.month() == date.month())
-                    .map(|t| t.amount)
-                    .sum();
-                total.to_shared_string()
-            }
-            Err(err) => {
-                warn!("Error while calculating total spent: {err}");
-                Money::ZERO.to_shared_string()
-            }
-        }
-    });
 
     global_state.on_format_dateym({
         |date| match Date::new(date.year as i16, date.month as i8, date.day as i8) {
