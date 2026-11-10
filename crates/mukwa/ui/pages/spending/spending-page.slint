@@ -10,6 +10,7 @@ import {
     Budget,
     Api,
     CategoryState,
+    TransactionState,
 } from "../../globals.slint";
 import {
     TextField,
@@ -97,12 +98,27 @@ component CategoryItem inherits VerticalLayout {
 
                     helper-text := Text {
                         property <string> available: CategoryState.left-to-spend(category.id, current-date);
+                        property <bool> has-transactions: {
+                            if !TransactionState.all-transactions.any((transaction) => transaction.category-id == category.id) {
+                                return false;
+                            }
+                            if TransactionState.all-transactions.any((transaction) => Api.parse-date(transaction.date).year < current-date.year) {
+                                return true;
+                            }
+                            if TransactionState.all-transactions.any((transaction) => Api.parse-date(transaction.date).year == current-date.year && Api.parse-date(transaction.date).month <= current-date.month) {
+                                return true;
+                            }
+                            return false;
+                        };
                         text: {
-                            if Api.money-to-float(available) == 0 && Api.money-to-float(budget.amount) > 0 {
+                            if !has-transactions {
+                                return "";
+                            }
+                            if Api.money-to-float(available) == 0 {
                                 return "Fully spent";
                             }
                             if Api.money-to-float(available) < 0 {
-                                return "Overspent by " + State.format-money(available, Settings.currency-code);
+                                return "Overspent by " + State.format-money(Api.int-to-money(Api.money-to-int(available).abs()), Settings.currency-code);
                             }
                             return "";
                         }
