@@ -24,9 +24,8 @@ fn setup() -> crate::Result<(MainWindow, Service)> {
     i_slint_backend_testing::init_no_event_loop();
     let service = Service::new(create_test_db());
     let app = MainWindow::new()?;
-    let state = AppState::new(service.clone())?;
     let settings = SettingsStore::open_in_memory();
-    controllers::bind_all(&app, &state, &settings)?;
+    controllers::bind_all(&app, &service, &settings)?;
     Ok((app, service))
 }
 
@@ -77,12 +76,11 @@ fn total_spent_all_only_includes_expenses() -> Result<()> {
         .create_income()
         .amount(Money::new(10_000))
         .submit()?;
-    let state = AppState::new(service)?;
     let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
     let window = MainWindow::new()?;
-    controllers::bind_all(&window, &state, &settings)?;
-    let global_state = window.global::<ui::State>();
-    let total = global_state.invoke_total_spent_all(Zoned::now().date().into());
+    controllers::bind_all(&window, &service, &settings)?;
+    let account_state = window.global::<ui::AccountState>();
+    let total = account_state.invoke_total_spent_all(Zoned::now().date().into());
     assert_eq!(total, Money::new(700).to_shared_string());
     Ok(())
 }
@@ -110,11 +108,10 @@ fn total_spent_all_filters_by_month() -> Result<()> {
         day: 1,
     };
     let window = MainWindow::new()?;
-    let state = AppState::new(service)?;
     let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
-    controllers::bind_all(&window, &state, &settings)?;
-    let global_state = window.global::<ui::State>();
-    let total = global_state.invoke_total_spent_all(date);
+    controllers::bind_all(&window, &service, &settings)?;
+    let account_state = window.global::<ui::AccountState>();
+    let total = account_state.invoke_total_spent_all(date);
     assert_eq!(total, Money::new(500).to_shared_string());
     Ok(())
 }
@@ -148,9 +145,8 @@ fn draw_pie_chart_filters_by_date() -> Result<()> {
         .submit()?;
 
     let window = MainWindow::new()?;
-    let state = AppState::new(service)?;
     let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
-    controllers::bind_all(&window, &state, &settings)?;
+    controllers::bind_all(&window, &service, &settings)?;
     let analytics = window.global::<ui::AnalyticsApi>();
     let date = Zoned::now().date() - 1.month();
     let slices = analytics.invoke_draw_pie_chart(500.0, 500.0, date.into());
@@ -189,9 +185,8 @@ fn draw_pie_chart_sorts_categories() -> Result<()> {
         .submit()?;
 
     let window = MainWindow::new()?;
-    let state = AppState::new(service)?;
     let settings = SettingsStore::open(temp.path().join("settings.toml"))?;
-    controllers::bind_all(&window, &state, &settings)?;
+    controllers::bind_all(&window, &service, &settings)?;
     let analytics = window.global::<ui::AnalyticsApi>();
     let pie_slices = analytics.invoke_draw_pie_chart(500.0, 500.0, Zoned::now().date().into());
     let mut slices = pie_slices.iter();

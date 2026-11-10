@@ -875,8 +875,3 @@ fn edit_outflow_updates_account_balance() -> crate::Result<()> {
     );
     Ok(())
 }
-
-#[test]
-fn account_options() {
-    todo!()
-}

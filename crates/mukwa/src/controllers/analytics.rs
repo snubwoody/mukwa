@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use crate::state::AppState;
 use crate::ui::{self, MainWindow};
 use crate::ui::{AnalyticsApi, PieChartSlice};
 use jiff::Zoned;
@@ -16,8 +15,8 @@ use std::rc::Rc;
 use tracing::warn;
 use uuid::Uuid;
 
-pub fn bind(window: &MainWindow, state: &AppState) {
-    AnalyticsController::bind(window, &state.service());
+pub fn bind(window: &MainWindow, service: &Service) {
+    AnalyticsController::bind(window, service);
 }
 
 #[derive(Clone)]

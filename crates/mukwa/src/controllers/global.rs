@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use crate::state::AppState;
 use crate::ui;
 use crate::ui::MainWindow;
 use jiff::civil::Date;
@@ -14,7 +13,7 @@ use std::str::FromStr;
 use std::time::Instant;
 use tracing::warn;
 
-pub fn bind(window: &MainWindow, state: &AppState) {
+pub fn bind(window: &MainWindow) {
     let instant = Instant::now();
     let mut database = fontdb::Database::new();
     database.load_system_fonts();
