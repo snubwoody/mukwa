@@ -10,6 +10,7 @@ import {
     CategoryState,
     TransactionState,
     AccountState,
+    Account,
 } from "../../globals.slint";
 import { FontSize } from "../../theme.slint";
 import {
@@ -642,6 +643,91 @@ component Search {
     }
 }
 
+component Audit {
+    in property <Account> account;
+    property <string> balance: account.balance;
+
+    button := PrimaryButton {
+        text: @tr("Audit");
+        clicked => popup.show();
+    }
+
+    popup := PopupWindow {
+        y: button.height;
+        close-policy: close-on-click-outside;
+        Rectangle {
+            background: white;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Colors.borderNeutral;
+        }
+
+        VerticalLayout {
+            padding: 16px;
+            spacing: 32px;
+            VerticalLayout {
+                spacing: 16px;
+                cross-axis-alignment: center;
+                Text {
+                    text: @tr("Is your bank account balance:");
+                    color: Colors.textBody;
+                }
+
+                Text {
+                    text: State.format-money(balance, Settings.currency-code);
+                    color: Colors.textBody;
+                    font-weight: FontWeight.semi-bold;
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                PrimaryButton {
+                    text: @tr("No");
+                    theme: neutral;
+                }
+
+                PrimaryButton {
+                    text: @tr("Yes");
+                    clicked => {
+                        popup.close();
+                        popup-audited.show();
+                    }
+                }
+            }
+        }
+    }
+
+    popup-audited := PopupWindow {
+        y: button.height;
+        width: 250px;
+        Rectangle {
+            background: white;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Colors.borderNeutral;
+        }
+
+        VerticalLayout {
+            spacing: 12px;
+            padding: 16px;
+            cross-axis-alignment: center;
+            Text {
+                text: @tr("Account audited");
+                color: Colors.textHeading;
+                font-weight: FontWeight.semi-bold;
+            }
+
+            Text {
+                text: @tr("All audited transactions have been hidden.");
+                color: Colors.textBody;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+        }
+    }
+}
+
 export component TransactionPage inherits VerticalLayout {
     in property <[Transaction]> transactions;
     in property <string> active-account-id;
@@ -649,25 +735,32 @@ export component TransactionPage inherits VerticalLayout {
     property <data-transfer> csv-data;
     callback create-account();
 
-    VerticalLayout {
+    HorizontalLayout {
+        alignment: space-between;
         padding: 12px;
-        spacing: 4px;
+        VerticalLayout {
+            spacing: 4px;
 
-        Text {
-            text: active-account-id.is-empty
-                ? @tr("All accounts")
-                : AccountState.get-account(active-account-id).name;
-            color: Colors.textBody;
-            font-weight: FontWeight.semi-bold;
+            Text {
+                text: active-account-id.is-empty
+                    ? @tr("All accounts")
+                    : AccountState.get-account(active-account-id).name;
+                color: Colors.textBody;
+                font-weight: FontWeight.semi-bold;
+            }
+
+            balance := Text {
+                text: active-account-id.is-empty
+                    ? State.format-money(AccountState.total-balance(),Settings.currency-code)
+                    : State.format-money(AccountState.accounts[AccountState.accounts.find-index((value) => value.id == active-account-id)].balance, Settings.currency-code);
+                font-size: FontSize.heading-sm;
+                color: Colors.textHeading;
+                font-weight: FontWeight.semi-bold;
+            }
         }
-
-        balance := Text {
-            text: active-account-id.is-empty
-                ? State.format-money(AccountState.total-balance(),Settings.currency-code)
-                : State.format-money(AccountState.accounts[AccountState.accounts.find-index((value) => value.id == active-account-id)].balance, Settings.currency-code);
-            font-size: FontSize.heading-sm;
-            color: Colors.textHeading;
-            font-weight: FontWeight.semi-bold;
+        
+        if !active-account-id.is-empty: Audit {
+            account: AccountState.get-account(active-account-id);
         }
     }
 
