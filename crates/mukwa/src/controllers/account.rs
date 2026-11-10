@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use crate::ui::AccountState;
 use crate::ui::{self, MainWindow};
+use crate::ui::{AccountState, ComboBoxItem};
 use jiff::Zoned;
 use jiff::civil::Date;
 use mukwa_core::Money;
@@ -169,10 +169,6 @@ impl AccountController {
 
         info!(id=?account.id,"Created new account");
         self.load_accounts()?;
-        let mut account_options: Vec<_> = self.state.get_account_options().iter().collect();
-        account_options.push(account.into());
-        self.state
-            .set_account_options(ModelRc::new(VecModel::from(account_options)));
         Ok(())
     }
 
@@ -194,6 +190,7 @@ impl AccountController {
     fn load_accounts(&self) -> crate::Result<()> {
         let accounts = self.service.fetch_accounts()?;
         let mut account_list = vec![];
+        let mut account_options = vec![];
         for account in accounts {
             let balance = self.service.account_balance(account.id)?;
             account_list.push(ui::Account {
@@ -201,11 +198,16 @@ impl AccountController {
                 name: account.name.to_shared_string(),
                 account_type: account.account_type.into(),
                 balance: balance.to_shared_string(),
-            })
+            });
+            account_options.push(ComboBoxItem {
+                value: account.id.to_shared_string(),
+                text: account.name.to_shared_string(),
+            });
         }
         self.state
             .set_accounts(ModelRc::new(VecModel::from(account_list)));
-        // TODO: load account options?
+        self.state
+            .set_account_options(ModelRc::new(VecModel::from(account_options)));
         Ok(())
     }
 }
@@ -223,6 +225,13 @@ mod test {
         let app = MainWindow::new()?;
         let service = Service::new(create_test_db());
         let controller = AccountController::bind(&app, &service);
+        Ok((app, controller))
+    }
+
+    fn setup_with_service(service: &Service) -> crate::Result<(MainWindow, AccountController)> {
+        i_slint_backend_testing::init_no_event_loop();
+        let app = MainWindow::new()?;
+        let controller = AccountController::bind(&app, service);
         Ok((app, controller))
     }
 
@@ -313,21 +322,27 @@ mod test {
 
     #[test]
     fn load_data_on_init() -> crate::Result<()> {
-        let (app, controller) = setup()?;
+        let service = Service::new(create_test_db());
+        let a1 = service.create_account("Chequing", AccountType::Cash)?;
+        let a2 = service.create_account("Savings", AccountType::Cash)?;
+
+        let (app, _) = setup_with_service(&service)?;
         let state: AccountState = app.global();
 
-        controller.state.invoke_create_account(
-            "".to_shared_string(),
-            ui::AccountType::Cash,
-            "".to_shared_string(),
-        );
-        controller.state.invoke_create_account(
-            "".to_shared_string(),
-            ui::AccountType::Cash,
-            "".to_shared_string(),
-        );
-
-        assert_eq!(state.get_accounts().iter().len(), 2);
+        let accounts: Vec<_> = state.get_accounts().iter().collect();
+        let account_options: Vec<_> = state.get_account_options().iter().collect();
+        assert_eq!(accounts.len(), 2);
+        assert_eq!(account_options.len(), 2);
+        assert!(account_options.contains(&ComboBoxItem {
+            text: a1.name.to_shared_string(),
+            value: a1.id.to_shared_string(),
+        }));
+        assert!(account_options.contains(&ComboBoxItem {
+            text: a2.name.to_shared_string(),
+            value: a2.id.to_shared_string(),
+        }));
+        assert!(accounts.contains(&a1.into()));
+        assert!(accounts.contains(&a2.into()));
         Ok(())
     }
 

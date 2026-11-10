@@ -3,9 +3,7 @@
 
 use std::ops::ControlFlow;
 
-use crate::ui::{
-    AccountState, CategoryState, CreateTransactionOpts, Settings, State, TransactionState,
-};
+use crate::ui::{AccountState, CategoryState, Settings, TransactionState};
 
 use super::*;
 use i_slint_backend_testing::ElementHandle;
@@ -38,9 +36,7 @@ fn find_by_accessible_label(element: &ElementHandle, label: &str) -> ElementHand
         .query_descendants()
         .match_accessible_label(label)
         .find_first()
-        .expect(&format!(
-            "Element with accessible label '{label}' not found"
-        ))
+        .unwrap_or_else(|| panic!("Element with accessible label '{label}' not found"))
 }
 
 /// Finds the element with the given type id, panics if the element cannot be found.
@@ -49,7 +45,7 @@ fn find_by_id(element: &ElementHandle, id: &str) -> ElementHandle {
         .query_descendants()
         .match_id(id)
         .find_first()
-        .expect(&format!("Element with id '{id}' not found"))
+        .unwrap_or_else(|| panic!("Element with id '{id}' not found"))
 }
 
 /// Finds the element with the given type name, panics if the element cannot be found.
@@ -58,7 +54,7 @@ fn find_by_type_name(element: &ElementHandle, type_name: &str) -> ElementHandle 
         .query_descendants()
         .match_type_name(type_name)
         .find_first()
-        .expect(&format!("Element with type name '{type_name}' not found"))
+        .unwrap_or_else(|| panic!("Element with type name '{type_name}' not found"))
 }
 
 /// Finds all the elements with the given type name.

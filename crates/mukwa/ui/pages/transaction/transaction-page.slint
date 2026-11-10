@@ -312,6 +312,7 @@ component TransactionRow inherits TableRow {
         current-value: transaction.account-id;
         changed(value) => {
             TransactionState.set-transaction-account(transaction.id,value);
+            AccountState.load-accounts();
         }
     }
 
@@ -321,6 +322,7 @@ component TransactionRow inherits TableRow {
         active-account-id: active-account-id;
         changed(value) => {
             TransactionState.set-transaction-payee(transaction.id,value);
+            AccountState.load-accounts();
         }
     }
 
