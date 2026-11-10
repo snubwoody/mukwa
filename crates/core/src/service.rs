@@ -795,6 +795,20 @@ impl Service {
         Ok(categories)
     }
 
+    /// Fetches all the categories in the category group.
+    pub fn fetch_categories_in_group(&self, id: Uuid) -> crate::Result<Vec<Category>> {
+        let mut categories = vec![];
+        let connection = self.connection();
+        let sql = "SELECT * FROM categories WHERE group_id = ?";
+        let mut stmt = connection.prepare_cached(sql)?;
+        let rows = stmt.query_and_then([id.to_string()], |row| Category::try_from(row))?;
+
+        for row in rows {
+            categories.push(row?);
+        }
+        Ok(categories)
+    }
+
     /// Fetches all category groups from the database.
     pub fn fetch_category_groups(&self) -> crate::Result<Vec<CategoryGroup>> {
         let mut category_groups = vec![];
@@ -1250,6 +1264,51 @@ impl Service {
             .sum();
 
         Ok(total_assignable - total_assigned)
+    }
+
+    /// Returns the total amount available to spend for a budget.
+    pub fn available_to_spend(&self, category_id: Uuid, date: Date) -> crate::Result<Money> {
+        let total_assigned = self.total_assigned(category_id, date)?;
+        let total_spent = self.total_spent_in_category(category_id, date)?;
+
+        Ok(total_assigned - total_spent)
+    }
+
+    pub fn total_spent_in_category(&self, category_id: Uuid, date: Date) -> crate::Result<Money> {
+        let transactions = self.fetch_transactions()?;
+        let total_spent: Money = transactions
+            .iter()
+            .filter(|t| t.transaction_type() == TransactionType::Expense)
+            .filter(|t| t.category_id == Some(category_id))
+            .filter(|t| (t.date.year(), t.date.month()) <= (date.year(), date.month()))
+            .map(|t| t.amount)
+            .sum();
+        Ok(total_spent)
+    }
+
+    pub fn total_assigned(&self, category_id: Uuid, date: Date) -> crate::Result<Money> {
+        let budgets = self.fetch_budgets()?;
+        let total_assigned: Money = budgets
+            .iter()
+            .filter(|b| b.category_id == category_id)
+            .filter(|b| (b.year, b.month) <= (date.year() as i64, date.month() as i64))
+            .map(|b| b.amount)
+            .sum();
+        Ok(total_assigned)
+    }
+
+    pub fn available_to_spend_in_group(&self, id: Uuid, date: Date) -> crate::Result<Money> {
+        let mut available = Money::ZERO;
+        let groups = self.fetch_category_groups()?;
+        let group = groups
+            .iter()
+            .find(|g| g.id == id)
+            .ok_or(Error::new("Category group not found"))?;
+        let categories = self.fetch_categories_in_group(group.id)?;
+        for category in categories {
+            available += self.available_to_spend(category.id, date)?;
+        }
+        Ok(available)
     }
 
     /// Returns the total amount of money deposited into cash accounts.

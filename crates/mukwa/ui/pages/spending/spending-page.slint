@@ -10,6 +10,7 @@ import {
     Budget,
     Api,
     CategoryState,
+    TransactionState,
 } from "../../globals.slint";
 import {
     TextField,
@@ -30,20 +31,18 @@ export global SpendingPageState {
 }
 
 component CategoryItem inherits VerticalLayout {
-    in property <Date> current-date;
+    property <Date> current-date: CategoryState.current-month;
     in property <Category> category;
     property <Budget> budget: CategoryState.get-budget(category.id, current-date);
+    property <string> total-assigned: CategoryState.total-assigned(category.id, current-date);
+    property <string> total-spent-in-category: CategoryState.total-spent-in-category(category.id, current-date);
     callback selected(string);
 
     function budget-progress() -> float {
-        if Api.money-to-float(budget.amount) <= 0 && Api.money-to-float(CategoryState.total-spent(budget.id)) > 0 {
-            return 1;
-        }
-        if Api.money-to-float(budget.amount) <= 0 {
+        if Api.money-to-float(total-spent-in-category) == 0 {
             return 0;
         }
-        return Math.max(Api.money-to-float(CategoryState.total-spent(budget.id)))
-            / Api.money-to-float(budget.amount);
+        return Api.money-to-float(total-spent-in-category) / Api.money-to-float(total-assigned);
     }
 
     context-menu := ContextMenu {
@@ -95,25 +94,33 @@ component CategoryItem inherits VerticalLayout {
                         accepted(value) => CategoryState.update-category(category.id, value);
                     }
 
-                    Text {
-                        text: helper-text();
-                        color: Colors.textBody;
-
-                        function helper-text() -> string {
-                            if Api.money-to-float(CategoryState.total-spent(budget.id)) == Api.money-to-float(budget.amount) && Api.money-to-float(budget.amount) > 0 {
+                    helper-text := Text {
+                        property <string> available: CategoryState.left-to-spend(category.id, current-date);
+                        property <bool> has-transactions: {
+                            if !TransactionState.all-transactions.any((transaction) => transaction.category-id == category.id) {
+                                return false;
+                            }
+                            if TransactionState.all-transactions.any((transaction) => Api.parse-date(transaction.date).year < current-date.year) {
+                                return true;
+                            }
+                            if TransactionState.all-transactions.any((transaction) => Api.parse-date(transaction.date).year == current-date.year && Api.parse-date(transaction.date).month <= current-date.month) {
+                                return true;
+                            }
+                            return false;
+                        };
+                        text: {
+                            if !has-transactions {
+                                return "";
+                            }
+                            if Api.money-to-float(available) == 0 {
                                 return "Fully spent";
                             }
-                            if Api.money-to-float(CategoryState.total-spent(budget.id)) > Api.money-to-float(budget.amount) {
-                                return "Overspent "
-                                    + State.format-money(CategoryState.total-spent(budget.id),Settings.currency-code)
-                                    + " of "
-                                    + State.format-money(budget.amount,Settings.currency-code);
+                            if Api.money-to-float(available) < 0 {
+                                return "Overspent by " + State.format-money(Api.int-to-money(Api.money-to-int(available).abs()), Settings.currency-code);
                             }
-                            return "Spent "
-                                + State.format-money(CategoryState.total-spent(budget.id),Settings.currency-code)
-                                + " of "
-                                + State.format-money(budget.amount,Settings.currency-code);
+                            return "";
                         }
+                        color: Colors.textBody;
                     }
                 }
 
@@ -144,9 +151,9 @@ component CategoryItem inherits VerticalLayout {
                 horizontal-alignment: end;
             }
 
-            Text {
+            left-to-spend := Text {
                 width: 100px;
-                text: State.format-money(CategoryState.left-to-spend(budget.id),Settings.currency-code);
+                text: State.format-money(CategoryState.left-to-spend(category.id,current-date),Settings.currency-code);
                 color: Colors.textBody;
                 horizontal-alignment: end;
             }
@@ -161,7 +168,7 @@ component CategoryItem inherits VerticalLayout {
 }
 
 component CategoryGroupItem {
-    in property <Date> current-date;
+    property <Date> current-date: CategoryState.current-month;
     in property <CategoryGroup> category-group;
     property <bool> open: true;
     callback category-selected(string);
@@ -341,7 +348,6 @@ component CategoryGroupItem {
 
         if root.open: VerticalLayout {
             for category in CategoryState.categories-in-group(category-group.id): CategoryItem {
-                current-date: current-date;
                 category: category;
                 selected(id) => category-selected(id);
             }
@@ -350,7 +356,7 @@ component CategoryGroupItem {
 }
 
 component SpendingPageBody inherits VerticalLayout {
-    in-out property <Date> current-date: CalendarState.today();
+    property <Date> current-date: CategoryState.current-month;
     property <string> left-to-budget: SpendingPageState.left-to-budget;
     callback category-selected(string);
     alignment: start;
@@ -371,8 +377,7 @@ component SpendingPageBody inherits VerticalLayout {
             theme: ghost;
             accessible-label: @tr("Previous month");
             clicked => {
-                current-date = CalendarState.decrement-month(current-date);
-                CategoryState.set-current-budget-month(current-date);
+                CategoryState.set-current-budget-month(CalendarState.decrement-month(current-date));
             }
         }
 
@@ -387,8 +392,7 @@ component SpendingPageBody inherits VerticalLayout {
             theme: ghost;
             accessible-label: @tr("Next month");
             clicked => {
-                current-date = CalendarState.increment-month(current-date);
-                CategoryState.set-current-budget-month(current-date);
+                CategoryState.set-current-budget-month(CalendarState.increment-month(current-date));
             }
         }
     }
@@ -536,7 +540,6 @@ component SpendingPageBody inherits VerticalLayout {
             content := VerticalLayout {
                 for category-group in CategoryState.category-groups: CategoryGroupItem {
                     category-group: category-group;
-                    current-date: current-date;
                     category-selected(id) => category-selected(id);
                 }
             }

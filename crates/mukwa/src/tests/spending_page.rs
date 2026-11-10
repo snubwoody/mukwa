@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+use crate::tests::{find_by_accessible_label, find_by_type_name};
 use crate::ui::{CategoryState, MainWindow, Settings};
-use i_slint_backend_testing::ElementHandle;
-use mukwa_core::service::AccountType;
+use crate::{SettingsStore, controllers};
+use i_slint_backend_testing::{ElementHandle, ElementRoot};
+use jiff::civil::Date;
+use jiff::{ToSpan, Zoned};
+use mukwa_core::service::{AccountType, CreateBudgetOpts};
 use mukwa_core::{Currency, Money, fmt::CurrencyFormatter, service::Service};
 use slint::{
     ComponentHandle, Model, PhysicalSize, SharedString, ToSharedString,
@@ -641,5 +645,298 @@ fn assign_button_reloads_left_to_budget() -> Result<()> {
         left_to_budget.accessible_label().unwrap(),
         formatter.format_money(Money::new(250))?
     );
+    Ok(())
+}
+
+#[test]
+fn category_helper_text() -> Result<()> {
+    // TODO: test
+    // - Budget progress
+
+    i_slint_backend_testing::init_no_event_loop();
+    let currency = Currency::CAD;
+    let formatter = CurrencyFormatter::with_currency(currency);
+    let run_test =
+        |budgets: &[(Date, Money)], transactions: &[(Date, Money)], date: Date, text: &str| {
+            let service = Service::open_in_memory().unwrap();
+            service.create_account("", AccountType::Cash).unwrap();
+
+            let group = service.create_category_group("").unwrap();
+            let category = service.create_category("Test Category", group.id).unwrap();
+            for (date, amount) in budgets {
+                service
+                    .create_budget(CreateBudgetOpts {
+                        amount: Some(*amount),
+                        month: Some(*date),
+                        category_id: category.id,
+                    })
+                    .unwrap();
+            }
+            for (date, amount) in transactions {
+                service
+                    .create_expense()
+                    .category(category.id)
+                    .date(*date)
+                    .amount(*amount)
+                    .submit()
+                    .unwrap();
+            }
+
+            let app = MainWindow::new().unwrap();
+            let window = app.window();
+            window.set_size(PhysicalSize::new(1200, 1200));
+            let settings = SettingsStore::open_in_memory();
+            controllers::bind_all(&app, &service, &settings).unwrap();
+            let settings: Settings = app.global();
+            settings.set_currency_code(currency.code().to_shared_string());
+            let category_state: CategoryState = app.global();
+            category_state.invoke_set_current_budget_month(date.into());
+
+            let root_element = app.root_element();
+            find_by_accessible_label(&root_element, "Spending")
+                .mock_single_click(PointerEventButton::Left);
+            let category_item = find_by_type_name(&root_element, "CategoryItem");
+            let helper_text = category_item
+                .query_descendants()
+                .match_id("CategoryItem::helper-text")
+                .find_first()
+                .unwrap();
+            assert_eq!(helper_text.accessible_label().unwrap(), text);
+        };
+
+    let now = Zoned::now().date();
+    run_test(
+        &[(now, Money::new(100))],
+        &[(now, Money::new(100))],
+        now,
+        "Fully spent",
+    );
+    run_test(&[(now, Money::ZERO)], &[], now, "");
+    // Rollover into future months
+    run_test(
+        &[(now, Money::new(100)), (now + 10.months(), Money::ZERO)],
+        &[
+            (now + 2.months(), Money::new(50)),
+            (now + 7.months(), Money::new(50)),
+        ],
+        now + 10.months(),
+        "Fully spent",
+    );
+    run_test(
+        &[(now, Money::new(100)), (now - 2.months(), Money::ZERO)],
+        &[
+            (now + 2.months(), Money::new(50)),
+            (now + 7.months(), Money::new(50)),
+        ],
+        now - 2.months(),
+        "",
+    );
+    run_test(
+        &[(now, Money::new(20))],
+        &[(now, Money::new(50))],
+        now,
+        &format!("Overspent by {}", formatter.format_money(Money::new(30))?),
+    );
+    Ok(())
+}
+
+#[test]
+fn category_left_to_spend() -> Result<()> {
+    i_slint_backend_testing::init_no_event_loop();
+    let currency = Currency::CAD;
+    let formatter = CurrencyFormatter::with_currency(currency);
+    let run_test =
+        |budgets: &[(Date, Money)], transactions: &[(Date, Money)], date: Date, amount: Money| {
+            let service = Service::open_in_memory().unwrap();
+            service.create_account("", AccountType::Cash).unwrap();
+
+            let group = service.create_category_group("").unwrap();
+            let category = service.create_category("Test Category", group.id).unwrap();
+            for (date, amount) in budgets {
+                service
+                    .create_budget(CreateBudgetOpts {
+                        amount: Some(*amount),
+                        month: Some(*date),
+                        category_id: category.id,
+                    })
+                    .unwrap();
+            }
+            for (date, amount) in transactions {
+                service
+                    .create_expense()
+                    .category(category.id)
+                    .date(*date)
+                    .amount(*amount)
+                    .submit()
+                    .unwrap();
+            }
+
+            let app = MainWindow::new().unwrap();
+            let window = app.window();
+            window.set_size(PhysicalSize::new(1200, 1200));
+            let settings = SettingsStore::open_in_memory();
+            controllers::bind_all(&app, &service, &settings).unwrap();
+            let settings: Settings = app.global();
+            settings.set_currency_code(currency.code().to_shared_string());
+            let category_state: CategoryState = app.global();
+            category_state.invoke_set_current_budget_month(date.into());
+
+            let root_element = app.root_element();
+            find_by_accessible_label(&root_element, "Spending")
+                .mock_single_click(PointerEventButton::Left);
+            let category_item = find_by_type_name(&root_element, "CategoryItem");
+            let helper_text = category_item
+                .query_descendants()
+                .match_id("CategoryItem::left-to-spend")
+                .find_first()
+                .unwrap();
+            assert_eq!(
+                helper_text.accessible_label().unwrap(),
+                formatter.format_money(amount).unwrap()
+            );
+        };
+
+    let now = Zoned::now().date();
+    run_test(
+        &[(now, Money::new(100))],
+        &[(now, Money::new(100))],
+        now,
+        Money::ZERO,
+    );
+    run_test(&[(now, Money::ZERO)], &[], now, Money::ZERO);
+    // Rollover into future months
+    run_test(
+        &[(now, Money::new(100)), (now + 10.months(), Money::ZERO)],
+        &[
+            (now + 2.months(), Money::new(50)),
+            (now + 7.months(), Money::new(25)),
+        ],
+        now + 10.months(),
+        Money::new(25),
+    );
+    run_test(
+        &[(now, Money::new(100)), (now - 2.months(), Money::ZERO)],
+        &[
+            (now + 2.months(), Money::new(50)),
+            (now + 7.months(), Money::new(50)),
+        ],
+        now - 2.months(),
+        Money::ZERO,
+    );
+    run_test(
+        &[(now, Money::new(100)), (now - 2.months(), Money::ZERO)],
+        &[
+            (now + 2.months(), Money::new(30)),
+            (now + 7.months(), Money::new(80)),
+        ],
+        now + 5.months(),
+        Money::new(70),
+    );
+    run_test(
+        &[(now, Money::new(20))],
+        &[(now, Money::new(50))],
+        now,
+        Money::new(-30),
+    );
+    run_test(
+        &[(now, Money::new(20))],
+        &[(now, Money::new(10))],
+        now,
+        Money::new(10),
+    );
+    Ok(())
+}
+
+#[test]
+fn category_progress_bar() -> Result<()> {
+    i_slint_backend_testing::init_no_event_loop();
+    let run_test =
+        |budgets: &[(Date, Money)], transactions: &[(Date, Money)], date: Date, progress: f32| {
+            let service = Service::open_in_memory().unwrap();
+            service.create_account("", AccountType::Cash).unwrap();
+
+            let group = service.create_category_group("").unwrap();
+            let category = service.create_category("Test Category", group.id).unwrap();
+            for (date, amount) in budgets {
+                service
+                    .create_budget(CreateBudgetOpts {
+                        amount: Some(*amount),
+                        month: Some(*date),
+                        category_id: category.id,
+                    })
+                    .unwrap();
+            }
+            for (date, amount) in transactions {
+                service
+                    .create_expense()
+                    .category(category.id)
+                    .date(*date)
+                    .amount(*amount)
+                    .submit()
+                    .unwrap();
+            }
+
+            let app = MainWindow::new().unwrap();
+            let window = app.window();
+            window.set_size(PhysicalSize::new(1200, 1200));
+            let settings = SettingsStore::open_in_memory();
+            controllers::bind_all(&app, &service, &settings).unwrap();
+            let category_state: CategoryState = app.global();
+            category_state.invoke_set_current_budget_month(date.into());
+
+            let root_element = app.root_element();
+            find_by_accessible_label(&root_element, "Spending")
+                .mock_single_click(PointerEventButton::Left);
+            let category_item = find_by_type_name(&root_element, "CategoryItem");
+            let progress_bar = find_by_type_name(&category_item, "ProgressBar");
+            assert_eq!(
+                progress_bar.accessible_value().unwrap(),
+                progress.to_shared_string()
+            );
+        };
+
+    let now = Zoned::now().date();
+    run_test(
+        &[(now, Money::new(100))],
+        &[(now, Money::new(100))],
+        now,
+        1.0,
+    );
+    run_test(&[(now, Money::ZERO)], &[], now, 0.0);
+    // Rollover into future months
+    run_test(
+        &[(now, Money::new(100)), (now + 10.months(), Money::ZERO)],
+        &[
+            (now + 2.months(), Money::new(50)),
+            (now + 7.months(), Money::new(25)),
+        ],
+        now + 10.months(),
+        0.75,
+    );
+    run_test(
+        &[(now, Money::new(100)), (now - 2.months(), Money::ZERO)],
+        &[
+            (now + 2.months(), Money::new(50)),
+            (now + 7.months(), Money::new(50)),
+        ],
+        now - 2.months(),
+        0.0,
+    );
+    run_test(
+        &[(now, Money::new(100)), (now - 2.months(), Money::ZERO)],
+        &[
+            (now + 2.months(), Money::new(30)),
+            (now + 7.months(), Money::new(80)),
+        ],
+        now + 5.months(),
+        0.3,
+    );
+    run_test(
+        &[(now, Money::new(100))],
+        &[(now, Money::new(120))],
+        now,
+        1.2,
+    );
+    run_test(&[(now, Money::new(20))], &[(now, Money::new(10))], now, 0.5);
     Ok(())
 }
