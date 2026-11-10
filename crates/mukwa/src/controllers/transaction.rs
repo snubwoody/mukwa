@@ -21,7 +21,7 @@ pub fn bind(app: &MainWindow, service: Service) -> crate::Result<()> {
 }
 
 #[derive(Clone)]
-struct TransactionController {
+pub struct TransactionController {
     transaction_state: Rc<TransactionState<'static>>,
     service: Service,
 }
@@ -389,7 +389,7 @@ impl TransactionController {
         Ok(())
     }
 
-    fn search(&self, query: &str) -> crate::Result<()> {
+    pub fn search(&self, query: &str) -> crate::Result<()> {
         // TODO: test that it doesnt load transactions
         // TODO: if it's empty then just add all transactions
         // TODO: for some reason / matches zero transactions

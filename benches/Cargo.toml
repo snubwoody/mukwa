@@ -13,8 +13,14 @@ name = "fmt"
 harness = false
 path = "fmt.rs"
 
+[[bench]]
+name = "controller"
+harness = false
+path = "controller.rs"
+
 [dependencies]
 criterion = "0.5.1"
 tempfile.workspace = true
 rusqlite.workspace = true
 mukwa-core = { path = "../crates/core" }
+mukwa = { path = "../crates/mukwa" }

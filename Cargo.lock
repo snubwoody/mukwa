@@ -655,6 +655,7 @@ name = "benches"
 version = "0.3.2"
 dependencies = [
  "criterion",
+ "mukwa",
  "mukwa-core",
  "rusqlite",
  "tempfile",

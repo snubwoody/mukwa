@@ -17,6 +17,8 @@ mod import_csv;
 mod settings;
 mod transaction;
 
+pub use transaction::TransactionController;
+
 /// Binds the state and callbacks of all Slint globals to Rust code.
 pub fn bind_all(
     window: &MainWindow,
