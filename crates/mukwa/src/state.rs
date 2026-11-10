@@ -10,6 +10,7 @@ use std::str::FromStr;
 use tracing::info;
 use uuid::Uuid;
 
+#[deprecated]
 #[derive(Clone)]
 pub struct AppState {
     service: Service,
