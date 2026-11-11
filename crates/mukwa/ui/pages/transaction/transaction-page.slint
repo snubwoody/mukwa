@@ -646,6 +646,7 @@ component Search {
 component Audit {
     in property <Account> account;
     property <string> balance: account.balance;
+    property <string> actual-balance;
 
     button := PrimaryButton {
         text: @tr("Audit");
@@ -685,6 +686,10 @@ component Audit {
                 PrimaryButton {
                     text: @tr("No");
                     theme: neutral;
+                    clicked => {
+                        popup.close();
+                        popup-input.show();
+                    }
                 }
 
                 PrimaryButton {
@@ -699,9 +704,122 @@ component Audit {
         }
     }
 
+    popup-input := PopupWindow {
+        y: button.height + 2px;
+        close-policy: close-on-click-outside;
+        width: 200px;
+
+        function submit() {
+            if balance-field.text.is-empty {
+                return;
+            }
+            popup.close();
+            popup-correction.show();
+        }
+
+        Rectangle {
+            background: white;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Colors.borderNeutral;
+        }
+
+        VerticalLayout {
+            spacing: 12px;
+            padding: 16px;
+
+            VerticalLayout {
+                spacing: 8px;
+                Text {
+                    text: @tr("Enter your account balance");
+                    color: Colors.textBody;
+                }
+
+                balance-field := TextField {
+                    width: 100%;
+                    input-type: decimal;
+                    edited => {
+                        actual-balance = self.text;
+                    }
+                    accepted => submit();
+                }
+            }
+
+            PrimaryButton {
+                width: 100%;
+                text: @tr("Continue");
+                clicked => submit();
+            }
+        }
+    }
+
+    popup-correction := PopupWindow {
+        y: button.height + 2px;
+        close-policy: close-on-click-outside;
+        width: 300px;
+        property <string> difference: Api.int-to-money(Api.money-to-int(Api.parse-money(actual-balance)) - Api.money-to-int(balance));
+
+        Rectangle {
+            background: white;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Colors.borderNeutral;
+        }
+
+        VerticalLayout {
+            spacing: 12px;
+            padding: 12px;
+
+            VerticalLayout {
+                spacing: 8px;
+                cross-axis-alignment: center;
+                Text {
+                    // TODO: try storing the parsed money instead
+                    text: State.format-money(Api.int-to-money(Api.money-to-int(Api.parse-money(actual-balance)) - Api.money-to-int(balance)), Settings.currency-code);
+                    color: Colors.textBody;
+                    font-weight: FontWeight.semi-bold;
+                }
+
+                Text {
+                    text: @tr("Difference");
+                    color: Colors.textMuted;
+                }
+            }
+
+            Text {
+                text: @tr("The balance in Mukwa does not match the one at your financial institution.");
+                color: Colors.textBody;
+                wrap: word-wrap;
+            }
+
+            // TODO: try showing the amount of the adjustment in bold
+            Text {
+                text: @tr("You can either verify if the transactions are entered correctly or create an adjustment transaction and complete the audit.");
+                color: Colors.textBody;
+                wrap: word-wrap;
+            }
+
+            PrimaryButton {
+                text: @tr("Cancel");
+                theme: neutral;
+                clicked => popup-correction.close();
+            }
+
+            PrimaryButton {
+                text: @tr("Create adjustment and finish");
+                clicked => {
+                    TransactionState.create-correction-transaction(account.id, difference);
+                    TransactionState.audit-account(account.id);
+                    popup-correction.close();
+                }
+            }
+        }
+    }
+
     popup-audited := PopupWindow {
-        y: button.height;
+        y: button.height + 2px;
         width: 250px;
+        close-policy: close-on-click-outside;
         Rectangle {
             background: white;
             border-radius: 12px;

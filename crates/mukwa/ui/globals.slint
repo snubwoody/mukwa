@@ -87,6 +87,7 @@ export global Api {
     pure callback window-position() -> { x: length, y: length };
     pure callback window-size() -> { width: length, height: length };
     pure callback parse-date(string) -> Date;
+    pure callback parse-money(string) -> string;
     pure callback money-to-float(string) -> float;
     pure callback money-to-int(string) -> int;
     pure callback int-to-money(int) -> string;
@@ -118,6 +119,7 @@ export global TransactionState {
     callback set-transaction-inflow(id: string, amount: string);
     callback create-transaction(CreateTransactionOpts);
     callback delete-selected-transactions();
+    callback create-correction-transaction(account-id: string, balance: string);
     callback load-transactions();
 
     pure callback is-transaction-unconfirmed(id: string) -> bool;
