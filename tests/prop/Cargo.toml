@@ -11,6 +11,7 @@ path = "main.rs"
 smol = "2.0.2"
 slint.workspace = true
 fastrand = "2.5.0"
+uuid.workspace = true
 mukwa = { path = "../../crates/mukwa" }
 mukwa-core = { path = "../../crates/core" }
 

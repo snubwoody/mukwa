@@ -27,6 +27,7 @@ use slint::{
 
 use mukwa::testing::*;
 use mukwa::ui::{self, MainWindow, State, TransactionState};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -203,6 +204,8 @@ impl TestRunner {
     /// - Enter a random amount in the outflow textfield.
     /// - Click the "Save" button and submit the form.
     fn create_transaction(&mut self) {
+        // TODO: test that the new transaction is visible
+        // TODO: stop creating account on init and handle that here
         let amount = Money::new(self.rng.i64(0..));
         let transaction_page =
             ElementHandle::find_by_element_type_name(&self.app, "TransactionPage")
@@ -293,8 +296,23 @@ impl TestRunner {
         );
 
         let transaction_state: TransactionState = self.app.global();
-        let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
-        let all_transactions: Vec<_> = transaction_state.get_all_transactions().iter().collect();
+        let mut transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
+        let mut all_transactions: Vec<_> =
+            transaction_state.get_all_transactions().iter().collect();
+
+        transactions.sort_by(|a, b| {
+            a.id.parse::<Uuid>()
+                .unwrap()
+                .cmp(&b.id.parse().unwrap())
+                .reverse()
+        });
+        all_transactions.sort_by(|a, b| {
+            a.id.parse::<Uuid>()
+                .unwrap()
+                .cmp(&b.id.parse().unwrap())
+                .reverse()
+        });
+
         let assert_transaction = |transaction: &ui::Transaction| {
             assert_eq!(transaction.account_id, account_id);
             assert_eq!(transaction.outflow, amount.to_shared_string());

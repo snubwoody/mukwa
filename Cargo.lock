@@ -4864,6 +4864,7 @@ dependencies = [
  "mukwa-core",
  "slint",
  "smol",
+ "uuid",
 ]
 
 [[package]]
