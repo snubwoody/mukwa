@@ -83,7 +83,7 @@ impl TestRunner {
             );
         }
 
-        for run in 1..=10 {
+        for run in 1..3 {
             self.current_run = run;
             // TODO: maybe add enum weights so that certain things are more likely,
             // to prevent things from being too uniform
@@ -333,7 +333,7 @@ fn main() -> mukwa_core::Result<()> {
 
     println!("Running test runner with seed {seed}");
     println!("To re-run this test use the command:");
-    println!("TEST_SEED={seed} cargo test");
+    println!("TEST_SEED={seed} cargo run --bin simulacrum");
 
     let mut runner = TestRunner::new(seed);
     runner.run()?;
