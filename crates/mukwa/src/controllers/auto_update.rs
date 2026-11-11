@@ -223,7 +223,6 @@ impl AutoUpdateController {
                     progress += downloaded;
                     if progress > 0.005 || len < BUF_SIZE {
                         let _ = updater.upgrade_in_event_loop(move |updater| {
-                            dbg!("Updating progress");
                             updater
                                 .set_download_progress(updater.get_download_progress() + progress)
                         });

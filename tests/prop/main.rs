@@ -1,0 +1,360 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Wakunguma Kalimukwa
+
+//! Property based fuzz testing
+
+// TODO:
+// - Maybe prop testing for each page
+// - TODO: save state or logs to target/prop-tests
+// - Deterministic seeding
+// - Maybe a trait
+// - maybe save the database to a file on failure
+
+#![allow(unused)]
+use std::{fs, path::PathBuf};
+
+use fastrand::Rng;
+use i_slint_backend_testing::{AccessibleRole, ElementHandle, ElementRoot};
+use mukwa::{
+    SettingsStore,
+    ui::{AccountState, Settings},
+};
+use mukwa_core::{Currency, Money, create_test_db, fmt::CurrencyFormatter, service::Service};
+use slint::{
+    ComponentHandle, Model, SharedString, ToSharedString,
+    platform::{Key, PointerEventButton},
+};
+
+use mukwa::testing::*;
+use mukwa::ui::{self, MainWindow, State, TransactionState};
+use uuid::Uuid;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+enum Action {
+    CreateTransaction = 0,
+    CreateAccount = 1,
+    EditOutflow = 2,
+}
+
+// TODO: create CreateAccount struct and store a randomly chosen enter_balance variable
+impl Action {
+    const MAX: u8 = Action::EditOutflow as u8;
+}
+
+impl From<u8> for Action {
+    fn from(value: u8) -> Self {
+        match value {
+            x if x == Action::CreateTransaction as u8 => Action::CreateTransaction,
+            x if x == Action::CreateAccount as u8 => Action::CreateAccount,
+            x if x == Action::EditOutflow as u8 => Action::EditOutflow,
+            _ => panic!("Cannot convert {value} into Action"),
+        }
+    }
+}
+
+pub struct TestRunner {
+    rng: Rng,
+    app: MainWindow,
+    succeeded: bool,
+    current_run: u64,
+    seed: u64,
+}
+
+impl TestRunner {
+    fn new(seed: u64) -> TestRunner {
+        let (app, _) = setup().unwrap();
+        TestRunner {
+            rng: Rng::with_seed(seed),
+            app,
+            succeeded: false,
+            current_run: 0,
+            seed,
+        }
+    }
+
+    fn run(&mut self) -> mukwa::Result<()> {
+        let state: AccountState = self.app.global();
+        // TODO: account options has len of 7 every time?
+        for _ in 0..self.rng.u8(..) {
+            state.invoke_create_account(
+                "My account".to_shared_string(),
+                ui::AccountType::Cash,
+                "".to_shared_string(),
+            );
+        }
+
+        for run in 1..3 {
+            self.current_run = run;
+            // TODO: maybe add enum weights so that certain things are more likely,
+            // to prevent things from being too uniform
+            // TODO: pick a random subset of actions to choose from?
+            // Pick a random combination of actions
+            let actions: Vec<_> = (1..self.rng.u8(2..10))
+                .map(|_| Action::from(self.rng.u8(0..=Action::MAX)))
+                .collect();
+            for action in actions {
+                match action {
+                    Action::CreateAccount => {
+                        self.create_account();
+                    }
+                    Action::CreateTransaction => {
+                        self.create_transaction();
+                    }
+                    Action::EditOutflow => {
+                        self.edit_outflow();
+                    }
+                }
+            }
+        }
+
+        self.succeeded = true;
+        Ok(())
+    }
+
+    fn create_account(&mut self) {
+        let state: AccountState = self.app.global();
+        let accounts_len = state.get_accounts().iter().len();
+        let balance = Money::new(self.rng.i64(0..));
+        let name = "My account";
+
+        ElementHandle::find_by_accessible_label(&self.app, "Create account")
+            .next()
+            .unwrap()
+            .mock_single_click(PointerEventButton::Left);
+
+        ElementHandle::find_by_element_id(&self.app, "CreateAccountDialog::name")
+            .next()
+            .unwrap()
+            .mock_single_click(PointerEventButton::Left);
+
+        i_slint_backend_testing::send_keyboard_string_sequence(&self.app, name);
+        i_slint_backend_testing::send_keyboard_string_sequence(
+            &self.app,
+            &SharedString::from(Key::Tab),
+        );
+        i_slint_backend_testing::send_keyboard_string_sequence(&self.app, &balance.to_string());
+
+        ElementHandle::find_by_element_id(&self.app, "CreateAccountDialog::create-account")
+            .next()
+            .unwrap()
+            .mock_single_click(PointerEventButton::Left);
+
+        // TODO: assert that the elements are not visible
+
+        assert!(
+            ElementHandle::find_by_element_id(&self.app, "CreateAccountDialog::create-account")
+                .next()
+                .is_none(),
+            "CreateAccountDialog::create-account should not be visible"
+        );
+
+        let accounts: Vec<_> = state.get_accounts().iter().collect();
+        assert_eq!(
+            accounts.len(),
+            accounts_len + 1,
+            "Test should have created a new account"
+        );
+        let account = &accounts[accounts.len() - 1];
+        assert_eq!(account.balance, balance.to_shared_string());
+        assert_eq!(account.name, name);
+    }
+
+    fn edit_outflow(&mut self) {
+        // TODO: check negative values
+        // TODO: test that the balance in the transaction changes
+        // TODO: negative outflow converts to expense
+        // FIXME: is it generating the same amount?
+        let amount = Money::new(self.rng.i64(0..));
+        let root_element = self.app.root_element();
+
+        let transactions = find_all_by_type_name(&root_element, "TransactionRow");
+        if transactions.is_empty() {
+            return;
+        }
+
+        let transaction = self.rng.choice(&transactions).unwrap();
+        let transaction_id = transaction.accessible_id().unwrap();
+
+        let outflow_cell = find_by_id(transaction, "TransactionRow::outflow-cell");
+        outflow_cell.mock_single_click(PointerEventButton::Left);
+        // Clear the text field
+        outflow_cell.mock_single_click(PointerEventButton::Left);
+        outflow_cell.mock_single_click(PointerEventButton::Left);
+        i_slint_backend_testing::send_key_combo(&self.app, [Key::Backspace]);
+        i_slint_backend_testing::send_keyboard_string_sequence(&self.app, &amount.to_string());
+        i_slint_backend_testing::send_key_combo(&self.app, [Key::Return]);
+
+        let state: TransactionState = self.app.global();
+        let transactions: Vec<_> = state.get_all_transactions().iter().collect();
+        let transaction = transactions
+            .iter()
+            .find(|t| t.id == transaction_id.to_shared_string())
+            .unwrap();
+        assert_eq!(transaction.amount, amount.to_shared_string());
+
+        let settings: Settings = self.app.global();
+        settings.set_font_family("CAD".to_shared_string());
+        let formatter = CurrencyFormatter::with_currency(Currency::CAD);
+    }
+
+    /// Creates a transaction and verifies its creating using the following steps:
+    /// - Click the "New" button and open the transaction form.
+    /// - Randomly pick the account.
+    /// - Enter a random amount in the outflow textfield.
+    /// - Click the "Save" button and submit the form.
+    fn create_transaction(&mut self) {
+        // TODO: test that the new transaction is visible
+        // TODO: stop creating account on init and handle that here
+        let amount = Money::new(self.rng.i64(0..));
+        let transaction_page =
+            ElementHandle::find_by_element_type_name(&self.app, "TransactionPage")
+                .next()
+                .unwrap();
+        transaction_page
+            .query_descendants()
+            .match_accessible_role(AccessibleRole::Button)
+            .match_accessible_label("New")
+            .find_first()
+            .unwrap()
+            .mock_single_click(PointerEventButton::Left);
+
+        // TODO: test that it's closed after saving
+        assert!(
+            transaction_page
+                .query_descendants()
+                .match_type_name("NewTransactionRow")
+                .find_first()
+                .is_some()
+        );
+
+        let new_transaction_row = transaction_page
+            .query_descendants()
+            .match_type_name("NewTransactionRow")
+            .find_first()
+            .unwrap();
+
+        // TODO: fill items here
+
+        // TODO: also test no accounts?
+        let account_cell = new_transaction_row
+            .query_descendants()
+            .match_type_name("AccountCell")
+            .find_first()
+            .unwrap();
+
+        account_cell.mock_single_click(PointerEventButton::Left);
+
+        let account_options = account_cell
+            .query_descendants()
+            .match_accessible_role(AccessibleRole::ListItem)
+            .find_all();
+
+        let account_option = self.rng.choice(account_options).unwrap();
+        let account_id = account_option.accessible_id().unwrap();
+        account_option.mock_single_click(PointerEventButton::Left);
+
+        let outflow_cell = new_transaction_row
+            .query_descendants()
+            .match_id("NewTransactionRow::outflow-cell")
+            .find_first()
+            .unwrap();
+
+        outflow_cell.mock_single_click(PointerEventButton::Left);
+        // Clear the text field first
+        i_slint_backend_testing::send_key_combo(
+            &self.app,
+            [
+                Key::RightArrow,
+                Key::RightArrow,
+                Key::RightArrow,
+                Key::RightArrow,
+                Key::Backspace,
+                Key::Backspace,
+                Key::Backspace,
+            ],
+        );
+
+        // TODO: Implement better random number inputs
+        i_slint_backend_testing::send_keyboard_string_sequence(&self.app, &amount.to_string());
+        i_slint_backend_testing::send_key_combo(&self.app, [Key::Return]);
+
+        new_transaction_row
+            .query_descendants()
+            .match_accessible_role(AccessibleRole::Button)
+            .match_accessible_label("Save")
+            .find_first()
+            .unwrap()
+            .mock_single_click(PointerEventButton::Left);
+
+        assert!(
+            transaction_page
+                .query_descendants()
+                .match_type_name("NewTransactionRow")
+                .find_first()
+                .is_none()
+        );
+
+        let transaction_state: TransactionState = self.app.global();
+        let mut transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
+        let mut all_transactions: Vec<_> =
+            transaction_state.get_all_transactions().iter().collect();
+
+        transactions.sort_by(|a, b| {
+            a.id.parse::<Uuid>()
+                .unwrap()
+                .cmp(&b.id.parse().unwrap())
+                .reverse()
+        });
+        all_transactions.sort_by(|a, b| {
+            a.id.parse::<Uuid>()
+                .unwrap()
+                .cmp(&b.id.parse().unwrap())
+                .reverse()
+        });
+
+        let assert_transaction = |transaction: &ui::Transaction| {
+            assert_eq!(transaction.account_id, account_id);
+            assert_eq!(transaction.outflow, amount.to_shared_string());
+        };
+        assert_transaction(&all_transactions[0]);
+        assert_transaction(&transactions[0]);
+        // dbg!(transactions);
+    }
+}
+
+impl Drop for TestRunner {
+    fn drop(&mut self) {
+        if self.succeeded {
+            return;
+        }
+
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test-output");
+        fs::create_dir_all(&dir).unwrap();
+        let mut content = format!("Seed: {}\n", self.seed);
+        content += &format!("Failed on run: {}", self.current_run);
+        let path = dir.join(format!("test-{}.txt", self.seed));
+        fs::write(&path, content).unwrap();
+        eprintln!("Saved test state to {}", path.display());
+    }
+}
+
+// TODO tick method
+fn main() -> mukwa_core::Result<()> {
+    let seed = if let Ok(seed) = std::env::var("TEST_SEED")
+        && let Ok(seed) = seed.parse::<u64>()
+    {
+        seed
+    } else {
+        fastrand::u64(..)
+    };
+
+    println!("Running test runner with seed {seed}");
+    println!("To re-run this test use the command:");
+    println!("TEST_SEED={seed} cargo run --bin simulacrum");
+
+    let mut runner = TestRunner::new(seed);
+    runner.run()?;
+    println!("No errors found");
+    Ok(())
+}

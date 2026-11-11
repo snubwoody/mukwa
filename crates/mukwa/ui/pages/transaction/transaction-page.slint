@@ -269,6 +269,7 @@ component TransactionRow inherits TableRow {
     padding-left: 8px;
     padding-right: 8px;
     is-selected: TransactionState.selected-transactions.any((value) => value == transaction.id) || TransactionState.all-transactions-selected;
+    accessible-id: transaction.id;
 
     right-clicked => {
         context-menu.show();
@@ -457,6 +458,7 @@ component NewTransactionRow inherits VerticalLayout {
         outflow-cell := MoneyCell {
             width: parent.width / length;
             amount: transaction.outflow;
+            accessible-id: "outflow-cell";
             changed(value) => {
                 transaction.outflow = value;
                 transaction.inflow = "";

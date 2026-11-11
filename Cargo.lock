@@ -1101,6 +1101,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "component-tests"
+version = "0.3.2"
+dependencies = [
+ "i-slint-backend-testing",
+ "i-slint-compiler",
+ "i-slint-core",
+ "slint",
+ "smol",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4841,6 +4854,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "prop-tests"
+version = "0.3.2"
+dependencies = [
+ "fastrand",
+ "i-slint-backend-testing",
+ "i-slint-core",
+ "mukwa",
+ "mukwa-core",
+ "slint",
+ "smol",
+ "uuid",
+]
+
+[[package]]
 name = "pulldown-cmark"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6047,19 +6074,6 @@ dependencies = [
  "once_cell",
  "rustix 1.1.4",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "tests"
-version = "0.3.2"
-dependencies = [
- "i-slint-backend-testing",
- "i-slint-compiler",
- "i-slint-core",
- "slint",
- "smol",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
