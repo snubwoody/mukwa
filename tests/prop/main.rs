@@ -83,7 +83,7 @@ impl TestRunner {
             );
         }
 
-        for run in 1..3 {
+        for run in 1..=10 {
             self.current_run = run;
             // TODO: maybe add enum weights so that certain things are more likely,
             // to prevent things from being too uniform
@@ -175,7 +175,7 @@ impl TestRunner {
         let transaction = self.rng.choice(&transactions).unwrap();
         let transaction_id = transaction.accessible_id().unwrap();
 
-        let outflow_cell = find_by_id(&transaction, "TransactionRow::outflow-cell");
+        let outflow_cell = find_by_id(transaction, "TransactionRow::outflow-cell");
         outflow_cell.mock_single_click(PointerEventButton::Left);
         // Clear the text field
         outflow_cell.mock_single_click(PointerEventButton::Left);
