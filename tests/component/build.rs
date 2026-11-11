@@ -45,7 +45,7 @@ fn main() {
         std::env::set_var("SLINT_ENABLE_EXPERIMENTAL_FEATURES", "1");
     }
 
-    println!("cargo:rerun-if-changed=../crates/mukwa/ui");
+    println!("cargo:rerun-if-changed=../../crates/mukwa/ui");
     println!("cargo:rerun-if-changed=cases");
     let cases_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("cases");
 
@@ -65,6 +65,8 @@ fn main() {
 
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
     let include_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
         .parent()
         .unwrap()
         .join("crates/mukwa/ui");

@@ -5,7 +5,7 @@ members = [
     "crates/mukwa",
     "crates/utils",
     "benches",
-    "tests",
+    "tests/component",
     "tests/prop",
 ]
 
