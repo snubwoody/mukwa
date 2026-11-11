@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [[bin]]
-name = "prop-tests"
+name = "simulacrum"
 path = "main.rs"
 
 [dependencies]

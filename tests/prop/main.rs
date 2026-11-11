@@ -14,16 +14,19 @@
 use std::{fs, path::PathBuf};
 
 use fastrand::Rng;
-use i_slint_backend_testing::{AccessibleRole, ElementHandle,ElementRoot};
-use mukwa::{SettingsStore, ui::{AccountState, Settings}};
+use i_slint_backend_testing::{AccessibleRole, ElementHandle, ElementRoot};
+use mukwa::{
+    SettingsStore,
+    ui::{AccountState, Settings},
+};
 use mukwa_core::{Currency, Money, create_test_db, fmt::CurrencyFormatter, service::Service};
 use slint::{
     ComponentHandle, Model, SharedString, ToSharedString,
     platform::{Key, PointerEventButton},
 };
 
-use mukwa::ui::{self, MainWindow, State, TransactionState};
 use mukwa::testing::*;
+use mukwa::ui::{self, MainWindow, State, TransactionState};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -33,7 +36,7 @@ enum Action {
     EditOutflow = 2,
 }
 
-// TODO: create CreateAccount struct and store a randomly chosen enter_balance variable 
+// TODO: create CreateAccount struct and store a randomly chosen enter_balance variable
 impl Action {
     const MAX: u8 = Action::EditOutflow as u8;
 }
@@ -156,19 +159,19 @@ impl TestRunner {
         assert_eq!(account.name, name);
     }
 
-    fn edit_outflow(&mut self){
+    fn edit_outflow(&mut self) {
         // TODO: check negative values
         // TODO: test that the balance in the transaction changes
         // TODO: negative outflow converts to expense
         // FIXME: is it generating the same amount?
         let amount = Money::new(self.rng.i64(0..));
         let root_element = self.app.root_element();
-        
+
         let transactions = find_all_by_type_name(&root_element, "TransactionRow");
-        if transactions.is_empty(){
+        if transactions.is_empty() {
             return;
         }
-        
+
         let transaction = self.rng.choice(&transactions).unwrap();
         let transaction_id = transaction.accessible_id().unwrap();
 
@@ -183,8 +186,11 @@ impl TestRunner {
 
         let state: TransactionState = self.app.global();
         let transactions: Vec<_> = state.get_all_transactions().iter().collect();
-        let transaction = transactions.iter().find(|t|t.id == transaction_id.to_shared_string()).unwrap();
-        assert_eq!(transaction.amount,amount.to_shared_string());
+        let transaction = transactions
+            .iter()
+            .find(|t| t.id == transaction_id.to_shared_string())
+            .unwrap();
+        assert_eq!(transaction.amount, amount.to_shared_string());
 
         let settings: Settings = self.app.global();
         settings.set_font_family("CAD".to_shared_string());
@@ -316,8 +322,7 @@ impl Drop for TestRunner {
 }
 
 // TODO tick method
-#[test]
-fn prop_test() -> mukwa::Result<()> {
+fn main() -> mukwa_core::Result<()> {
     let seed = if let Ok(seed) = std::env::var("TEST_SEED")
         && let Ok(seed) = seed.parse::<u64>()
     {
@@ -326,16 +331,12 @@ fn prop_test() -> mukwa::Result<()> {
         fastrand::u64(..)
     };
 
-    eprintln!("Running test runner with seed {seed}");
-    eprintln!("To re-run this test use the command:");
-    eprintln!("TEST_SEED={seed} cargo test");
+    println!("Running test runner with seed {seed}");
+    println!("To re-run this test use the command:");
+    println!("TEST_SEED={seed} cargo test");
 
     let mut runner = TestRunner::new(seed);
     runner.run()?;
-    eprintln!("No errors found");
+    println!("No errors found");
     Ok(())
-}
-
-fn main(){
-
 }
