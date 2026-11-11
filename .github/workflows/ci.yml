@@ -75,6 +75,7 @@ jobs:
         if: ${{runner.os == 'Linux'}}
         run: sudo apt install mold clang
       - run: cargo nextest run --locked --no-fail-fast
+      - run: cargo run --bin simulacrum
   doc-test:
     strategy:
       fail-fast: false
