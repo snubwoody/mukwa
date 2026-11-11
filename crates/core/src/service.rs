@@ -638,6 +638,46 @@ impl Service {
         Ok(())
     }
 
+    /// Creates a correction transaction that makes the account balance match `balance`. E.g. if
+    /// `account_id` has a balance of 50 and `balance = 75` then a correction of `25` will be made.
+    pub fn create_correction_transaction(
+        &self,
+        account_id: Uuid,
+        balance: Money,
+    ) -> crate::Result<Transaction> {
+        // TODO: prevent setting payee on other kinds of transactions
+        let account_balance = self.account_balance(account_id)?;
+        if balance == account_balance {
+            return Err(Error::new(
+                "Cannot create correction when account balances are equal",
+            ));
+        }
+
+        let connection = self.connection();
+        let sql = if balance > account_balance {
+            "INSERT INTO transactions(id,transaction_date,receiver_id,amount,kind) \
+            VALUES(?1,?2,?3,?4,?5) \
+            RETURNING *"
+        } else {
+            "INSERT INTO transactions(id,transaction_date,sender_id,amount,kind) \
+            VALUES(?1,?2,?3,?4,?5) \
+            RETURNING *"
+        };
+
+        let correction = (balance - account_balance).abs();
+        let mut stmt = connection.prepare_cached(sql)?;
+        let params = params![
+            Uuid::now_v7().to_string(),
+            Zoned::now().date().to_string(),
+            account_id.to_string(),
+            correction.inner(),
+            TransactionKind::Correction as i64
+        ];
+        let mut rows = stmt.query_and_then(params, |row| Transaction::try_from(row))?;
+        let transaction = rows.next().unwrap()?;
+        Ok(transaction)
+    }
+
     /// Fetches all transactions from the database.
     pub fn fetch_transactions(&self) -> crate::Result<Vec<Transaction>> {
         let mut transactions = vec![];
@@ -1053,6 +1093,13 @@ impl Service {
         let mut stmt = connection.prepare_cached("SELECT * FROM transactions WHERE id = ?")?;
         let mut rows = stmt.query_and_then([id.to_string()], |row| Transaction::try_from(row))?;
         rows.next().ok_or(Error::new("Transaction not found"))?
+    }
+
+    pub fn get_account(&self, id: Uuid) -> crate::Result<Account> {
+        let connection = self.connection();
+        let mut stmt = connection.prepare_cached("SELECT * FROM accounts WHERE id = ?")?;
+        let mut rows = stmt.query_and_then([id.to_string()], |row| Account::try_from(row))?;
+        rows.next().ok_or(Error::new("Account not found"))?
     }
 
     pub fn get_category_group(&self, id: Uuid) -> crate::Result<CategoryGroup> {

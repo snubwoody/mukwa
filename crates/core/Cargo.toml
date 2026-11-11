@@ -18,6 +18,7 @@ slint.workspace = true
 ureq.workspace = true
 serde_json.workspace = true
 semver.workspace = true
+rstest = "0.28.0"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.189"
