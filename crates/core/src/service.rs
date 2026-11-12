@@ -425,6 +425,13 @@ impl Service {
         self.connection.clone()
     }
 
+    pub fn vacuum(&self, path: impl AsRef<Path>) -> crate::Result<()> {
+        let path = path.as_ref();
+        let connection = self.connection();
+        connection.execute("VACUUM main INTO ?", [path.to_str().unwrap()])?;
+        Ok(())
+    }
+
     pub fn open(path: impl AsRef<Path>) -> crate::Result<Service> {
         let connection = Connection::open(path)?;
         let service = Service {

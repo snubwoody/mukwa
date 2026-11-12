@@ -10,6 +10,7 @@ use i_slint_backend_testing::{AccessibleRole, ElementHandle, ElementRoot};
 use mukwa::testing::*;
 use mukwa::ui::{self, MainWindow, TransactionState};
 use mukwa::ui::{AccountState, Settings};
+use mukwa_core::service::Service;
 use mukwa_core::{Currency, Money, fmt::CurrencyFormatter};
 use slint::{
     ComponentHandle, Model, SharedString, ToSharedString,
@@ -259,6 +260,7 @@ impl CreateAccount {
 pub struct TestRunner {
     rng: Rng,
     app: MainWindow,
+    service: Service,
     succeeded: bool,
     current_run: u64,
     seed: u64,
@@ -266,10 +268,11 @@ pub struct TestRunner {
 
 impl TestRunner {
     fn new(seed: u64) -> TestRunner {
-        let (app, _) = setup().unwrap();
+        let (app, service) = setup().unwrap();
         TestRunner {
             rng: Rng::with_seed(seed),
             app,
+            service,
             succeeded: false,
             current_run: 0,
             seed,
@@ -277,6 +280,7 @@ impl TestRunner {
     }
 
     fn run(&mut self) -> mukwa::Result<()> {
+        // TODO: use drop guard instead
         let state: AccountState = self.app.global();
         // TODO: account options has len of 7 every time?
         // TODO: don't create default accounts
@@ -322,13 +326,21 @@ impl Drop for TestRunner {
             return;
         }
 
-        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test-output");
-        fs::create_dir_all(&dir).unwrap();
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("test-output")
+            .join(format!("test-{}", self.seed));
+        let _ = fs::create_dir_all(&dir);
+
         let mut content = format!("Seed: {}\n", self.seed);
         content += &format!("Failed on run: {}", self.current_run);
-        let path = dir.join(format!("test-{}.txt", self.seed));
+
+        let path = dir.join("state.txt");
         fs::write(&path, content).unwrap();
-        eprintln!("Saved test state to {}", path.display());
+
+        if let Err(err) = self.service.vacuum(dir.join("data.sqlite")) {
+            eprintln!("Error: {err}")
+        }
+        eprintln!("Saved test state to {}", dir.display());
     }
 }
 
