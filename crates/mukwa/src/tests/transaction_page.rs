@@ -4,14 +4,14 @@
 use std::ops::ControlFlow;
 
 use crate::{
-    tests::{
-        find_all_by_type_name, find_by_accessible_label, find_by_id, find_by_type_name, setup,
-    },
+    testing::*,
     ui::{
         self, AccountState, CategoryState, CreateTransactionOpts, Settings, State, TransactionState,
     },
 };
-use i_slint_backend_testing::{AccessibleRole, ElementHandle, ElementRoot, mock_elapsed_time};
+use i_slint_backend_testing::{
+    AccessibleRole, ElementHandle, ElementRoot, mock_elapsed_time, send_keyboard_string_sequence,
+};
 use jiff::Zoned;
 use mukwa_core::{Currency, Money, fmt::CurrencyFormatter, service::AccountType};
 use slint::{
@@ -23,7 +23,7 @@ use super::Result;
 
 #[test]
 fn open_and_close_searchbox() -> Result<()> {
-    let (app, _) = super::setup()?;
+    let (app, _) = setup()?;
 
     let search = ElementHandle::find_by_element_type_name(&app, "Search")
         .next()
@@ -980,5 +980,81 @@ fn hide_audited_transactions() -> Result<()> {
         .match_type_name("TransactionRow")
         .find_all();
     assert_eq!(transactions.len(), 1);
+    Ok(())
+}
+
+#[test]
+fn audit_account_create_correction() -> Result<()> {
+    // TODO: ElementHandleExt
+    let (app, service) = setup()?;
+    let settings: Settings = app.global();
+    settings.set_currency_code("CAD".to_shared_string());
+
+    let root_element = app.root_element();
+    let account_state: AccountState = app.global();
+    let transaction_state: TransactionState = app.global();
+    let account = service.create_account("My account", AccountType::Cash)?;
+    service
+        .create_expense()
+        .account(account.id)
+        .amount(Money::new(50))
+        .submit()?;
+    transaction_state.invoke_load_transactions();
+    account_state.invoke_load_accounts();
+
+    find_by_accessible_label(&root_element, "My account")
+        .mock_single_click(PointerEventButton::Left);
+    find_by_accessible_label(&root_element, "Audit").mock_single_click(PointerEventButton::Left);
+
+    let audit_element = find_by_type_name(&root_element, "Audit");
+    assert!(
+        audit_element
+            .query_descendants()
+            .match_accessible_label("Is your bank account balance:")
+            .find_first()
+            .is_some()
+    );
+
+    let formatter = CurrencyFormatter::with_currency(Currency::CAD);
+    find_by_accessible_label(&audit_element, "No").mock_single_click(PointerEventButton::Left);
+
+    let accounts: Vec<_> = account_state.get_accounts().iter().collect();
+    dbg!(accounts);
+    assert!(
+        audit_element
+            .query_descendants()
+            .match_accessible_label("Enter your account balance")
+            .find_first()
+            .is_some()
+    );
+
+    let text_field = find_by_type_name(&audit_element, "TextField");
+    send_keyboard_string_sequence(&app, "not-a-decimal");
+    assert!(text_field.accessible_label().is_none());
+    send_keyboard_string_sequence(&app, "25");
+    find_by_accessible_label(&audit_element, "Continue")
+        .mock_single_click(PointerEventButton::Left);
+
+    audit_element.visit_descendants(|el| {
+        dbg!(el.accessible_label());
+        dbg!(el.type_name());
+        std::ops::ControlFlow::<ElementHandle>::Continue(())
+    });
+    let difference = formatter.format_money(Money::new(75))?;
+    assert_eq!(
+        find_by_id(&audit_element, "Audit::balance-difference")
+            .accessible_label()
+            .unwrap(),
+        difference,
+    );
+    assert!(
+        audit_element
+            .query_descendants()
+            .match_accessible_label("Difference")
+            .find_first()
+            .is_some()
+    );
+    // FIXME: incorrect amount for the adjustment
+    // FIXME: test that the account balance is updated
     Ok(())
 }

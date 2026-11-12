@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use crate::ui::{self, State};
+use crate::ui;
 use crate::ui::{MainWindow, TransactionState};
 use jiff::Zoned;
 use jiff::civil::Date;

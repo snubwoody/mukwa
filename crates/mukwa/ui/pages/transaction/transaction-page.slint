@@ -738,6 +738,7 @@ component Audit {
                 balance-field := TextField {
                     width: 100%;
                     input-type: decimal;
+                    init => self.focus();
                     edited => {
                         actual-balance = self.text;
                     }
@@ -773,9 +774,9 @@ component Audit {
             VerticalLayout {
                 spacing: 8px;
                 cross-axis-alignment: center;
-                Text {
+                balance-difference := Text {
                     // TODO: try storing the parsed money instead
-                    text: State.format-money(Api.int-to-money(Api.money-to-int(Api.parse-money(actual-balance)) - Api.money-to-int(balance)), Settings.currency-code);
+                    text: State.format-money(difference, Settings.currency-code);
                     color: Colors.textBody;
                     font-weight: FontWeight.semi-bold;
                 }
