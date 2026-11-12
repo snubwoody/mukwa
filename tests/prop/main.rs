@@ -3,214 +3,48 @@
 
 //! Property based fuzz testing
 
-// TODO:
-// - Maybe prop testing for each page
-// - TODO: save state or logs to target/prop-tests
-// - Deterministic seeding
-// - Maybe a trait
-// - maybe save the database to a file on failure
-
 #![allow(unused)]
-use std::{fs, path::PathBuf};
-
 use fastrand::Rng;
 use i_slint_backend_testing::{AccessibleRole, ElementHandle, ElementRoot};
-use mukwa::{
-    SettingsStore,
-    ui::{AccountState, Settings},
-};
-use mukwa_core::{Currency, Money, create_test_db, fmt::CurrencyFormatter, service::Service};
+use mukwa::ui::{AccountState, Settings};
+use mukwa_core::{Currency, Money, fmt::CurrencyFormatter};
 use slint::{
     ComponentHandle, Model, SharedString, ToSharedString,
     platform::{Key, PointerEventButton},
 };
+use std::fmt::Debug;
+use std::{fs, path::PathBuf};
 
 use mukwa::testing::*;
-use mukwa::ui::{self, MainWindow, State, TransactionState};
+use mukwa::ui::{self, MainWindow, TransactionState};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
+#[derive(Debug)]
 enum Action {
-    CreateTransaction = 0,
-    CreateAccount = 1,
-    EditOutflow = 2,
+    CreateTransaction(CreateTransaction),
+    CreateAccount(CreateAccount),
+    EditOutflow(EditOutflow),
 }
 
-// TODO: create CreateAccount struct and store a randomly chosen enter_balance variable
-impl Action {
-    const MAX: u8 = Action::EditOutflow as u8;
-}
+/// Creates a transaction and verifies its creating using the following steps:
+/// - Click the "New" button and open the transaction form.
+/// - Randomly pick the account.
+/// - Enter a random amount in the outflow textfield.
+/// - Click the "Save" button and submit the form.
+#[derive(Debug)]
+struct CreateTransaction;
 
-impl From<u8> for Action {
-    fn from(value: u8) -> Self {
-        match value {
-            x if x == Action::CreateTransaction as u8 => Action::CreateTransaction,
-            x if x == Action::CreateAccount as u8 => Action::CreateAccount,
-            x if x == Action::EditOutflow as u8 => Action::EditOutflow,
-            _ => panic!("Cannot convert {value} into Action"),
-        }
-    }
-}
-
-pub struct TestRunner {
-    rng: Rng,
-    app: MainWindow,
-    succeeded: bool,
-    current_run: u64,
-    seed: u64,
-}
-
-impl TestRunner {
-    fn new(seed: u64) -> TestRunner {
-        let (app, _) = setup().unwrap();
-        TestRunner {
-            rng: Rng::with_seed(seed),
-            app,
-            succeeded: false,
-            current_run: 0,
-            seed,
-        }
-    }
-
-    fn run(&mut self) -> mukwa::Result<()> {
-        let state: AccountState = self.app.global();
-        // TODO: account options has len of 7 every time?
-        for _ in 0..self.rng.u8(..) {
-            state.invoke_create_account(
-                "My account".to_shared_string(),
-                ui::AccountType::Cash,
-                "".to_shared_string(),
-            );
-        }
-
-        for run in 1..3 {
-            self.current_run = run;
-            // TODO: maybe add enum weights so that certain things are more likely,
-            // to prevent things from being too uniform
-            // TODO: pick a random subset of actions to choose from?
-            // Pick a random combination of actions
-            let actions: Vec<_> = (1..self.rng.u8(2..10))
-                .map(|_| Action::from(self.rng.u8(0..=Action::MAX)))
-                .collect();
-            for action in actions {
-                match action {
-                    Action::CreateAccount => {
-                        self.create_account();
-                    }
-                    Action::CreateTransaction => {
-                        self.create_transaction();
-                    }
-                    Action::EditOutflow => {
-                        self.edit_outflow();
-                    }
-                }
-            }
-        }
-
-        self.succeeded = true;
-        Ok(())
-    }
-
-    fn create_account(&mut self) {
-        let state: AccountState = self.app.global();
-        let accounts_len = state.get_accounts().iter().len();
-        let balance = Money::new(self.rng.i64(0..));
-        let name = "My account";
-
-        ElementHandle::find_by_accessible_label(&self.app, "Create account")
-            .next()
-            .unwrap()
-            .mock_single_click(PointerEventButton::Left);
-
-        ElementHandle::find_by_element_id(&self.app, "CreateAccountDialog::name")
-            .next()
-            .unwrap()
-            .mock_single_click(PointerEventButton::Left);
-
-        i_slint_backend_testing::send_keyboard_string_sequence(&self.app, name);
-        i_slint_backend_testing::send_keyboard_string_sequence(
-            &self.app,
-            &SharedString::from(Key::Tab),
-        );
-        i_slint_backend_testing::send_keyboard_string_sequence(&self.app, &balance.to_string());
-
-        ElementHandle::find_by_element_id(&self.app, "CreateAccountDialog::create-account")
-            .next()
-            .unwrap()
-            .mock_single_click(PointerEventButton::Left);
-
-        // TODO: assert that the elements are not visible
-
-        assert!(
-            ElementHandle::find_by_element_id(&self.app, "CreateAccountDialog::create-account")
-                .next()
-                .is_none(),
-            "CreateAccountDialog::create-account should not be visible"
-        );
-
-        let accounts: Vec<_> = state.get_accounts().iter().collect();
-        assert_eq!(
-            accounts.len(),
-            accounts_len + 1,
-            "Test should have created a new account"
-        );
-        let account = &accounts[accounts.len() - 1];
-        assert_eq!(account.balance, balance.to_shared_string());
-        assert_eq!(account.name, name);
-    }
-
-    fn edit_outflow(&mut self) {
-        // TODO: check negative values
-        // TODO: test that the balance in the transaction changes
-        // TODO: negative outflow converts to expense
-        // FIXME: is it generating the same amount?
-        let amount = Money::new(self.rng.i64(0..));
-        let root_element = self.app.root_element();
-
-        let transactions = find_all_by_type_name(&root_element, "TransactionRow");
-        if transactions.is_empty() {
-            return;
-        }
-
-        let transaction = self.rng.choice(&transactions).unwrap();
-        let transaction_id = transaction.accessible_id().unwrap();
-
-        let outflow_cell = find_by_id(transaction, "TransactionRow::outflow-cell");
-        outflow_cell.mock_single_click(PointerEventButton::Left);
-        // Clear the text field
-        outflow_cell.mock_single_click(PointerEventButton::Left);
-        outflow_cell.mock_single_click(PointerEventButton::Left);
-        i_slint_backend_testing::send_key_combo(&self.app, [Key::Backspace]);
-        i_slint_backend_testing::send_keyboard_string_sequence(&self.app, &amount.to_string());
-        i_slint_backend_testing::send_key_combo(&self.app, [Key::Return]);
-
-        let state: TransactionState = self.app.global();
-        let transactions: Vec<_> = state.get_all_transactions().iter().collect();
-        let transaction = transactions
-            .iter()
-            .find(|t| t.id == transaction_id.to_shared_string())
-            .unwrap();
-        assert_eq!(transaction.amount, amount.to_shared_string());
-
-        let settings: Settings = self.app.global();
-        settings.set_font_family("CAD".to_shared_string());
-        let formatter = CurrencyFormatter::with_currency(Currency::CAD);
-    }
-
-    /// Creates a transaction and verifies its creating using the following steps:
-    /// - Click the "New" button and open the transaction form.
-    /// - Randomly pick the account.
-    /// - Enter a random amount in the outflow textfield.
-    /// - Click the "Save" button and submit the form.
-    fn create_transaction(&mut self) {
+impl CreateTransaction {
+    fn execute(&self, app: &MainWindow, rng: &mut Rng) {
         // TODO: test that the new transaction is visible
         // TODO: stop creating account on init and handle that here
-        let amount = Money::new(self.rng.i64(0..));
-        let transaction_page =
-            ElementHandle::find_by_element_type_name(&self.app, "TransactionPage")
-                .next()
-                .unwrap();
+        // TODO: if the accounts is empty click the save button and assert that no
+        // new transaction is created
+
+        let amount = Money::new(rng.i64(0..));
+        let transaction_page = ElementHandle::find_by_element_type_name(app, "TransactionPage")
+            .next()
+            .unwrap();
         transaction_page
             .query_descendants()
             .match_accessible_role(AccessibleRole::Button)
@@ -250,7 +84,7 @@ impl TestRunner {
             .match_accessible_role(AccessibleRole::ListItem)
             .find_all();
 
-        let account_option = self.rng.choice(account_options).unwrap();
+        let account_option = rng.choice(account_options).unwrap();
         let account_id = account_option.accessible_id().unwrap();
         account_option.mock_single_click(PointerEventButton::Left);
 
@@ -263,7 +97,7 @@ impl TestRunner {
         outflow_cell.mock_single_click(PointerEventButton::Left);
         // Clear the text field first
         i_slint_backend_testing::send_key_combo(
-            &self.app,
+            app,
             [
                 Key::RightArrow,
                 Key::RightArrow,
@@ -276,8 +110,8 @@ impl TestRunner {
         );
 
         // TODO: Implement better random number inputs
-        i_slint_backend_testing::send_keyboard_string_sequence(&self.app, &amount.to_string());
-        i_slint_backend_testing::send_key_combo(&self.app, [Key::Return]);
+        i_slint_backend_testing::send_keyboard_string_sequence(app, &amount.to_string());
+        i_slint_backend_testing::send_key_combo(app, [Key::Return]);
 
         new_transaction_row
             .query_descendants()
@@ -295,7 +129,7 @@ impl TestRunner {
                 .is_none()
         );
 
-        let transaction_state: TransactionState = self.app.global();
+        let transaction_state: TransactionState = app.global();
         let mut transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
         let mut all_transactions: Vec<_> =
             transaction_state.get_all_transactions().iter().collect();
@@ -323,6 +157,152 @@ impl TestRunner {
     }
 }
 
+#[derive(Debug)]
+struct EditOutflow;
+
+impl EditOutflow {
+    fn execute(&self, app: &MainWindow, rng: &mut Rng) {
+        // TODO: check negative values
+        // TODO: test that the balance in the transaction changes
+        // TODO: negative outflow converts to expense
+        // FIXME: is it generating the same amount?
+        let amount = Money::new(rng.i64(0..));
+        let root_element = app.root_element();
+
+        let transactions = find_all_by_type_name(&root_element, "TransactionRow");
+        if transactions.is_empty() {
+            return;
+        }
+
+        let transaction = rng.choice(&transactions).unwrap();
+        let transaction_id = transaction.accessible_id().unwrap();
+
+        let outflow_cell = find_by_id(transaction, "TransactionRow::outflow-cell");
+        outflow_cell.mock_single_click(PointerEventButton::Left);
+        // Clear the text field
+        outflow_cell.mock_single_click(PointerEventButton::Left);
+        outflow_cell.mock_single_click(PointerEventButton::Left);
+        i_slint_backend_testing::send_key_combo(app, [Key::Backspace]);
+        i_slint_backend_testing::send_keyboard_string_sequence(app, &amount.to_string());
+        i_slint_backend_testing::send_key_combo(app, [Key::Return]);
+
+        let state: TransactionState = app.global();
+        let transactions: Vec<_> = state.get_all_transactions().iter().collect();
+        let transaction = transactions
+            .iter()
+            .find(|t| t.id == transaction_id.to_shared_string())
+            .unwrap();
+        assert_eq!(transaction.amount, amount.to_shared_string());
+
+        let settings: Settings = app.global();
+        settings.set_font_family("CAD".to_shared_string());
+        let formatter = CurrencyFormatter::with_currency(Currency::CAD);
+    }
+}
+
+#[derive(Debug)]
+struct CreateAccount;
+
+impl CreateAccount {
+    fn execute(&self, app: &MainWindow, rng: &mut Rng) {
+        let state: AccountState = app.global();
+        let accounts_len = state.get_accounts().iter().len();
+        let balance = Money::new(rng.i64(0..));
+        let name = "My account";
+
+        let root_element = app.root_element();
+        find_by_accessible_label(&root_element, "Create account")
+            .mock_single_click(PointerEventButton::Left);
+        find_by_id(&root_element, "CreateAccountDialog::name")
+            .mock_single_click(PointerEventButton::Left);
+
+        i_slint_backend_testing::send_keyboard_string_sequence(app, name);
+        i_slint_backend_testing::send_keyboard_string_sequence(app, &SharedString::from(Key::Tab));
+        i_slint_backend_testing::send_keyboard_string_sequence(app, &balance.to_string());
+
+        find_by_id(&root_element, "CreateAccountDialog::create-account")
+            .mock_single_click(PointerEventButton::Left);
+        // TODO: assert that the elements are not visible
+
+        assert!(
+            ElementHandle::find_by_element_id(app, "CreateAccountDialog::create-account")
+                .next()
+                .is_none(),
+            "CreateAccountDialog::create-account should not be visible"
+        );
+
+        let accounts: Vec<_> = state.get_accounts().iter().collect();
+        assert_eq!(
+            accounts.len(),
+            accounts_len + 1,
+            "Test should have created a new account"
+        );
+        let account = &accounts[accounts.len() - 1];
+        assert_eq!(account.balance, balance.to_shared_string());
+        assert_eq!(account.name, name);
+    }
+}
+
+pub struct TestRunner {
+    rng: Rng,
+    app: MainWindow,
+    succeeded: bool,
+    current_run: u64,
+    seed: u64,
+}
+
+impl TestRunner {
+    fn new(seed: u64) -> TestRunner {
+        let (app, _) = setup().unwrap();
+        TestRunner {
+            rng: Rng::with_seed(seed),
+            app,
+            succeeded: false,
+            current_run: 0,
+            seed,
+        }
+    }
+
+    fn run(&mut self) -> mukwa::Result<()> {
+        let state: AccountState = self.app.global();
+        // TODO: account options has len of 7 every time?
+        // TODO: don't create default accounts
+        for _ in 0..self.rng.u8(..) {
+            state.invoke_create_account(
+                "My account".to_shared_string(),
+                ui::AccountType::Cash,
+                "".to_shared_string(),
+            );
+        }
+
+        let all_actions = [
+            Action::CreateAccount(CreateAccount),
+            Action::EditOutflow(EditOutflow),
+            Action::CreateTransaction(CreateTransaction),
+        ];
+
+        // Pick a random set of actions to run
+        let len = self.rng.usize(1..=all_actions.len());
+        let actions = self.rng.choose_multiple(all_actions, len);
+
+        for run in 1..=3 {
+            self.current_run = run;
+
+            for _ in 0..self.rng.u8(1..=10) {
+                let action = self.rng.choice(&actions).unwrap();
+                match action {
+                    Action::CreateTransaction(act) => act.execute(&self.app, &mut self.rng),
+                    Action::EditOutflow(act) => act.execute(&self.app, &mut self.rng),
+                    Action::CreateAccount(act) => act.execute(&self.app, &mut self.rng),
+                }
+            }
+        }
+
+        self.succeeded = true;
+        Ok(())
+    }
+}
+
 impl Drop for TestRunner {
     fn drop(&mut self) {
         if self.succeeded {
@@ -339,7 +319,6 @@ impl Drop for TestRunner {
     }
 }
 
-// TODO tick method
 fn main() -> mukwa_core::Result<()> {
     let seed = if let Ok(seed) = std::env::var("TEST_SEED")
         && let Ok(seed) = seed.parse::<u64>()
