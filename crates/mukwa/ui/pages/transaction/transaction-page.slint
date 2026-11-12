@@ -462,7 +462,6 @@ component NewTransactionRow inherits VerticalLayout {
             changed(value) => {
                 transaction.outflow = value;
                 transaction.inflow = "";
-                TransactionState.set-transaction-outflow(transaction.id, value);
             }
         }
 
