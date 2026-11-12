@@ -4863,6 +4863,8 @@ dependencies = [
  "mukwa",
  "mukwa-core",
  "slint",
+ "tracing",
+ "tracing-subscriber",
  "uuid",
 ]
 
