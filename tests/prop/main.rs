@@ -17,6 +17,10 @@ use slint::{
 };
 use std::fmt::Debug;
 use std::{fs, path::PathBuf};
+use tracing::{info, span, trace, trace_span};
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -41,6 +45,7 @@ impl CreateTransaction {
         // TODO: if the accounts is empty click the save button and assert that no
         // new transaction is created
 
+        let _span = trace_span!("CreateTransaction").entered();
         let amount = Money::new(rng.i64(0..));
         let transaction_page = ElementHandle::find_by_element_type_name(app, "TransactionPage")
             .next()
@@ -129,6 +134,8 @@ impl CreateTransaction {
                 .is_none()
         );
 
+        trace!(amount=?amount,account_id=?account_id,"Created new transaction");
+
         let transaction_state: TransactionState = app.global();
         let mut transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
         let mut all_transactions: Vec<_> =
@@ -162,6 +169,7 @@ struct EditOutflow;
 
 impl EditOutflow {
     fn execute(&self, app: &MainWindow, rng: &mut Rng) {
+        let _span = trace_span!("EditOutflow").entered();
         // TODO: check negative values
         // TODO: test that the balance in the transaction changes
         // TODO: negative outflow converts to expense
@@ -192,6 +200,8 @@ impl EditOutflow {
             .iter()
             .find(|t| t.id == transaction_id.to_shared_string())
             .unwrap();
+
+        trace!(amount=?amount,transaction_id=?transaction_id,"Edited outflow");
         assert_eq!(transaction.amount, amount.to_shared_string());
 
         let settings: Settings = app.global();
@@ -205,6 +215,7 @@ struct CreateAccount;
 
 impl CreateAccount {
     fn execute(&self, app: &MainWindow, rng: &mut Rng) {
+        let _span = trace_span!("CreateAccount").entered();
         let state: AccountState = app.global();
         let accounts_len = state.get_accounts().iter().len();
         let balance = Money::new(rng.i64(0..));
@@ -222,6 +233,8 @@ impl CreateAccount {
 
         find_by_id(&root_element, "CreateAccountDialog::create-account")
             .mock_single_click(PointerEventButton::Left);
+
+        trace!(name=name,balance=?balance,"Created account");
         // TODO: assert that the elements are not visible
 
         assert!(
@@ -323,11 +336,24 @@ impl Drop for TestRunner {
 struct Cli {
     #[arg(long)]
     seed: Option<u64>,
+    #[arg(short, long, default_value = "false")]
+    verbose: bool,
 }
 
 fn main() -> mukwa_core::Result<()> {
     let cli = Cli::parse();
     let seed = cli.seed.unwrap_or(fastrand::u64(..));
+    if cli.verbose {
+        let std_io_layer = tracing_subscriber::fmt::layer()
+            .without_time()
+            .with_writer(std::io::stdout);
+
+        let level = "warn,simulacrum=trace";
+        tracing_subscriber::registry()
+            .with(EnvFilter::new(level))
+            .with(std_io_layer)
+            .init();
+    }
 
     println!("Running test runner with seed {seed}");
     println!("To re-run this test use the command:");
