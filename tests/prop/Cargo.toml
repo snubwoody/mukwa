@@ -8,7 +8,7 @@ name = "simulacrum"
 path = "main.rs"
 
 [dependencies]
-smol = "2.0.2"
+clap.workspace = true
 slint.workspace = true
 fastrand = "2.5.0"
 uuid.workspace = true
@@ -20,6 +20,3 @@ git = "https://github.com/snubwoody/slint.git"
 branch = "mukwa"
 features = ["internal"]
 
-[dependencies.i-slint-core]
-git = "https://github.com/snubwoody/slint.git"
-branch = "mukwa"
