@@ -4857,13 +4857,12 @@ dependencies = [
 name = "prop-tests"
 version = "0.3.2"
 dependencies = [
+ "clap",
  "fastrand",
  "i-slint-backend-testing",
- "i-slint-core",
  "mukwa",
  "mukwa-core",
  "slint",
- "smol",
  "uuid",
 ]
 

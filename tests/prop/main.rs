@@ -4,8 +4,11 @@
 //! Property based fuzz testing
 
 #![allow(unused)]
+use clap::Parser;
 use fastrand::Rng;
 use i_slint_backend_testing::{AccessibleRole, ElementHandle, ElementRoot};
+use mukwa::testing::*;
+use mukwa::ui::{self, MainWindow, TransactionState};
 use mukwa::ui::{AccountState, Settings};
 use mukwa_core::{Currency, Money, fmt::CurrencyFormatter};
 use slint::{
@@ -14,9 +17,6 @@ use slint::{
 };
 use std::fmt::Debug;
 use std::{fs, path::PathBuf};
-
-use mukwa::testing::*;
-use mukwa::ui::{self, MainWindow, TransactionState};
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -319,18 +319,19 @@ impl Drop for TestRunner {
     }
 }
 
+#[derive(Parser)]
+struct Cli {
+    #[arg(long)]
+    seed: Option<u64>,
+}
+
 fn main() -> mukwa_core::Result<()> {
-    let seed = if let Ok(seed) = std::env::var("TEST_SEED")
-        && let Ok(seed) = seed.parse::<u64>()
-    {
-        seed
-    } else {
-        fastrand::u64(..)
-    };
+    let cli = Cli::parse();
+    let seed = cli.seed.unwrap_or(fastrand::u64(..));
 
     println!("Running test runner with seed {seed}");
     println!("To re-run this test use the command:");
-    println!("TEST_SEED={seed} cargo run --bin simulacrum");
+    println!("cargo run --bin simulacrum -- --seed {seed}");
 
     let mut runner = TestRunner::new(seed);
     runner.run()?;
