@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use jiff::Zoned;
 use jiff::civil::{Date, date};
+use jiff::{ToSpan, Zoned};
 use mukwa_core::Result;
 use mukwa_core::migrator::Migrator;
-use mukwa_core::service::{AccountType, Category, CreateBudgetOpts, Service, TransactionType};
+use mukwa_core::service::{
+    AccountType, Category, CreateBudgetOpts, Service, TransactionKind, TransactionType,
+};
 use mukwa_core::{Money, create_test_db};
 use rusqlite::{Connection, OptionalExtension};
 use uuid::Uuid;
@@ -1222,6 +1224,117 @@ fn delete_budget_target() -> Result<()> {
         .query_one("SELECT * FROM budget_targets", (), |_| Ok(()))
         .optional()?;
     assert!(target.is_none());
+    Ok(())
+}
+
+#[test]
+fn credit_income_does_not_affect_available_to_spend() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("", AccountType::Credit)?;
+    service
+        .create_income()
+        .account(account.id)
+        .amount(Money::new(50))
+        .submit()?;
+    let categories = service.fetch_categories()?;
+    let available = service.available_to_spend(categories[0].id, Zoned::now().date())?;
+    assert_eq!(available, Money::ZERO);
+    Ok(())
+}
+
+#[test]
+fn available_to_spend_credit_categories() -> Result<()> {
+    struct TestCase {
+        balance: (Date, Money),
+        payments: Vec<(Date, Money)>,
+        budgets: Vec<(Date, Money)>,
+        expenses: Vec<(Date, Money)>,
+        expected: (Date, Money),
+    }
+
+    let now = Zoned::now().date();
+    let test_cases = [
+        TestCase {
+            balance: (now, Money::new(100)),
+            expenses: vec![],
+            budgets: vec![],
+            payments: vec![(now, Money::new(50))],
+            expected: (now, Money::new(-50)),
+        },
+        // Fully paid
+        TestCase {
+            balance: (now, Money::ZERO),
+            expenses: vec![(now, Money::new(50))],
+            budgets: vec![],
+            payments: vec![(now, Money::new(50))],
+            expected: (now, Money::ZERO),
+        },
+        // Future transactions don't affect past budgets
+        TestCase {
+            balance: (now, Money::ZERO),
+            expenses: vec![(now + 2.months(), Money::new(50))],
+            budgets: vec![(now + 1.month(), Money::new(50))],
+            payments: vec![],
+            expected: (now + 1.month(), Money::new(50)),
+        },
+        // Budgets don't affect those in the past
+        TestCase {
+            balance: (now, Money::ZERO),
+            expenses: vec![],
+            budgets: vec![(date(1899, 2, 1), Money::new(50))],
+            payments: vec![],
+            expected: (date(1899, 1, 1), Money::ZERO),
+        },
+    ];
+
+    for case in test_cases {
+        let service = Service::open_in_memory()?;
+        let cash_account = service.create_account("", AccountType::Cash)?;
+        let credit_account = service.create_account("", AccountType::Credit)?;
+
+        if case.balance.1 > Money::ZERO {
+            service
+                .create_expense()
+                .account(credit_account.id)
+                .kind(TransactionKind::StartingBalance)
+                .amount(case.balance.1)
+                .date(case.balance.0)
+                .submit()?;
+        }
+
+        let categories = service.fetch_categories()?;
+        for (date, money) in case.budgets {
+            service.create_budget(CreateBudgetOpts {
+                amount: Some(money),
+                month: Some(date),
+                category_id: categories[0].id,
+            })?;
+        }
+
+        for (date, money) in case.expenses {
+            service
+                .create_expense()
+                .account(credit_account.id)
+                .amount(money)
+                .date(date)
+                .submit()?;
+        }
+
+        for (date, money) in case.payments {
+            service
+                .create_transfer()
+                .accounts(cash_account.id, credit_account.id)
+                .amount(money)
+                .date(date)
+                .submit()?;
+        }
+
+        let categories = service.fetch_categories()?;
+        let category = &categories[0];
+
+        let available = service.available_to_spend(category.id, case.expected.0)?;
+        assert_eq!(available, case.expected.1);
+    }
     Ok(())
 }
 

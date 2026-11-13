@@ -30,4 +30,5 @@ core-foundation = "0.10.1"
 windows-sys = { version = "0.61.2", features = ["Win32_Globalization"] }
 
 [dev-dependencies]
+rstest = "0.28.0"
 tempfile.workspace = true
