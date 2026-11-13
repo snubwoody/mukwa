@@ -220,7 +220,7 @@ impl CreateAccount {
         let state: AccountState = app.global();
         let accounts_len = state.get_accounts().iter().len();
         let balance = Money::new(rng.i64(0..));
-        let name = "My account";
+        let name = gen_string(rng);
 
         let root_element = app.root_element();
         find_by_accessible_label(&root_element, "Create account")
@@ -228,7 +228,7 @@ impl CreateAccount {
         find_by_id(&root_element, "CreateAccountDialog::name")
             .mock_single_click(PointerEventButton::Left);
 
-        i_slint_backend_testing::send_keyboard_string_sequence(app, name);
+        i_slint_backend_testing::send_keyboard_string_sequence(app, &name);
         i_slint_backend_testing::send_keyboard_string_sequence(app, &SharedString::from(Key::Tab));
         i_slint_backend_testing::send_keyboard_string_sequence(app, &balance.to_string());
 
@@ -350,6 +350,21 @@ struct Cli {
     seed: Option<u64>,
     #[arg(short, long, default_value = "false")]
     verbose: bool,
+}
+
+fn gen_string(rng: &mut Rng) -> String {
+    let mut alphabet = b"abcdefg ".to_vec();
+    rng.shuffle(&mut alphabet);
+
+    let count = rng.usize(1..=alphabet.len());
+    alphabet.truncate(count);
+
+    let mut result = vec![];
+    let count = rng.usize(0..8);
+    for _ in 0..count {
+        result.push(alphabet[rng.usize(0..alphabet.len())]);
+    }
+    String::from_utf8(result).unwrap()
 }
 
 fn main() -> mukwa_core::Result<()> {
