@@ -43,10 +43,8 @@ impl CreateTransaction {
     fn execute(&self, app: &MainWindow, rng: &mut Rng) {
         // TODO: test that the new transaction is visible
         // TODO: stop creating account on init and handle that here
-        // TODO: if the accounts is empty click the save button and assert that no
-        // new transaction is created
-
         let _span = trace_span!("CreateTransaction").entered();
+        let transaction_state: TransactionState = app.global();
         let amount = Money::new(rng.i64(0..));
         let transaction_page = ElementHandle::find_by_element_type_name(app, "TransactionPage")
             .next()
@@ -89,6 +87,28 @@ impl CreateTransaction {
             .query_descendants()
             .match_accessible_role(AccessibleRole::ListItem)
             .find_all();
+
+        if account_options.is_empty() {
+            let transactions_len = transaction_state.get_transactions().iter().len();
+            let all_transactions_len = transaction_state.get_all_transactions().iter().len();
+            new_transaction_row
+                .query_descendants()
+                .match_accessible_role(AccessibleRole::Button)
+                .match_accessible_label("Save")
+                .find_first()
+                .unwrap()
+                .mock_single_click(PointerEventButton::Left);
+
+            assert_eq!(
+                transaction_state.get_transactions().iter().len(),
+                transactions_len
+            );
+            assert_eq!(
+                transaction_state.get_all_transactions().iter().len(),
+                all_transactions_len
+            );
+            return;
+        }
 
         let account_option = rng.choice(account_options).unwrap();
         let account_id = account_option.accessible_id().unwrap();
@@ -137,7 +157,6 @@ impl CreateTransaction {
 
         trace!(amount=?amount,account_id=?account_id,"Created new transaction");
 
-        let transaction_state: TransactionState = app.global();
         let mut transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
         let mut all_transactions: Vec<_> =
             transaction_state.get_all_transactions().iter().collect();
@@ -335,9 +354,7 @@ impl Drop for TestRunner {
         let path = dir.join("state.txt");
         fs::write(&path, content).unwrap();
 
-        if let Err(err) = self.service.vacuum(dir.join("data.sqlite")) {
-            eprintln!("Error: {err}")
-        }
+        let _ = self.service.vacuum(dir.join("data.sqlite"));
         eprintln!("Saved test state to {}", dir.display());
     }
 }
