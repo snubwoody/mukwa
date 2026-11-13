@@ -284,13 +284,11 @@ impl TestRunner {
         let state: AccountState = self.app.global();
         // TODO: account options has len of 7 every time?
         // TODO: don't create default accounts
-        for _ in 0..self.rng.u8(..) {
-            state.invoke_create_account(
-                "My account".to_shared_string(),
-                ui::AccountType::Cash,
-                "".to_shared_string(),
-            );
-        }
+        state.invoke_create_account(
+            "My account".to_shared_string(),
+            ui::AccountType::Cash,
+            "".to_shared_string(),
+        );
 
         let all_actions = [
             Action::CreateAccount(CreateAccount),
