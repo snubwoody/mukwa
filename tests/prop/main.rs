@@ -42,7 +42,6 @@ struct CreateTransaction;
 impl CreateTransaction {
     fn execute(&self, app: &MainWindow, rng: &mut Rng) {
         // TODO: test that the new transaction is visible
-        // TODO: stop creating account on init and handle that here
         let _span = trace_span!("CreateTransaction").entered();
         let transaction_state: TransactionState = app.global();
         let amount = Money::new(rng.i64(0..));
@@ -57,7 +56,6 @@ impl CreateTransaction {
             .unwrap()
             .mock_single_click(PointerEventButton::Left);
 
-        // TODO: test that it's closed after saving
         assert!(
             transaction_page
                 .query_descendants()
@@ -72,23 +70,10 @@ impl CreateTransaction {
             .find_first()
             .unwrap();
 
-        // TODO: fill items here
+        let account_state: AccountState = app.global();
+        let accounts: Vec<_> = account_state.get_accounts().iter().collect();
 
-        // TODO: also test no accounts?
-        let account_cell = new_transaction_row
-            .query_descendants()
-            .match_type_name("AccountCell")
-            .find_first()
-            .unwrap();
-
-        account_cell.mock_single_click(PointerEventButton::Left);
-
-        let account_options = account_cell
-            .query_descendants()
-            .match_accessible_role(AccessibleRole::ListItem)
-            .find_all();
-
-        if account_options.is_empty() {
+        if accounts.is_empty() {
             let transactions_len = transaction_state.get_transactions().iter().len();
             let all_transactions_len = transaction_state.get_all_transactions().iter().len();
             new_transaction_row
@@ -110,9 +95,32 @@ impl CreateTransaction {
             return;
         }
 
-        let account_option = rng.choice(account_options).unwrap();
-        let account_id = account_option.accessible_id().unwrap();
-        account_option.mock_single_click(PointerEventButton::Left);
+        let account_id = if accounts.len() > 1 {
+            let account_cell = new_transaction_row
+                .query_descendants()
+                .match_type_name("AccountCell")
+                .find_first()
+                .unwrap();
+            account_cell.mock_single_click(PointerEventButton::Left);
+
+            let combobox = find_by_type_name(&account_cell, "ComboBox");
+            assert!(
+                combobox.accessible_expanded().unwrap(),
+                "Account cell ComboBox did not open"
+            );
+
+            let account_options = account_cell
+                .query_descendants()
+                .match_accessible_role(AccessibleRole::ListItem)
+                .find_all();
+
+            let account_option = rng.choice(account_options).unwrap();
+            let account_id = account_option.accessible_id().unwrap();
+            account_option.mock_single_click(PointerEventButton::Left);
+            account_id
+        } else {
+            accounts[0].id.to_shared_string()
+        };
 
         let outflow_cell = new_transaction_row
             .query_descendants()
@@ -180,7 +188,6 @@ impl CreateTransaction {
         };
         assert_transaction(&all_transactions[0]);
         assert_transaction(&transactions[0]);
-        // dbg!(transactions);
     }
 }
 
@@ -308,6 +315,7 @@ impl TestRunner {
             ui::AccountType::Cash,
             "".to_shared_string(),
         );
+        state.invoke_load_accounts();
 
         let all_actions = [
             Action::CreateAccount(CreateAccount),
@@ -322,7 +330,7 @@ impl TestRunner {
         for run in 1..=3 {
             self.current_run = run;
 
-            for _ in 0..self.rng.u8(1..=10) {
+            for i in 0..self.rng.u8(1..=10) {
                 let action = self.rng.choice(&actions).unwrap();
                 match action {
                     Action::CreateTransaction(act) => act.execute(&self.app, &mut self.rng),
