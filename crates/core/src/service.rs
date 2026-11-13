@@ -1287,8 +1287,24 @@ impl Service {
     pub fn available_to_spend(&self, category_id: Uuid, date: Date) -> crate::Result<Money> {
         let total_assigned = self.total_assigned(category_id, date)?;
         let total_spent = self.total_spent_in_category(category_id, date)?;
+        let mut available = total_assigned - total_spent;
+        let category = self.get_category(category_id)?;
+        if let Some(account_id) = category.account_id {
+            let transactions = self.fetch_transactions()?;
+            let credit_expenses: Money = transactions
+                .iter()
+                .filter(|t| {
+                    t.transaction_type() == TransactionType::Expense
+                        && t.kind == TransactionKind::Regular
+                })
+                .filter(|t| t.sender_id == Some(account_id))
+                .filter(|t| (t.date.year(), t.date.month()) <= (date.year(), date.month()))
+                .map(|t| t.amount)
+                .sum();
+            available += credit_expenses;
+        }
 
-        Ok(total_assigned - total_spent)
+        Ok(available)
     }
 
     pub fn total_spent_in_category(&self, category_id: Uuid, date: Date) -> crate::Result<Money> {
