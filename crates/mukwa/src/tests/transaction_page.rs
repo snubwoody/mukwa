@@ -3,6 +3,7 @@
 
 use std::ops::ControlFlow;
 
+use super::Result;
 use crate::{
     testing::*,
     ui::{
@@ -13,13 +14,12 @@ use i_slint_backend_testing::{
     AccessibleRole, ElementHandle, ElementRoot, mock_elapsed_time, send_keyboard_string_sequence,
 };
 use jiff::Zoned;
+use mukwa_core::service::TransactionKind;
 use mukwa_core::{Currency, Money, fmt::CurrencyFormatter, service::AccountType};
 use slint::{
     ComponentHandle, Model, SharedString, ToSharedString,
     platform::{Key, PointerEventButton},
 };
-
-use super::Result;
 
 #[test]
 fn open_and_close_searchbox() -> Result<()> {
@@ -985,7 +985,6 @@ fn hide_audited_transactions() -> Result<()> {
 
 #[test]
 fn audit_account_create_correction() -> Result<()> {
-    // TODO: ElementHandleExt
     let (app, service) = setup()?;
     let settings: Settings = app.global();
     settings.set_currency_code("CAD".to_shared_string());
@@ -1001,12 +1000,10 @@ fn audit_account_create_correction() -> Result<()> {
         .submit()?;
     transaction_state.invoke_load_transactions();
     account_state.invoke_load_accounts();
+    root_element.find_by_accessible_label("My account").click();
+    root_element.find_by_accessible_label("Audit").click();
 
-    find_by_accessible_label(&root_element, "My account")
-        .mock_single_click(PointerEventButton::Left);
-    find_by_accessible_label(&root_element, "Audit").mock_single_click(PointerEventButton::Left);
-
-    let audit_element = find_by_type_name(&root_element, "Audit");
+    let audit_element = root_element.find_by_type_name("Audit");
     assert!(
         audit_element
             .query_descendants()
@@ -1016,10 +1013,8 @@ fn audit_account_create_correction() -> Result<()> {
     );
 
     let formatter = CurrencyFormatter::with_currency(Currency::CAD);
-    find_by_accessible_label(&audit_element, "No").mock_single_click(PointerEventButton::Left);
+    audit_element.find_by_accessible_label("No").click();
 
-    let accounts: Vec<_> = account_state.get_accounts().iter().collect();
-    dbg!(accounts);
     assert!(
         audit_element
             .query_descendants()
@@ -1028,18 +1023,14 @@ fn audit_account_create_correction() -> Result<()> {
             .is_some()
     );
 
-    let text_field = find_by_type_name(&audit_element, "TextField");
-    send_keyboard_string_sequence(&app, "not-a-decimal");
-    assert!(text_field.accessible_label().is_none());
+    let text_field = find_by_type_name(&audit_element, "TextInput");
+    send_keyboard_string_sequence(&app, "not a decimal");
+    assert_eq!(text_field.accessible_value().unwrap(), "");
     send_keyboard_string_sequence(&app, "25");
+    assert_eq!(text_field.accessible_value().unwrap(), "25");
     find_by_accessible_label(&audit_element, "Continue")
         .mock_single_click(PointerEventButton::Left);
 
-    audit_element.visit_descendants(|el| {
-        dbg!(el.accessible_label());
-        dbg!(el.type_name());
-        std::ops::ControlFlow::<ElementHandle>::Continue(())
-    });
     let difference = formatter.format_money(Money::new(75))?;
     assert_eq!(
         find_by_id(&audit_element, "Audit::balance-difference")
@@ -1054,7 +1045,22 @@ fn audit_account_create_correction() -> Result<()> {
             .find_first()
             .is_some()
     );
-    // FIXME: incorrect amount for the adjustment
-    // FIXME: test that the account balance is updated
+
+    audit_element
+        .find_by_accessible_label("Create adjustment and finish")
+        .click();
+
+    let mut transactions = service.fetch_transactions()?;
+    transactions.sort_by(|a, b| a.id.cmp(&b.id).reverse());
+    transactions.iter().for_each(|t| assert!(t.audited));
+    assert_eq!(transactions[0].amount, Money::new(75));
+    assert_eq!(transactions[0].kind, TransactionKind::Correction);
+    assert_eq!(
+        root_element
+            .find_by_id("TransactionPage::balance")
+            .accessible_label()
+            .unwrap(),
+        formatter.format_money(Money::new(25))?
+    );
     Ok(())
 }
