@@ -441,7 +441,7 @@ impl Service {
         Ok(service)
     }
 
-    /// Opens an in-memory service for testing.
+    /// Opens an in-memory service.
     pub fn open_in_memory() -> crate::Result<Service> {
         let connection = create_test_db();
         let service = Service {
@@ -1292,7 +1292,20 @@ impl Service {
     }
 
     pub fn total_spent_in_category(&self, category_id: Uuid, date: Date) -> crate::Result<Money> {
+        let category = self.get_category(category_id)?;
         let transactions = self.fetch_transactions()?;
+
+        if let Some(account_id) = category.account_id {
+            let total_spent: Money = transactions
+                .iter()
+                .filter(|t| t.transaction_type() == TransactionType::Transfer)
+                .filter(|t| t.receiver_id == Some(account_id))
+                .filter(|t| (t.date.year(), t.date.month()) <= (date.year(), date.month()))
+                .map(|t| t.amount)
+                .sum();
+            return Ok(total_spent);
+        }
+
         let total_spent: Money = transactions
             .iter()
             .filter(|t| t.transaction_type() == TransactionType::Expense)

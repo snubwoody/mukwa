@@ -7,6 +7,7 @@ use mukwa_core::Result;
 use mukwa_core::migrator::Migrator;
 use mukwa_core::service::{AccountType, Category, CreateBudgetOpts, Service, TransactionType};
 use mukwa_core::{Money, create_test_db};
+use rstest::rstest;
 use rusqlite::{Connection, OptionalExtension};
 use uuid::Uuid;
 
@@ -1222,6 +1223,38 @@ fn delete_budget_target() -> Result<()> {
         .query_one("SELECT * FROM budget_targets", (), |_| Ok(()))
         .optional()?;
     assert!(target.is_none());
+    Ok(())
+}
+
+#[rstest]
+#[case(100,0, 50, -50)]
+fn available_to_spend_credit_categories(
+    #[case] balance: i64,
+    #[case] assigned: i64,
+    #[case] payment: i64,
+    #[case] expected: i64,
+) -> Result<()> {
+    // TODO: add expenses to credit payments?
+    let service = Service::open_in_memory()?;
+    let cash_account = service.create_account("", AccountType::Cash)?;
+    let credit_account = service.create_account("", AccountType::Credit)?;
+
+    service
+        .create_expense()
+        .account(credit_account.id)
+        .amount(Money::new(balance))
+        .submit()?;
+    service
+        .create_transfer()
+        .accounts(cash_account.id, credit_account.id)
+        .amount(Money::new(payment))
+        .submit()?;
+
+    let categories = service.fetch_categories()?;
+    let category = &categories[0];
+
+    let available = service.available_to_spend(category.id, Zoned::now().date())?;
+    assert_eq!(available, Money::new(expected));
     Ok(())
 }
 
