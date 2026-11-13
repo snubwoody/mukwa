@@ -2,6 +2,8 @@
 
 - Budgets now carry over to future months.
 - Budgets now show a negative balance when overspent, instead of showing 0.
+- Changed the way credit payment categories are handled. Expenses on credit accounts are added to the credit payment
+  category.
 - Added button to close the budget target sidebar.
 
 ## 0.3.2 - 2026-10-30
