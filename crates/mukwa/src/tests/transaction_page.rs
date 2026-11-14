@@ -3,27 +3,27 @@
 
 use std::ops::ControlFlow;
 
+use super::Result;
 use crate::{
-    tests::{
-        find_all_by_type_name, find_by_accessible_label, find_by_id, find_by_type_name, setup,
-    },
+    testing::*,
     ui::{
         self, AccountState, CategoryState, CreateTransactionOpts, Settings, State, TransactionState,
     },
 };
-use i_slint_backend_testing::{AccessibleRole, ElementHandle, ElementRoot, mock_elapsed_time};
+use i_slint_backend_testing::{
+    AccessibleRole, ElementHandle, ElementRoot, mock_elapsed_time, send_keyboard_string_sequence,
+};
 use jiff::Zoned;
+use mukwa_core::service::TransactionKind;
 use mukwa_core::{Currency, Money, fmt::CurrencyFormatter, service::AccountType};
 use slint::{
     ComponentHandle, Model, SharedString, ToSharedString,
     platform::{Key, PointerEventButton},
 };
 
-use super::Result;
-
 #[test]
 fn open_and_close_searchbox() -> Result<()> {
-    let (app, _) = super::setup()?;
+    let (app, _) = setup()?;
 
     let search = ElementHandle::find_by_element_type_name(&app, "Search")
         .next()
@@ -872,6 +872,195 @@ fn edit_outflow_updates_account_balance() -> crate::Result<()> {
             .accessible_label()
             .unwrap(),
         formatter.format_money(Money::new(-50))?
+    );
+    Ok(())
+}
+
+#[test]
+fn audit_account_button_visibility() -> Result<()> {
+    let (app, _) = setup()?;
+    let root_element = app.root_element();
+    let account_state: AccountState = app.global();
+    account_state.invoke_create_account(
+        "My account".to_shared_string(),
+        ui::AccountType::Cash,
+        "".to_shared_string(),
+    );
+
+    assert!(
+        root_element
+            .query_descendants()
+            .match_accessible_role(AccessibleRole::Button)
+            .match_accessible_label("Audit")
+            .find_first()
+            .is_none()
+    );
+
+    find_by_accessible_label(&root_element, "My account")
+        .mock_single_click(PointerEventButton::Left);
+
+    assert!(
+        root_element
+            .query_descendants()
+            .match_accessible_role(AccessibleRole::Button)
+            .match_accessible_label("Audit")
+            .find_first()
+            .is_some()
+    );
+
+    Ok(())
+}
+
+#[test]
+fn audit_account_with_matching_balance() -> Result<()> {
+    let (app, service) = setup()?;
+    let settings: Settings = app.global();
+    settings.set_currency_code("CAD".to_shared_string());
+
+    let root_element = app.root_element();
+    let account_state: AccountState = app.global();
+    account_state.invoke_create_account(
+        "My account".to_shared_string(),
+        ui::AccountType::Cash,
+        "".to_shared_string(),
+    );
+    service.create_expense().amount(Money::new(50)).submit()?;
+    account_state.invoke_load_accounts();
+
+    find_by_accessible_label(&root_element, "My account")
+        .mock_single_click(PointerEventButton::Left);
+    find_by_accessible_label(&root_element, "Audit").mock_single_click(PointerEventButton::Left);
+
+    let audit_element = find_by_type_name(&root_element, "Audit");
+    assert!(
+        audit_element
+            .query_descendants()
+            .match_accessible_label("Is your bank account balance:")
+            .find_first()
+            .is_some()
+    );
+
+    let formatter = CurrencyFormatter::with_currency(Currency::CAD);
+    let balance = formatter.format_money(Money::new(-50))?;
+    assert!(
+        audit_element
+            .query_descendants()
+            .match_accessible_label(balance)
+            .find_first()
+            .is_some()
+    );
+
+    find_by_accessible_label(&audit_element, "Yes").mock_single_click(PointerEventButton::Left);
+    let transactions = service.fetch_transactions()?;
+    assert!(transactions[0].audited);
+    Ok(())
+}
+
+#[test]
+fn hide_audited_transactions() -> Result<()> {
+    let (app, service) = setup()?;
+    let account = service.create_account("", AccountType::Cash)?;
+    let account2 = service.create_account("", AccountType::Cash)?;
+    service.create_expense().account(account.id).submit()?;
+    service.create_income().account(account.id).submit()?;
+    service.create_expense().account(account2.id).submit()?;
+
+    let transaction_state: TransactionState = app.global();
+    transaction_state.invoke_load_transactions();
+
+    let root_element = app.root_element();
+    let table = find_by_type_name(&root_element, "Table");
+    let transactions = find_all_by_type_name(&root_element, "TransactionRow");
+    assert_eq!(transactions.len(), 3);
+    transaction_state.invoke_audit_account(account.id.to_shared_string());
+    transaction_state.invoke_load_transactions();
+
+    let transactions = table
+        .query_descendants()
+        .match_type_name("TransactionRow")
+        .find_all();
+    assert_eq!(transactions.len(), 1);
+    Ok(())
+}
+
+#[test]
+fn audit_account_create_correction() -> Result<()> {
+    let (app, service) = setup()?;
+    let settings: Settings = app.global();
+    settings.set_currency_code("CAD".to_shared_string());
+
+    let root_element = app.root_element();
+    let account_state: AccountState = app.global();
+    let transaction_state: TransactionState = app.global();
+    let account = service.create_account("My account", AccountType::Cash)?;
+    service
+        .create_expense()
+        .account(account.id)
+        .amount(Money::new(50))
+        .submit()?;
+    transaction_state.invoke_load_transactions();
+    account_state.invoke_load_accounts();
+    root_element.find_by_accessible_label("My account").click();
+    root_element.find_by_accessible_label("Audit").click();
+
+    let audit_element = root_element.find_by_type_name("Audit");
+    assert!(
+        audit_element
+            .query_descendants()
+            .match_accessible_label("Is your bank account balance:")
+            .find_first()
+            .is_some()
+    );
+
+    let formatter = CurrencyFormatter::with_currency(Currency::CAD);
+    audit_element.find_by_accessible_label("No").click();
+
+    assert!(
+        audit_element
+            .query_descendants()
+            .match_accessible_label("Enter your account balance")
+            .find_first()
+            .is_some()
+    );
+
+    let text_field = find_by_type_name(&audit_element, "TextInput");
+    send_keyboard_string_sequence(&app, "not a decimal");
+    assert_eq!(text_field.accessible_value().unwrap(), "");
+    send_keyboard_string_sequence(&app, "25");
+    assert_eq!(text_field.accessible_value().unwrap(), "25");
+    find_by_accessible_label(&audit_element, "Continue")
+        .mock_single_click(PointerEventButton::Left);
+
+    let difference = formatter.format_money(Money::new(75))?;
+    assert_eq!(
+        find_by_id(&audit_element, "Audit::balance-difference")
+            .accessible_label()
+            .unwrap(),
+        difference,
+    );
+    assert!(
+        audit_element
+            .query_descendants()
+            .match_accessible_label("Difference")
+            .find_first()
+            .is_some()
+    );
+
+    audit_element
+        .find_by_accessible_label("Create adjustment and finish")
+        .click();
+
+    let mut transactions = service.fetch_transactions()?;
+    transactions.sort_by(|a, b| a.id.cmp(&b.id).reverse());
+    transactions.iter().for_each(|t| assert!(t.audited));
+    assert_eq!(transactions[0].amount, Money::new(75));
+    assert_eq!(transactions[0].kind, TransactionKind::Correction);
+    assert_eq!(
+        root_element
+            .find_by_id("TransactionPage::balance")
+            .accessible_label()
+            .unwrap(),
+        formatter.format_money(Money::new(25))?
     );
     Ok(())
 }

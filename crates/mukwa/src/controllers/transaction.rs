@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
-use crate::ui::{self, State};
+use crate::ui;
 use crate::ui::{MainWindow, TransactionState};
 use jiff::Zoned;
 use jiff::civil::Date;
@@ -29,7 +29,6 @@ struct TransactionController {
 impl TransactionController {
     pub fn bind(app: &MainWindow, service: &Service) -> crate::Result<Self> {
         let transaction_state: TransactionState = app.global();
-        let global_state: State = app.global();
 
         let controller = Self {
             transaction_state: Rc::new(transaction_state.as_weak().unwrap()),
@@ -71,26 +70,20 @@ impl TransactionController {
         });
 
         transaction_state.on_delete_selected_transactions({
-            let _global_state = global_state.as_weak();
             let controller = controller.clone();
             move || {
                 if let Err(err) = controller.delete_selected_transactions() {
                     warn!("Failed to delete transactions: {err}");
                 }
-                // FIXME
-                // global_state.unwrap().invoke_load_accounts();
             }
         });
 
         transaction_state.on_delete_transaction({
             let controller = controller.clone();
-            let _global_state = global_state.as_weak();
             move |id| {
                 if let Err(err) = controller.delete_transaction(&id) {
                     warn!("Failed to delete transaction: {err}");
                 }
-                // FIXME
-                // global_state.unwrap().invoke_load_accounts();
             }
         });
 
@@ -148,8 +141,6 @@ impl TransactionController {
                 if let Err(err) = controller.set_transaction_outflow(&id, &amount) {
                     warn!("Failed to set transaction outflow: {err}");
                 }
-                // FIXME
-                // global_state.unwrap().invoke_load_accounts();
             }
         });
 
@@ -159,8 +150,6 @@ impl TransactionController {
                 if let Err(err) = controller.set_transaction_inflow(&id, &amount) {
                     warn!("Failed to set transaction inflow: {err}");
                 }
-                // FIXME
-                // global_state.unwrap().invoke_load_accounts();
             }
         });
 
@@ -200,8 +189,6 @@ impl TransactionController {
                 {
                     warn!("{}", err.report())
                 }
-                // FIXME
-                // global_state.unwrap().invoke_load_accounts();
             }
         });
 
@@ -242,6 +229,18 @@ impl TransactionController {
             }
         });
 
+        transaction_state.on_create_correction_transaction({
+            let controller = controller.clone();
+            move |id, balance| {
+                if let Err(err) = controller
+                    .create_correction_transaction(&id, &balance)
+                    .context("Failed to create correction transaction")
+                {
+                    warn!("{}", err.report());
+                }
+            }
+        });
+
         transaction_state.on_total_balance({
             let transaction_state = transaction_state.as_weak();
             move || {
@@ -252,6 +251,18 @@ impl TransactionController {
                     total += Money::from_str(transaction.inflow.as_str()).unwrap_or_default();
                 }
                 total.to_shared_string()
+            }
+        });
+
+        transaction_state.on_audit_account({
+            let controller = controller.clone();
+            move |id| {
+                if let Err(err) = controller
+                    .audit_account(&id)
+                    .context("Failed to audit account")
+                {
+                    warn!("{}", err.report());
+                }
             }
         });
 
@@ -291,6 +302,14 @@ impl TransactionController {
     fn delete_transaction(&self, id: &str) -> crate::Result<()> {
         let id = Uuid::parse_str(id)?;
         self.service.delete_transaction(id)?;
+        self.load_transactions()?;
+        Ok(())
+    }
+
+    fn create_correction_transaction(&self, id: &str, balance: &str) -> crate::Result<()> {
+        let id = Uuid::parse_str(id)?;
+        let balance = Money::from_str(balance)?;
+        self.service.create_correction_transaction(id, balance)?;
         self.load_transactions()?;
         Ok(())
     }
@@ -389,6 +408,12 @@ impl TransactionController {
         self.transaction_state
             .get_all_transactions()
             .insert_row(0, transaction.into())?;
+        Ok(())
+    }
+
+    fn audit_account(&self, account_id: &str) -> crate::Result<()> {
+        self.service.audit_account(Uuid::parse_str(account_id)?)?;
+        self.load_transactions()?;
         Ok(())
     }
 
@@ -865,6 +890,24 @@ mod test {
         assert_eq!(transaction.outflow.as_str(), Money::new(300).to_string());
         assert!(transaction.inflow.is_empty());
         assert!(transaction.category_id.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn audit_account() -> crate::Result<()> {
+        i_slint_backend_testing::init_no_event_loop();
+        let window = MainWindow::new()?;
+        let service = Service::open_in_memory()?;
+        let account = service.create_account("", AccountType::Cash)?;
+        service.create_expense().account(account.id).submit()?;
+        let transaction_state: TransactionState = window.global();
+        TransactionController::bind(&window, &service)?;
+
+        transaction_state.invoke_audit_account(account.id.to_shared_string());
+        let transactions: Vec<_> = transaction_state.get_transactions().iter().collect();
+        let all_transactions: Vec<_> = transaction_state.get_all_transactions().iter().collect();
+        assert!(transactions[0].audited);
+        assert!(all_transactions[0].audited);
         Ok(())
     }
 

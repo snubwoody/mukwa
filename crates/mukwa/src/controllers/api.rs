@@ -90,6 +90,14 @@ pub fn bind(main_window: &ui::MainWindow) {
         }
     });
 
+    api.on_parse_money(|value| {
+        Money::from_str(&value)
+            .context("Failed to parse Money")
+            .inspect_err(|err| warn!("{}", err.report()))
+            .unwrap_or_default()
+            .to_shared_string()
+    });
+
     api.on_today(|| Zoned::now().date().to_shared_string());
     api.on_money_to_float(|money| {
         Money::from_str(&money)

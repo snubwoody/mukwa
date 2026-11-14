@@ -89,6 +89,7 @@ pub enum TransactionKind {
     #[default]
     Regular = 0,
     StartingBalance = 1,
+    Correction = 2,
 }
 
 impl TryFrom<i64> for TransactionKind {
@@ -100,6 +101,7 @@ impl TryFrom<i64> for TransactionKind {
             x if x == TransactionKind::StartingBalance as i64 => {
                 Ok(TransactionKind::StartingBalance)
             }
+            x if x == TransactionKind::Correction as i64 => Ok(TransactionKind::Correction),
             _ => Err(Error::new(&format!("Unknown transaction kind: {v}"))),
         }
     }
@@ -117,6 +119,7 @@ pub struct Transaction {
     pub note: Option<String>,
     pub amount: Money,
     pub kind: TransactionKind,
+    pub audited: bool,
 }
 
 impl Transaction {
@@ -197,6 +200,12 @@ impl<'a> TryFrom<&Row<'a>> for Transaction {
             None => None,
         };
 
+        let audited = match value.get::<_, i64>("is_audited")? {
+            0 => false,
+            1 => true,
+            _ => return Err(Error::new("Invalid is_audited value")),
+        };
+
         let transaction = Transaction {
             id: Uuid::parse_str(&id)?,
             amount: Money::from_scaled(amount),
@@ -206,6 +215,7 @@ impl<'a> TryFrom<&Row<'a>> for Transaction {
             receiver_id,
             category_id,
             kind,
+            audited,
         };
 
         Ok(transaction)
@@ -628,6 +638,46 @@ impl Service {
         Ok(())
     }
 
+    /// Creates a correction transaction that makes the account balance match `balance`. E.g. if
+    /// `account_id` has a balance of 50 and `balance = 75` then a correction of `25` will be made.
+    pub fn create_correction_transaction(
+        &self,
+        account_id: Uuid,
+        balance: Money,
+    ) -> crate::Result<Transaction> {
+        // TODO: prevent setting payee on other kinds of transactions
+        let account_balance = self.account_balance(account_id)?;
+        if balance == account_balance {
+            return Err(Error::new(
+                "Cannot create correction when account balances are equal",
+            ));
+        }
+
+        let connection = self.connection();
+        let sql = if balance > account_balance {
+            "INSERT INTO transactions(id,transaction_date,receiver_id,amount,kind) \
+            VALUES(?1,?2,?3,?4,?5) \
+            RETURNING *"
+        } else {
+            "INSERT INTO transactions(id,transaction_date,sender_id,amount,kind) \
+            VALUES(?1,?2,?3,?4,?5) \
+            RETURNING *"
+        };
+
+        let correction = (balance - account_balance).abs();
+        let mut stmt = connection.prepare_cached(sql)?;
+        let params = params![
+            Uuid::now_v7().to_string(),
+            Zoned::now().date().to_string(),
+            account_id.to_string(),
+            correction.inner(),
+            TransactionKind::Correction as i64
+        ];
+        let mut rows = stmt.query_and_then(params, |row| Transaction::try_from(row))?;
+        let transaction = rows.next().unwrap()?;
+        Ok(transaction)
+    }
+
     /// Fetches all transactions from the database.
     pub fn fetch_transactions(&self) -> crate::Result<Vec<Transaction>> {
         let mut transactions = vec![];
@@ -719,7 +769,7 @@ impl Service {
         let connection = self.connection();
 
         let sql = "SELECT \
-            t.id,t.amount,t.transaction_date,t.sender_id,t.receiver_id,t.category_id,t.note,t.kind \
+            t.id,t.amount,t.transaction_date,t.sender_id,t.receiver_id,t.category_id,t.note,t.kind,t.is_audited \
             FROM transactions t \
             LEFT JOIN categories c ON t.category_id = c.id \
             WHERE c.group_id = ?";
@@ -740,6 +790,15 @@ impl Service {
             total += transaction.amount;
         }
         Ok(total)
+    }
+
+    /// Sets the `is_audited` field of all the account's transactions to true.
+    pub fn audit_account(&self, account_id: Uuid) -> crate::Result<()> {
+        let sql =
+            "UPDATE transactions SET is_audited = TRUE WHERE sender_id = ?1 OR receiver_id = ?1";
+        let connection = self.connection();
+        connection.execute(sql, [account_id.to_string()])?;
+        Ok(())
     }
 
     pub fn total_assigned_in_group(&self, group_id: Uuid, month: Date) -> crate::Result<Money> {
@@ -1034,6 +1093,13 @@ impl Service {
         let mut stmt = connection.prepare_cached("SELECT * FROM transactions WHERE id = ?")?;
         let mut rows = stmt.query_and_then([id.to_string()], |row| Transaction::try_from(row))?;
         rows.next().ok_or(Error::new("Transaction not found"))?
+    }
+
+    pub fn get_account(&self, id: Uuid) -> crate::Result<Account> {
+        let connection = self.connection();
+        let mut stmt = connection.prepare_cached("SELECT * FROM accounts WHERE id = ?")?;
+        let mut rows = stmt.query_and_then([id.to_string()], |row| Account::try_from(row))?;
+        rows.next().ok_or(Error::new("Account not found"))?
     }
 
     pub fn get_category_group(&self, id: Uuid) -> crate::Result<CategoryGroup> {

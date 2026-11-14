@@ -9,6 +9,7 @@ use mukwa_core::service::{
     AccountType, Category, CreateBudgetOpts, Service, TransactionKind, TransactionType,
 };
 use mukwa_core::{Money, create_test_db};
+use rstest::rstest;
 use rusqlite::{Connection, OptionalExtension};
 use uuid::Uuid;
 
@@ -1474,5 +1475,124 @@ fn available_to_spend_filters_by_category() -> Result<()> {
 
     let amount = service.available_to_spend(category.id, date(2026, 5, 1))?;
     assert_eq!(amount, Money::new(40));
+    Ok(())
+}
+
+#[test]
+fn audit_account() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("", AccountType::Cash)?;
+    let account2 = service.create_account("", AccountType::Cash)?;
+    service.create_expense().account(account.id).submit()?;
+    service.create_income().account(account.id).submit()?;
+    service
+        .create_transfer()
+        .accounts(account.id, account2.id)
+        .submit()?;
+
+    for transaction in service.fetch_transactions()? {
+        assert!(!transaction.audited);
+    }
+    service.audit_account(account.id)?;
+    for transaction in service.fetch_transactions()? {
+        assert!(transaction.audited);
+    }
+    Ok(())
+}
+
+#[test]
+fn audit_account_does_not_affect_other_accounts() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("", AccountType::Cash)?;
+    let account2 = service.create_account("", AccountType::Cash)?;
+    service.create_expense().account(account.id).submit()?;
+    service.create_income().account(account.id).submit()?;
+    let t1 = service
+        .create_transfer()
+        .accounts(account.id, account2.id)
+        .submit()?;
+    let t2 = service.create_expense().account(account2.id).submit()?;
+    service.audit_account(account.id)?;
+
+    let t1 = service.get_transaction(t1.id)?;
+    let t2 = service.get_transaction(t2.id)?;
+    assert!(t1.audited);
+    assert!(!t2.audited);
+    Ok(())
+}
+
+#[rstest]
+#[case(10, 20, 10, TransactionType::Income)]
+#[case(-25, 0, 25, TransactionType::Income)]
+#[case(100, -25, 125, TransactionType::Expense)]
+#[case(75, 25, 50, TransactionType::Expense)]
+#[case(-75, -100, 25, TransactionType::Expense)]
+#[case(0, 50, 50, TransactionType::Income)]
+#[case(0, -50, 50, TransactionType::Expense)]
+fn balance_correction(
+    #[case] account_balance: i64,
+    #[case] actual_balance: i64,
+    #[case] expected_correction: i64,
+    #[case] expected_type: TransactionType,
+) -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let account = service.create_account("", AccountType::Cash)?;
+    if account_balance > 0 {
+        service
+            .create_income()
+            .account(account.id)
+            .amount(Money::new(account_balance.abs()))
+            .submit()?;
+    } else {
+        service
+            .create_expense()
+            .account(account.id)
+            .amount(Money::new(account_balance.abs()))
+            .submit()?;
+    }
+    let correction =
+        service.create_correction_transaction(account.id, Money::new(actual_balance))?;
+    assert_eq!(correction.amount, Money::new(expected_correction));
+    assert_eq!(correction.transaction_type(), expected_type);
+    Ok(())
+}
+
+#[test]
+fn transfers_included_in_balance_correction() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let a1 = service.create_account("", AccountType::Cash)?;
+    let a2 = service.create_account("", AccountType::Credit)?;
+
+    service
+        .create_expense()
+        .account(a1.id)
+        .amount(Money::new(25))
+        .submit()?;
+    service
+        .create_transfer()
+        .accounts(a1.id, a2.id)
+        .amount(Money::new(35))
+        .submit()?;
+
+    let c1 = service.create_correction_transaction(a1.id, Money::new(10))?;
+    assert_eq!(c1.amount, Money::new(70));
+    assert_eq!(c1.transaction_type(), TransactionType::Income);
+    Ok(())
+}
+
+#[test]
+fn balance_correction_error_when_balances_are_equal() -> Result<()> {
+    let service = Service::open_in_memory()?;
+    let a1 = service.create_account("", AccountType::Cash)?;
+    service
+        .create_income()
+        .account(a1.id)
+        .amount(Money::new(25))
+        .submit()?;
+    assert!(
+        service
+            .create_correction_transaction(a1.id, Money::new(25))
+            .is_err()
+    );
     Ok(())
 }
