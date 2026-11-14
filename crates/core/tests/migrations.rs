@@ -118,7 +118,7 @@ fn mark_starting_balance_transactions() -> Result<()> {
             })?
             .map(|r| r.unwrap())
             .collect();
-        transaction_kinds.sort_by(|a, b| a.0.cmp(&b.0));
+        transaction_kinds.sort_by_key(|k| k.0);
         transaction_kinds
     };
 
