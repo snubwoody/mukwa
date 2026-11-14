@@ -188,6 +188,7 @@ impl CreateTransaction {
         };
         assert_transaction(&all_transactions[0]);
         assert_transaction(&transactions[0]);
+        panic!()
     }
 }
 
@@ -306,9 +307,13 @@ impl TestRunner {
     }
 
     fn run(&mut self) -> mukwa::Result<()> {
+        // TODO:
+        // Test case shriking
+        // - Eliminate actions and check if those actions fail
+        // - Try every permutation of actions
+
         // TODO: use drop guard instead
         let state: AccountState = self.app.global();
-        // TODO: account options has len of 7 every time?
         // TODO: don't create default accounts
         state.invoke_create_account(
             "My account".to_shared_string(),
