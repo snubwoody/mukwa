@@ -133,6 +133,73 @@ mod test {
 
     use super::*;
 
+    #[test]
+    fn account_balance_filters_by_id() {
+        let account1 = Account {
+            id: Uuid::now_v7(),
+            name: String::new(),
+            account_type: AccountType::Cash,
+        };
+        let account2 = Account {
+            id: Uuid::now_v7(),
+            name: String::new(),
+            account_type: AccountType::Cash,
+        };
+
+        let transactions = vec![
+            Transaction {
+                receiver_id: Some(account1.id),
+                amount: Money::new(500),
+                ..Default::default()
+            },
+            Transaction {
+                receiver_id: Some(account2.id),
+                amount: Money::new(100),
+                ..Default::default()
+            },
+        ];
+        assert_eq!(
+            super::account_balance(account1.id, &transactions),
+            Money::new(500)
+        );
+    }
+
+    #[test]
+    fn account_balance_income_overflow() {
+        let id = Uuid::now_v7();
+        let transactions = vec![
+            Transaction {
+                receiver_id: Some(id),
+                amount: Money::MAX,
+                ..Default::default()
+            },
+            Transaction {
+                receiver_id: Some(id),
+                amount: Money::new(100),
+                ..Default::default()
+            },
+        ];
+        assert_eq!(super::account_balance(id, &transactions), Money::MAX);
+    }
+
+    #[test]
+    fn account_balance_expense_overflow() {
+        let id = Uuid::now_v7();
+        let transactions = vec![
+            Transaction {
+                sender_id: Some(id),
+                amount: Money::MAX,
+                ..Default::default()
+            },
+            Transaction {
+                sender_id: Some(id),
+                amount: Money::new(100),
+                ..Default::default()
+            },
+        ];
+        super::account_balance(id, &transactions);
+    }
+
     #[quickcheck]
     fn prop_available_to_assign(
         accounts: Vec<Account>,

@@ -7,6 +7,7 @@ use jiff::ZonedDateTime;
 use jiff::civil::Date;
 use mukwa_core::Money;
 use mukwa_core::error::ErrorExt;
+use mukwa_core::math::account_balance;
 use mukwa_core::service::{AccountType, Service, TransactionKind, TransactionType};
 use slint::{ComponentHandle, Global, Model, ModelRc, ToSharedString, VecModel};
 use std::rc::Rc;
@@ -184,15 +185,17 @@ impl AccountController {
 
     fn account_balance(&self, id: &str) -> crate::Result<Money> {
         let id = Uuid::parse_str(id)?;
-        self.service.account_balance(id)
+        let transactions = self.service.fetch_transactions()?;
+        Ok(account_balance(id, &transactions))
     }
 
     fn load_accounts(&self) -> crate::Result<()> {
         let accounts = self.service.fetch_accounts()?;
+        let transactions = self.service.fetch_transactions()?;
         let mut account_list = vec![];
         let mut account_options = vec![];
         for account in accounts {
-            let balance = self.service.account_balance(account.id)?;
+            let balance = account_balance(account.id, &transactions);
             account_list.push(ui::Account {
                 id: account.id.to_shared_string(),
                 name: account.name.to_shared_string(),

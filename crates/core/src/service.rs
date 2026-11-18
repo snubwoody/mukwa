@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
+use crate::math::account_balance;
 use crate::{Error, Money, create_test_db};
 use jiff::ZonedDateTime;
 use jiff::civil::Date;
@@ -646,7 +647,8 @@ impl Service {
         balance: Money,
     ) -> crate::Result<Transaction> {
         // TODO: prevent setting payee on other kinds of transactions
-        let account_balance = self.account_balance(account_id)?;
+        let transactions = self.fetch_transactions()?;
+        let account_balance = account_balance(account_id, &transactions);
         if balance == account_balance {
             return Err(Error::new(
                 "Cannot create correction when account balances are equal",
@@ -841,37 +843,6 @@ impl Service {
 
             total += budget.amount;
         }
-        Ok(total)
-    }
-
-    /// Calculates the account balance.
-    pub fn account_balance(&self, account_id: Uuid) -> crate::Result<Money> {
-        let connection = self.connection();
-        let mut expense_stmt =
-            connection.prepare_cached("SELECT amount FROM transactions WHERE sender_id = ?1")?;
-        let mut income_stmt =
-            connection.prepare_cached("SELECT amount FROM transactions WHERE receiver_id = ?1")?;
-        let total_expenses: Money = expense_stmt
-            .query_and_then([account_id.to_string()], |row| {
-                let amount = row.get::<_, i64>("amount")?;
-                Ok(Money::from_scaled(amount))
-            })?
-            .collect::<Result<Vec<_>, Error>>()?
-            .iter()
-            .copied()
-            .sum();
-
-        let total_income: Money = income_stmt
-            .query_and_then([account_id.to_string()], |row| {
-                let amount = row.get::<_, i64>("amount")?;
-                Ok(Money::from_scaled(amount))
-            })?
-            .collect::<Result<Vec<_>, Error>>()?
-            .iter()
-            .copied()
-            .sum();
-
-        let total = total_income - total_expenses;
         Ok(total)
     }
 
