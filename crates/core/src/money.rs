@@ -167,6 +167,10 @@ impl quickcheck::Arbitrary for Money {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         Money(i64::arbitrary(g))
     }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        Box::new(self.0.shrink().map(|a| Money(a)))
+    }
 }
 
 /// Generates currency information.
