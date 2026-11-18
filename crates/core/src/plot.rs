@@ -6,6 +6,8 @@ use tiny_skia::{
     Color, FillRule, Paint, Path, PathBuilder, PathSegment, Pixmap, Point, Stroke, Transform,
 };
 
+pub mod bar;
+
 #[derive(Debug)]
 pub struct PieSegment {
     // The center position
