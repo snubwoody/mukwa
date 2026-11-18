@@ -4,6 +4,7 @@
 pub mod auto_update;
 pub mod error;
 pub mod fmt;
+pub mod math;
 pub mod migrator;
 mod money;
 pub mod plot;

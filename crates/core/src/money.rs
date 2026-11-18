@@ -162,6 +162,13 @@ impl std::iter::Sum for Money {
     }
 }
 
+#[cfg(test)]
+impl quickcheck::Arbitrary for Money {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        Money(i64::arbitrary(g))
+    }
+}
+
 /// Generates currency information.
 macro_rules! generate_currencies {
     ($($code:ident;$name:expr;$symbol:expr;$precision:expr),+) => {
