@@ -6,6 +6,9 @@ use tiny_skia::{
     Color, FillRule, Paint, Path, PathBuilder, PathSegment, Pixmap, Point, Stroke, Transform,
 };
 
+mod bar;
+pub use bar::{BarChart, BarChartSegment};
+
 #[derive(Debug)]
 pub struct PieSegment {
     // The center position
