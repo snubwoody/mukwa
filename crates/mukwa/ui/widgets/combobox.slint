@@ -2,7 +2,6 @@
 // Copyright (C) 2026 Wakunguma Kalimukwa
 
 import { Colors } from "../colors.slint";
-import { ListView, ScrollView } from "std-widgets.slint";
 import { FocusBorder } from "./focus-border.slint";
 import { FontSize } from "../theme.slint";
 import { Icon, Icons } from "../icons.slint";
@@ -10,6 +9,55 @@ import { Icon, Icons } from "../icons.slint";
 export struct ComboBoxItem {
     value: string,
     text: string,
+}
+
+// TODO: maybe add scrollbar size setting
+// TODO: expand on hover
+// TODO: height 100% then thumb (thumb should respond the number of items in the list with a min and max)
+// TODO: Only enable when needed, or use scroll bar policy
+component ScrollBar {
+    in-out property <color> thumb-color: Colors.surface0;
+    in-out property <length> maximum;
+    in-out property <length> page-size;
+    in-out property <length> value;
+    width: 8px;
+
+    thumb := Rectangle {
+        height: 70%;
+        border-radius: 999px;
+        background: thumb-color;
+    }
+
+    touch-area := TouchArea {
+        moved => {
+            debug(self.mouse-x,self.mouse-y);
+        }
+    }
+}
+
+component ScrollView {
+    in-out property <length> content-height <=> flickable.content-height;
+    preferred-width: 100%;
+    preferred-height: 100%;
+
+    flickable := Flickable {
+        x: 0;
+        y: 0;
+        width: parent.width - scollbar.width;
+        mouse-drag-pan-enabled: false;
+        content-y <=> scollbar.value;
+        // height: parent.height;
+        @children
+    }
+
+    scollbar := ScrollBar {
+        x: flickable.x + flickable.width;
+        y: flickable.y;
+        thumb-color: Colors.surface2;
+        height: flickable.height;
+        maximum: flickable.content-height - flickable.height;
+        page-size: flickable.height;
+    }
 }
 
 export component ComboBox {
@@ -100,6 +148,7 @@ export component ComboBox {
                 padding-left: 8px;
                 padding-right: 8px;
                 flex-wrap: no-wrap;
+
                 text := Text {
                     text: options[current-index].text;
                     color: Colors.textBody;
@@ -152,9 +201,11 @@ export component ComboBox {
             }
         }
 
-        flickable := Flickable {
+        flickable := ScrollView {
+            // width: parent.width;
             max-height: 250px;
             content-height: content.preferred-height;
+
             content := VerticalLayout {
                 padding: 12px;
                 spacing: 8px;
@@ -162,6 +213,7 @@ export component ComboBox {
                 VerticalLayout {
                     spacing: 4px;
                     alignment: start;
+
                     Text {
                         text: @tr("Selected");
                         color: Colors.textMuted;
@@ -172,6 +224,7 @@ export component ComboBox {
                         background: Colors.surface1;
                         border-radius: 4px;
                         height: 24px;
+
                         HorizontalLayout {
                             cross-axis-alignment: center;
                             padding: 8px;
@@ -194,6 +247,7 @@ export component ComboBox {
 
                 VerticalLayout {
                     spacing: 4px;
+
                     Text {
                         text: @tr("Change selection");
                         color: Colors.textMuted;
@@ -226,6 +280,7 @@ export component ComboBox {
                                     }
                                 }
                             ]
+
                             inner-touch-area := TouchArea {
                                 clicked => {
                                     root.select(i);
@@ -238,6 +293,7 @@ export component ComboBox {
                             HorizontalLayout {
                                 cross-axis-alignment: center;
                                 padding: 8px;
+
                                 Text {
                                     text: option.text;
                                     color: Colors.textBody;
@@ -246,6 +302,12 @@ export component ComboBox {
                         }
                     }
                 }
+            }
+
+            Rectangle {
+                background: white;
+                width: 3px;
+                height: 70%;
             }
         }
     }
