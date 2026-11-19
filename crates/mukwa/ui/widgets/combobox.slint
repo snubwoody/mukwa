@@ -23,9 +23,14 @@ component ScrollBar {
     width: 8px;
 
     thumb := Rectangle {
-        height: 70%;
         border-radius: 999px;
         background: thumb-color;
+        height: {
+            if root.maximum <= 0phx {
+                return 0phx;
+            }
+            return max(min(32px,root.height),parent.height * (root.page-size / (root.maximum + root.page-size)));
+        }
     }
 
     touch-area := TouchArea {
