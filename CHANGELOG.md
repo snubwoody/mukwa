@@ -1,3 +1,7 @@
+## (unreleased)
+
+- Added scrollbars.
+
 ## 0.4.0 - 2026-11-17
 
 - Added dark mode.
