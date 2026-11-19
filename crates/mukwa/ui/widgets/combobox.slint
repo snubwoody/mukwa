@@ -20,7 +20,7 @@ component ScrollBar {
     in-out property <length> maximum;
     in-out property <length> page-size;
     in-out property <length> value;
-    width: 8px;
+    width: 6px;
 
     thumb := Rectangle {
         border-radius: 999px;
@@ -35,8 +35,37 @@ component ScrollBar {
     }
 
     touch-area := TouchArea {
+        property <{ pressed-value: length, maximum: length, x: length, y: length }> saved-values;
+
+        function update-saved-values() {
+            self.saved-values = { pressed-value: -root.value, maximum: root.maximum, x: self.mouse-x, y: self.mouse-y };
+        }
+
+        pointer-event(event) => {
+            if (event.button == PointerEventButton.left && event.kind == PointerEventKind.down) {
+                self.update-saved-values();
+            }
+        }
+
         moved => {
-            debug(self.mouse-x,self.mouse-y);
+            if (!self.enabled || !self.pressed) {
+                return;
+            }
+
+            // Update reference points when the size of the viewport changes to
+            // avoid 'jumping' during scrolling.
+            if (self.saved-values.maximum != root.maximum) {
+                self.update-saved-values();
+            }
+            root.value = -max(0px,min(root.maximum,self.saved-values.pressed-value + ((self.mouse-y - self.saved-values.y) * (root.maximum / (root.height - thumb.height)))));
+        }
+
+        scroll-event(event) => {
+            if (event.delta-y != 0) {
+                root.value = max(-root.maximum, min(0px, root.value + event.delta-y));
+                return accept;
+            }
+            reject
         }
     }
 }
