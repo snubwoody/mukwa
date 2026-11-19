@@ -25,6 +25,7 @@ component ScrollBar {
     thumb := Rectangle {
         border-radius: 999px;
         background: thumb-color;
+        y: (root.height - thumb.height) * (-root.value / root.maximum);
         height: {
             if root.maximum <= 0phx {
                 return 0phx;
