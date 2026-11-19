@@ -20,6 +20,7 @@ import {
     InlineTextField,
     ContextMenu,
     ContextMenuItem,
+    ScrollView,
 } from "../../widgets.slint";
 import { Settings } from "../../settings.slint";
 import { FontSize } from "../../theme.slint";
@@ -48,6 +49,7 @@ component CategoryItem inherits VerticalLayout {
     context-menu := ContextMenu {
         min-width: 250px;
         min-height: 50px;
+
         ContextMenuItem {
             text: @tr("Delete");
             clicked => {
@@ -184,6 +186,7 @@ component CategoryGroupItem {
     context-menu := ContextMenu {
         min-width: 250px;
         min-height: 50px;
+
         ContextMenuItem {
             text: @tr("Delete");
             clicked => {
@@ -278,6 +281,7 @@ component CategoryGroupItem {
 
         Rectangle {
             background: Colors.surface0;
+
             HorizontalLayout {
                 padding-left: 8px;
                 padding-right: 16px;
@@ -359,7 +363,6 @@ component SpendingPageBody inherits VerticalLayout {
     property <Date> current-date: CategoryState.current-month;
     property <string> left-to-budget: SpendingPageState.left-to-budget;
     callback category-selected(string);
-    alignment: start;
     spacing: 12px;
 
     init => {
@@ -534,7 +537,7 @@ component SpendingPageBody inherits VerticalLayout {
             }
         }
 
-        Flickable {
+        ScrollView {
             content-height: content.preferred-height;
 
             content := VerticalLayout {
