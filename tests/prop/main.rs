@@ -31,6 +31,7 @@ enum Action {
     CreateTransaction(CreateTransaction),
     CreateAccount(CreateAccount),
     EditOutflow(EditOutflow),
+    EditNote(EditNote),
 }
 
 /// Creates a transaction and verifies its creating using the following steps:
@@ -202,6 +203,26 @@ impl CreateTransaction {
 }
 
 #[derive(Debug, Clone)]
+struct EditNote;
+
+impl EditNote {
+    fn execute(&self, app: &MainWindow, rng: &mut Rng) {
+        let _span = trace_span!("EditNote").entered();
+        let root_element = app.root_element();
+        let transactions = find_all_by_type_name(&root_element, "TransactionRow");
+        if transactions.is_empty() {
+            return;
+        }
+
+        let transaction = rng.choice(&transactions).unwrap();
+        let transaction_id = transaction.accessible_id().unwrap();
+        let note_cell = transaction.find_by_type_name("NoteCell");
+        // TODO: assert that the visible value has changed
+        transaction.invoke_accessible_decrement_action();
+    }
+}
+
+#[derive(Debug, Clone)]
 struct EditOutflow;
 
 impl EditOutflow {
@@ -322,13 +343,13 @@ impl TestRunner {
     }
 
     fn step(&mut self) {
-        // TODO: maybe i pass all the values and then run
         let rng = &mut self.rng;
         for i in 0..rng.u8(1..=10) {
             match &self.actions[rng.usize(0..self.actions.len())] {
                 Action::CreateTransaction(act) => act.execute(&self.app, rng),
                 Action::EditOutflow(act) => act.execute(&self.app, rng),
                 Action::CreateAccount(act) => act.execute(&self.app, rng),
+                Action::EditNote(act) => act.execute(&self.app, rng),
             }
         }
     }
@@ -419,6 +440,7 @@ fn run(seed: u64) {
         return;
     }
 
+    // TODO: run in reverse as well to isolate more
     while actions.len() > 1 {
         let mut new_actions = actions.clone();
         new_actions.pop();

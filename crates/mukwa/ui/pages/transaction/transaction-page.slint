@@ -34,6 +34,7 @@ component ConfirmButton {
     popup := PopupWindow {
         x: icon-btn.width + 4px;
         close-policy: close-on-click-outside;
+
         Rectangle {
             background: Colors.page;
             border-color: Colors.borderNeutral;
@@ -228,6 +229,11 @@ component NoteCell inherits TableCell {
     in property <Transaction> transaction;
     callback changed(string);
 
+    accessible-action-set-value(value) => {
+        changed(value);
+        self.is-editing = false;
+    }
+
     if !self.is-editing: Text {
         text: transaction.note;
         color: Colors.textBody;
@@ -288,6 +294,7 @@ component TransactionRow inherits TableRow {
 
     context-menu := ContextMenu {
         min-width: 250px;
+
         ContextMenuItem {
             text: @tr("Duplicate");
             clicked => {
@@ -559,6 +566,7 @@ component TransactionTableHeader inherits TableRow {
 
     if show-account: TableCell {
         width: parent.width / length;
+
         Text {
             text: @tr("Account");
             color: Colors.textBody;
@@ -567,6 +575,7 @@ component TransactionTableHeader inherits TableRow {
 
     TableCell {
         width: parent.width / length;
+
         Text {
             text: @tr("Payee");
             color: Colors.textBody;
@@ -575,6 +584,7 @@ component TransactionTableHeader inherits TableRow {
 
     TableCell {
         width: parent.width / length;
+
         Text {
             text: @tr("Category");
             color: Colors.textBody;
@@ -583,6 +593,7 @@ component TransactionTableHeader inherits TableRow {
 
     TableCell {
         width: parent.width / length;
+
         Text {
             text: @tr("Note");
             color: Colors.textBody;
@@ -591,6 +602,7 @@ component TransactionTableHeader inherits TableRow {
 
     TableCell {
         width: parent.width / length;
+
         Text {
             text: @tr("Outflow");
             color: Colors.textBody;
@@ -599,6 +611,7 @@ component TransactionTableHeader inherits TableRow {
 
     TableCell {
         width: parent.width / length;
+
         Text {
             text: @tr("Inflow");
             color: Colors.textBody;
@@ -662,6 +675,7 @@ component Audit {
     popup := PopupWindow {
         y: button.height;
         close-policy: close-on-click-outside;
+
         Rectangle {
             background: Colors.page;
             border-radius: 12px;
@@ -672,9 +686,11 @@ component Audit {
         VerticalLayout {
             padding: 16px;
             spacing: 32px;
+
             VerticalLayout {
                 spacing: 16px;
                 cross-axis-alignment: center;
+
                 Text {
                     text: @tr("Is your bank account balance:");
                     color: Colors.textBody;
@@ -689,6 +705,7 @@ component Audit {
 
             HorizontalLayout {
                 spacing: 8px;
+
                 PrimaryButton {
                     text: @tr("No");
                     theme: neutral;
@@ -736,6 +753,7 @@ component Audit {
 
             VerticalLayout {
                 spacing: 8px;
+
                 Text {
                     text: @tr("Enter your account balance");
                     color: Colors.textBody;
@@ -780,6 +798,7 @@ component Audit {
             VerticalLayout {
                 spacing: 8px;
                 cross-axis-alignment: center;
+
                 balance-difference := Text {
                     text: State.format-money(difference, Settings.currency-code);
                     color: Colors.textBody;
@@ -828,6 +847,7 @@ component Audit {
         y: button.height + 2px;
         width: 250px;
         close-policy: close-on-click-outside;
+
         Rectangle {
             background: Colors.page;
             border-radius: 12px;
@@ -839,6 +859,7 @@ component Audit {
             spacing: 12px;
             padding: 16px;
             cross-axis-alignment: center;
+
             Text {
                 text: @tr("Account audited");
                 color: Colors.textHeading;
@@ -946,6 +967,7 @@ component TransactionTable inherits Table {
         alignment: start;
         spacing: 4px;
         padding: 12px;
+
         Text {
             text: @tr("Audited transactions are hidden");
             color: Colors.textBody;
@@ -1050,6 +1072,7 @@ export component TransactionPage inherits VerticalLayout {
     HorizontalLayout {
         alignment: space-between;
         padding: 12px;
+
         VerticalLayout {
             spacing: 4px;
 
